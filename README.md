@@ -2,7 +2,10 @@
   <img src="src/assets/logo.png" width="200" height="200" alt="Hamledger Logo">
 </p>
 
+
 # Hamledger
+
+![image](./public/gui.jpg)
 
 A modern amateur radio logging application built with Vue 3, TypeScript, and Electron.
 It just works.
