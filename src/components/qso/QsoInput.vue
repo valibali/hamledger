@@ -100,16 +100,6 @@ export default {
         </select>
       </div>
 
-      <div class="qso-input-group">
-        <label for="mode">Mode</label>
-        <select id="mode" :value="qsoStore.qsoForm.mode"
-          @change="(e) => qsoStore.updateQsoForm('mode', (e.target as HTMLSelectElement).value)">
-          <option v-for="mode in modes" :key="mode.value" :value="mode.value">
-            {{ mode.label }}
-          </option>
-        </select>
-      </div>
-
       <div class="qso-input-group small">
         <label for="rstr">RSTr</label>
         <input type="text" id="rstr" :value="qsoStore.qsoForm.rstr"
@@ -117,9 +107,9 @@ export default {
       </div>
 
       <div class="qso-input-group small">
-        <label for="rstr2">RSTr</label>
-        <input type="text" id="rstr2" :value="qsoStore.qsoForm.rstr2"
-          @input="(e) => qsoStore.updateQsoForm('rstr2', (e.target as HTMLInputElement).value)" placeholder="59" />
+        <label for="rstt">RSTt</label>
+        <input type="text" id="rstt" :value="qsoStore.qsoForm.rstt"
+          @input="(e) => qsoStore.updateQsoForm('rstt', (e.target as HTMLInputElement).value)" placeholder="59" />
       </div>
 
       <div class="qso-input-group small">

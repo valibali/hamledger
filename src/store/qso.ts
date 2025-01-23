@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { useRigStore } from "./rig";
 
 interface QsoEntry {
   callsign: string;
@@ -6,8 +7,8 @@ interface QsoEntry {
   freqRx: number;
   freqTx?: number;
   mode: string;
-  rstr1?: string;
-  rstr2?: string;
+  rstr?: string;
+  rstt?: string;
   datetime: string;
   remark?: string;
   notes?: string;
@@ -22,7 +23,7 @@ export const useQsoStore = defineStore("qso", {
       band: "40m",
       mode: "SSB",
       rstr: "",
-      rstr2: "",
+      rstt: "",
       date: "",
       utc: "",
       remark: "",
@@ -33,13 +34,13 @@ export const useQsoStore = defineStore("qso", {
     addQso() {
       const now = new Date();
       const rigStore = useRigStore();
-      
+
       const newQso: QsoEntry = {
         callsign: this.qsoForm.callsign,
         band: this.qsoForm.band,
         freqRx: parseFloat(rigStore.frequency),
         mode: rigStore.selectedMode,
-        datetime: now.toISOString()
+        datetime: now.toISOString(),
       };
 
       // Only add TX frequency if split is active
@@ -48,8 +49,8 @@ export const useQsoStore = defineStore("qso", {
       }
 
       // Only add optional fields if they have content
-      if (this.qsoForm.rstr) newQso.rstr1 = this.qsoForm.rstr;
-      if (this.qsoForm.rstr2) newQso.rstr2 = this.qsoForm.rstr2;
+      if (this.qsoForm.rstr) newQso.rstr = this.qsoForm.rstr;
+      if (this.qsoForm.rstt) newQso.rstt = this.qsoForm.rstt;
       if (this.qsoForm.remark?.trim()) newQso.remark = this.qsoForm.remark;
       if (this.qsoForm.notes?.trim()) newQso.notes = this.qsoForm.notes;
 
@@ -62,7 +63,7 @@ export const useQsoStore = defineStore("qso", {
         band: "40m",
         mode: "SSB",
         rstr: "",
-        rstr2: "",
+        rstt: "",
         date: "",
         utc: "",
         remark: "",
