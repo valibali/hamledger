@@ -4,19 +4,42 @@ import { useQsoStore } from '../../store/qso'
 export default {
   name: 'QsoInput',
   data() {
-    const store = useQsoStore()
+    const qsoStore = useQsoStore()
+    const rigStore = useRigStore()
     return {
-      qsoStore: store,
+      qsoStore,
+      rigStore,
       callsignInput: null as HTMLInputElement | null,
-      bands: [
-        { value: '10m', label: '10 m' },
-        { value: '20m', label: '20 m' },
-        { value: '40m', label: '40 m' }
-      ],
-      modes: [
-        { value: 'CW', label: 'CW' },
-        { value: 'SSB', label: 'SSB' }
-      ]
+      bands: BAND_RANGES.map(band => ({
+        value: band.name,
+        label: band.name.toUpperCase()
+      }))
+    }
+  },
+  computed: {
+    currentBand() {
+      const freq = parseFloat(this.rigStore.frequency);
+      return getBandFromFrequency(freq);
+    },
+    modes() {
+      return this.rigStore.modes;
+    }
+  },
+  watch: {
+    'rigStore.frequency': {
+      handler(newFreq) {
+        const band = getBandFromFrequency(parseFloat(newFreq));
+        if (band) {
+          this.qsoStore.updateQsoForm('band', band);
+        }
+      },
+      immediate: true
+    },
+    'rigStore.selectedMode': {
+      handler(newMode) {
+        this.qsoStore.updateQsoForm('mode', newMode);
+      },
+      immediate: true
     }
   },
   mounted() {
