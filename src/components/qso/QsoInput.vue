@@ -20,7 +20,12 @@ export default {
     }
   },
   mounted() {
-    this.callsignInput?.focus()
+    this.$nextTick(() => {
+      const input = this.$refs.callsignInput as HTMLInputElement
+      if (input) {
+        input.focus()
+      }
+    })
   },
   methods: {
     handleKeydown(e: KeyboardEvent) {
@@ -28,7 +33,12 @@ export default {
         e.preventDefault()
         this.qsoStore.addQso()
         // Refocus callsign input after adding QSO
-        this.callsignInput?.focus()
+        this.$nextTick(() => {
+          const input = this.$refs.callsignInput as HTMLInputElement
+          if (input) {
+            input.focus()
+          }
+        })
       }
     }
   }
