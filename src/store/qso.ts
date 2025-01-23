@@ -1,7 +1,12 @@
 import { defineStore } from "pinia";
 import { useRigStore } from "./rig";
+import PouchDB from 'pouchdb-browser';
+
+const db = new PouchDB<QsoEntry>('hamlogger');
 
 interface QsoEntry {
+  _id?: string;
+  _rev?: string;
   callsign: string;
   band: string;
   freqRx: number;
@@ -19,6 +24,7 @@ export const useQsoStore = defineStore("qso", {
     currentSession: [] as QsoEntry[],
     allQsos: [] as QsoEntry[],
     currentUTCTime: "",
+    initialized: false,
     qsoForm: {
       callsign: "",
       band: "40m",
@@ -68,8 +74,20 @@ export const useQsoStore = defineStore("qso", {
       newQso.remark = this.qsoForm.remark?.trim() || "--";
       newQso.notes = this.qsoForm.notes?.trim() || "--";
 
-      this.currentSession.push(newQso);
-      this.allQsos.push(newQso);
+      // Save to PouchDB and update state
+      try {
+        const response = await db.post({
+          ...newQso,
+          _id: new Date().toISOString()
+        });
+        
+        if (response.ok) {
+          this.currentSession.push(newQso);
+          this.allQsos.push(newQso);
+        }
+      } catch (error) {
+        console.error('Failed to save QSO:', error);
+      }
 
       // Reset form
       this.qsoForm = {
@@ -87,6 +105,21 @@ export const useQsoStore = defineStore("qso", {
     updateQsoForm(field: keyof typeof this.qsoForm, value: string) {
       this.qsoForm[field] = value;
     },
+    async initializeStore() {
+      if (!this.initialized) {
+        try {
+          const result = await db.allDocs({
+            include_docs: true,
+            attachments: true
+          });
+          this.allQsos = result.rows.map(row => row.doc as QsoEntry);
+          this.initialized = true;
+        } catch (error) {
+          console.error('Failed to initialize QSO store:', error);
+        }
+      }
+    },
+
     updateCurrentUTCTime() {
       const now = new Date();
       this.currentUTCTime = now.toLocaleTimeString("en-US", {
