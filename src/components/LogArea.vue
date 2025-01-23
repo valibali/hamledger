@@ -37,9 +37,6 @@ export default {
         G: 'gb',
         EA: 'es'
       },
-      resizing: null as HTMLElement | null,
-      startX: 0,
-      startWidth: 0
     }
   },
   methods: {
@@ -111,17 +108,17 @@ export default {
     <table class="qso-table">
       <thead>
         <tr>
-          <th @mousedown="(e) => startResize(e, $event.target)">Date</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Time</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Callsign</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Band</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Freq. RX</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Freq. TX</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Mode</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">RSTr</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">RSTr</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Remark</th>
-          <th @mousedown="(e) => startResize(e, $event.target)">Notes</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Callsign</th>
+          <th>Band</th>
+          <th>Freq. RX</th>
+          <th>Freq. TX</th>
+          <th>Mode</th>
+          <th>RSTr</th>
+          <th>RSTr</th>
+          <th>Remark</th>
+          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
