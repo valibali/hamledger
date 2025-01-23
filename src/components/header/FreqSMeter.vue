@@ -55,7 +55,7 @@ export default {
                  @input="e => rigStore.setFrequency((e.target as HTMLInputElement).value)"
                  @blur="isEditing = false"
                  @keyup.enter="isEditing = false"
-                 style="background: transparent; border: none; color: inherit; font: inherit; text-align: right; width: 80px;">
+                 class="freq-input">
           <template v-else>
             <span>{{ rigStore.frequency }}</span>
             <template v-if="rigStore.splitActive">

@@ -246,6 +246,17 @@ body {
 .freq-unit {
   font-size: 2rem;
 }
+
+.freq-input {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  width: 140px;
+  font-size: 3rem;
+  font-weight: bold;
+}
 /* S-meter */
 .s-meter {
   display: inline-block;
