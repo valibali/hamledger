@@ -103,8 +103,19 @@ export default {
       </thead>
       <tbody>
         <tr v-for="entry in currentSession" :key="entry.callsign + entry.datetime">
-          <td>{{ new Date(entry.datetime).toLocaleDateString() }}</td>
-          <td>{{ new Date(entry.datetime).toLocaleTimeString() }}</td>
+          <td>{{ new Date(entry.datetime).toLocaleDateString('en-US', { 
+            timeZone: 'UTC',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }) }}</td>
+          <td>{{ new Date(entry.datetime).toLocaleTimeString('en-US', {
+            timeZone: 'UTC',
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }) }}</td>
           <td>
             <img
               v-if="getCountryCodeForCallsign(entry.callsign) !== 'xx'"

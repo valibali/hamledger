@@ -32,7 +32,20 @@ export const useQsoStore = defineStore("qso", {
   }),
   actions: {
     addQso() {
-      const now = new Date();
+      const now = new Date(); 
+      const utcDateStr = now.toLocaleDateString('en-US', { 
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const utcTimeStr = now.toLocaleTimeString('en-US', {
+        timeZone: 'UTC',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
       const rigStore = useRigStore();
 
       const newQso: QsoEntry = {
