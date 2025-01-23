@@ -94,9 +94,13 @@ body {
 }
 
 button:hover,
-input[type="radio"],
 input:hover {
   filter: brightness(110%);
+}
+
+.mode-badge:hover {
+  filter: brightness(110%);
+  background: #555;
 }
 
 /* ----------------------------------
