@@ -74,7 +74,6 @@ export default {
             </template>
           </div>
           <span class="freq-unit">{{ unit }}</span>
-          </template>
         </div>
       </div>
 
