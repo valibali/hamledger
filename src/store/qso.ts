@@ -25,6 +25,13 @@ export const useQsoStore = defineStore("qso", {
     allQsos: [] as QsoEntry[],
     currentUTCTime: "",
     initialized: false,
+  }),
+  actions: {
+    async init() {
+      if (!this.initialized) {
+        await this.initializeStore();
+      }
+    },
     qsoForm: {
       callsign: "",
       band: "40m",

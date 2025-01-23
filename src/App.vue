@@ -1,12 +1,17 @@
 <script lang="ts">
 import Sidebar from './components/Sidebar.vue'
 import MainContent from './components/MainContent.vue'
+import { useQsoStore } from './store/qso'
 
 export default {
   name: 'App',
   components: {
     Sidebar,
     MainContent
+  },
+  async mounted() {
+    const qsoStore = useQsoStore()
+    await qsoStore.init()
   }
 }
 </script>
