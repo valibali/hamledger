@@ -52,7 +52,10 @@
     }
   },
   "dependencies": {
+    "@types/pouchdb-browser": "^6.1.5",
+    "events": "^3.3.0",
     "pinia": "^2.1.7",
+    "pouchdb-browser": "^9.0.0",
     "vue": "^3.2.25"
   },
   "devDependencies": {

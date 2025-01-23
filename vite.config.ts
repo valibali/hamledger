@@ -4,4 +4,5 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
   plugins: [vue()],
   base: "./", //add base path
+  define: { global: "window" },
 });
