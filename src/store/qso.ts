@@ -57,16 +57,14 @@ export const useQsoStore = defineStore("qso", {
         datetime: now.toISOString(),
       };
 
-      // Only add TX frequency if split is active
-      if (rigStore.splitActive) {
-        newQso.freqTx = parseFloat(rigStore.txFrequency);
-      }
+      // Handle TX frequency
+      newQso.freqTx = rigStore.splitActive ? parseFloat(rigStore.txFrequency) : "--";
 
       // Use form values or defaults for RST
       newQso.rstr = this.qsoForm.rstr || "59";
       newQso.rstt = this.qsoForm.rstt || "59";
-      if (this.qsoForm.remark?.trim()) newQso.remark = this.qsoForm.remark;
-      if (this.qsoForm.notes?.trim()) newQso.notes = this.qsoForm.notes;
+      newQso.remark = this.qsoForm.remark?.trim() || "--";
+      newQso.notes = this.qsoForm.notes?.trim() || "--";
 
       this.currentSession.push(newQso);
       this.allQsos.push(newQso);
