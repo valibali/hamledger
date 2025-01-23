@@ -50,7 +50,7 @@ export const useQsoStore = defineStore("qso", {
       const rigStore = useRigStore();
 
       const newQso: QsoEntry = {
-        callsign: this.qsoForm.callsign,
+        callsign: this.qsoForm.callsign.toUpperCase(),
         band: this.qsoForm.band,
         freqRx: parseFloat(rigStore.frequency),
         mode: rigStore.selectedMode,
