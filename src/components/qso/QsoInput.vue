@@ -103,13 +103,13 @@ export default {
       <div class="qso-input-group small">
         <label for="rstr">RSTr</label>
         <input type="text" id="rstr" :value="qsoStore.qsoForm.rstr"
-          @input="(e) => qsoStore.updateQsoForm('rstr', (e.target as HTMLInputElement).value)" placeholder="59" />
+          @input="(e) => qsoStore.updateQsoForm('rstr', (e.target as HTMLInputElement).value || '59')" placeholder="59" />
       </div>
 
       <div class="qso-input-group small">
         <label for="rstt">RSTt</label>
         <input type="text" id="rstt" :value="qsoStore.qsoForm.rstt"
-          @input="(e) => qsoStore.updateQsoForm('rstt', (e.target as HTMLInputElement).value)" placeholder="59" />
+          @input="(e) => qsoStore.updateQsoForm('rstt', (e.target as HTMLInputElement).value || '59')" placeholder="59" />
       </div>
 
       <div class="qso-input-group small">
