@@ -21,25 +21,34 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
+      this.focusCallsignInput()
+    })
+  },
+  methods: {
+    focusCallsignInput() {
       const input = this.$refs.callsignInput as HTMLInputElement
       if (input) {
         input.focus()
       }
-    })
-  },
-  methods: {
+    },
     handleKeydown(e: KeyboardEvent) {
-      if (e.shiftKey && e.key === 'Enter') {
+      const input = this.$refs.callsignInput as HTMLInputElement
+      if (input.value != "" && e.shiftKey && e.key === 'Enter') {
         e.preventDefault()
         this.qsoStore.addQso()
         // Refocus callsign input after adding QSO
         this.$nextTick(() => {
-          const input = this.$refs.callsignInput as HTMLInputElement
-          if (input) {
-            input.focus()
-          }
+          this.focusCallsignInput()
         })
       }
+    },
+    handleAddQSO() {
+      const input = this.$refs.callsignInput as HTMLInputElement
+      if (input.value != "") this.qsoStore.addQso()
+      // Refocus callsign input after adding QSO
+      this.$nextTick(() => {
+        this.focusCallsignInput()
+      })
     }
   }
 }
@@ -51,14 +60,9 @@ export default {
     <div class="qso-input-content">
       <div class="qso-input-group">
         <label for="callsign">Callsign</label>
-        <input 
-          ref="callsignInput" 
-          type="text" 
-          id="callsign" 
-          :value="qsoStore.qsoForm.callsign"
+        <input ref="callsignInput" type="text" id="callsign" :value="qsoStore.qsoForm.callsign"
           @input="(e) => qsoStore.updateQsoForm('callsign', (e.target as HTMLInputElement).value)"
-          @keydown="handleKeydown"
-        />
+          @keydown="handleKeydown" />
       </div>
 
       <div class="qso-input-group">
@@ -120,7 +124,7 @@ export default {
           placeholder="Additional info"></textarea>
       </div>
 
-      <button class="add-qso-btn" @click="qsoStore.addQso">Add QSO</button>
+      <button class="add-qso-btn" @click=handleAddQSO>Add QSO</button>
     </div>
   </section>
 </template>
