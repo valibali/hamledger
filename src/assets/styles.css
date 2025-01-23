@@ -139,6 +139,17 @@ input:hover {
   font-size: 1.2rem;
   font-weight: bold;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.port-badge {
+  font-size: 0.8rem;
+  background: #555;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  color: var(--gray-color);
 }
 .rig-buttons {
   display: flex;

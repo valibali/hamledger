@@ -43,7 +43,10 @@ export default {
     <h2 class="section-title">RIG CONTROL</h2>
     <div class="rig-control-content">
       <div class="rig-info">
-        <div class="rig-title">{{ rigModel }}</div>
+        <div class="rig-title">
+          {{ rigModel }}
+          <span class="port-badge">COM5</span>
+        </div>
       </div>
 
       <div class="rig-buttons">
