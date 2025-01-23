@@ -58,16 +58,18 @@ export default {
                  style="background: transparent; border: none; color: inherit; font: inherit; text-align: right; width: 80px;">
           <template v-else>
             <span>{{ rigStore.frequency }}</span>
-            <span v-if="rigStore.splitActive" class="tx-freq" @click.stop="isTxEditing = true">
-              <input v-if="isTxEditing"
-                     type="text"
-                     :value="rigStore.txFrequency"
-                     @input="e => rigStore.setTxFrequency((e.target as HTMLInputElement).value)"
-                     @blur="isTxEditing = false"
-                     @keyup.enter="isTxEditing = false"
-                     style="background: transparent; border: none; color: inherit; font: inherit; width: 60px;">
-              <span v-else>({{ rigStore.txFrequency }})</span>
-            </span>
+            <template v-if="rigStore.splitActive">
+              <span class="tx-freq" @click.stop="isTxEditing = true">
+                <input v-if="isTxEditing"
+                       type="text"
+                       :value="rigStore.txFrequency"
+                       @input="e => rigStore.setTxFrequency((e.target as HTMLInputElement).value)"
+                       @blur="isTxEditing = false"
+                       @keyup.enter="isTxEditing = false"
+                       style="background: transparent; border: none; color: inherit; font: inherit; width: 60px;">
+                <span v-else>({{ rigStore.txFrequency }})</span>
+              </span>
+            </template>
             <span class="freq-unit">{{ unit }}</span>
           </template>
         </div>
