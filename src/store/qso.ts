@@ -18,7 +18,7 @@ export const useQsoStore = defineStore("qso", {
   state: () => ({
     currentSession: [] as QsoEntry[],
     allQsos: [] as QsoEntry[],
-    currentUTCTime: '',
+    currentUTCTime: "",
     qsoForm: {
       callsign: "",
       band: "40m",
@@ -33,19 +33,19 @@ export const useQsoStore = defineStore("qso", {
   }),
   actions: {
     addQso() {
-      const now = new Date(); 
-      const utcDateStr = now.toLocaleDateString('en-US', { 
-        timeZone: 'UTC',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
+      const now = new Date();
+      const utcDateStr = now.toLocaleDateString("en-US", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
       });
-      const utcTimeStr = now.toLocaleTimeString('en-US', {
-        timeZone: 'UTC',
+      const utcTimeStr = now.toLocaleTimeString("en-US", {
+        timeZone: "UTC",
         hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       });
       const rigStore = useRigStore();
 
@@ -89,12 +89,12 @@ export const useQsoStore = defineStore("qso", {
     },
     updateCurrentUTCTime() {
       const now = new Date();
-      this.currentUTCTime = now.toLocaleTimeString('en-US', {
-        timeZone: 'UTC',
+      this.currentUTCTime = now.toLocaleTimeString("en-US", {
+        timeZone: "UTC",
         hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       });
     },
   },
