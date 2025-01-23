@@ -1,7 +1,22 @@
 <script setup lang="ts">
 import { useQsoStore } from '../../store/qso'
+import { onMounted, ref } from 'vue'
 
 const qsoStore = useQsoStore()
+const callsignInput = ref<HTMLInputElement | null>(null)
+
+onMounted(() => {
+  callsignInput.value?.focus()
+})
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.shiftKey && e.key === 'Enter') {
+    e.preventDefault()
+    qsoStore.addQso()
+    // Refocus callsign input after adding QSO
+    callsignInput.value?.focus()
+  }
+}
 
 const bands = [
   { value: '10m', label: '10 m' },
@@ -21,8 +36,14 @@ const modes = [
     <div class="qso-input-content">
       <div class="qso-input-group">
         <label for="callsign">Callsign</label>
-        <input type="text" id="callsign" :value="qsoStore.qsoForm.callsign"
-          @input="(e) => qsoStore.updateQsoForm('callsign', (e.target as HTMLInputElement).value)" />
+        <input 
+          ref="callsignInput"
+          type="text" 
+          id="callsign" 
+          :value="qsoStore.qsoForm.callsign"
+          @input="(e) => qsoStore.updateQsoForm('callsign', (e.target as HTMLInputElement).value)"
+          @keydown="handleKeydown"
+        />
       </div>
 
       <div class="qso-input-group">
