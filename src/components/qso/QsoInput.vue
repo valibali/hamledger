@@ -127,7 +127,7 @@ export default {
       <div class="qso-input-group small">
         <label for="utc">UTC</label>
         <input type="text" id="utc" :value="qsoStore.qsoForm.utc"
-          @input="(e) => qsoStore.updateQsoForm('utc', (e.target as HTMLInputElement).value)" placeholder="13:33:12" />
+          @input="(e) => qsoStore.updateQsoForm('utc', (e.target as HTMLInputElement).value)" :placeholder="qsoStore.currentUTCTime" />
       </div>
 
       <div class="qso-input-group">
