@@ -49,23 +49,6 @@ export default {
       <div class="rig-buttons">
         <button class="reconnect" @click="handleReconnect">Reconnect</button>
         <button class="stop-btn" @click="handleDisconnect">Disconnect</button>
-        <button 
-          class="split-btn" 
-          :class="{ active: splitActive }"
-          @click="() => rigStore.toggleSplit()"
-        >
-          Split
-        </button>
-      </div>
-
-      <div class="rig-mode-badges">
-        <template v-for="mode in modes" :key="mode.value">
-          <input type="radio" :id="'mode-' + mode.value.toLowerCase()" :value="mode.value" v-model="selectedMode"
-            name="rig-mode" />
-          <label :for="'mode-' + mode.value.toLowerCase()" class="mode-badge">
-            {{ mode.label }}
-          </label>
-        </template>
       </div>
     </div>
   </div>

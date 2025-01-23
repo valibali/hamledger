@@ -94,6 +94,26 @@ export default {
           </template>
         </div>
       </div>
+
+      <div class="freq-controls">
+        <button 
+          class="mode-badge split-badge" 
+          :class="{ active: rigStore.splitActive }"
+          @click="rigStore.toggleSplit()"
+        >
+          TX SPLIT
+        </button>
+      </div>
+
+      <div class="rig-mode-badges">
+        <template v-for="mode in rigStore.modes" :key="mode.value">
+          <input type="radio" :id="'mode-' + mode.value.toLowerCase()" :value="mode.value" v-model="rigStore.selectedMode"
+            name="rig-mode" />
+          <label :for="'mode-' + mode.value.toLowerCase()" class="mode-badge">
+            {{ mode.label }}
+          </label>
+        </template>
+      </div>
     </div>
   </div>
 </template>

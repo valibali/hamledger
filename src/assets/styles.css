@@ -209,7 +209,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 1rem;
+}
+
+.freq-controls {
+  display: flex;
   gap: 0.5rem;
+  margin: 0.5rem 0;
 }
 .freq-display {
   display: flex;
