@@ -21,6 +21,27 @@ export default {
       }
     }
   },
+  data() {
+    const store = useQsoStore()
+    return {
+      qsoStore: store,
+      currentSession: store.currentSession,
+      allQsos: store.allQsos,
+      sessionCount: store.sessionCount,
+      totalCount: store.totalCount,
+      prefixMap: {
+        F: 'fr',
+        HB9: 'ch',
+        OK: 'cz',
+        DL: 'de',
+        G: 'gb',
+        EA: 'es'
+      },
+      resizing: null as HTMLElement | null,
+      startX: 0,
+      startWidth: 0
+    }
+  },
   methods: {
     getCountryCodeForCallsign(callsign: string): string {
       callsign = callsign.toUpperCase()
@@ -31,6 +52,26 @@ export default {
         }
       }
       return 'xx'
+    },
+    startResize(e: MouseEvent, th: HTMLElement) {
+      this.resizing = th;
+      this.startX = e.pageX;
+      this.startWidth = th.offsetWidth;
+      document.addEventListener('mousemove', this.resize);
+      document.addEventListener('mouseup', this.stopResize);
+    },
+    resize(e: MouseEvent) {
+      if (this.resizing) {
+        const width = this.startWidth + (e.pageX - this.startX);
+        if (width > 50) { // Minimum width
+          this.resizing.style.width = `${width}px`;
+        }
+      }
+    },
+    stopResize() {
+      this.resizing = null;
+      document.removeEventListener('mousemove', this.resize);
+      document.removeEventListener('mouseup', this.stopResize);
     }
   },
   watch: {
@@ -70,17 +111,17 @@ export default {
     <table class="qso-table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Time</th>
-          <th>Callsign</th>
-          <th>Band</th>
-          <th>Freq. RX</th>
-          <th>Freq. TX</th>
-          <th>Mode</th>
-          <th>RSTr</th>
-          <th>RSTr</th>
-          <th>Remark</th>
-          <th>Notes</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Date</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Time</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Callsign</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Band</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Freq. RX</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Freq. TX</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Mode</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">RSTr</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">RSTr</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Remark</th>
+          <th @mousedown="(e) => startResize(e, $event.target)">Notes</th>
         </tr>
       </thead>
       <tbody>
