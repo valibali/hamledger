@@ -155,6 +155,20 @@ body {
   border-radius: 3px;
 }
 
+.split-btn {
+  background: transparent;
+  border: 1px solid var(--main-color);
+  padding: 0.2rem 0.5rem;
+  color: var(--main-color);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.split-btn.active {
+  background: var(--main-color);
+  color: #000;
+}
+
 /* Mode badges */
 .rig-mode-badges {
   display: inline-flex;

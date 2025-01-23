@@ -46,6 +46,13 @@ export default {
       <div class="rig-buttons">
         <button class="reconnect" @click="handleReconnect">Reconnect</button>
         <button class="stop-btn" @click="handleDisconnect">Disconnect</button>
+        <button 
+          class="split-btn" 
+          :class="{ active: rigStore.splitActive }"
+          @click="rigStore.toggleSplit"
+        >
+          Split
+        </button>
       </div>
 
       <div class="rig-mode-badges">
