@@ -47,6 +47,11 @@ export default {
   mounted() {
     this.$nextTick(() => {
       this.focusCallsignInput()
+      // Start updating UTC time
+      this.qsoStore.updateCurrentUTCTime()
+      setInterval(() => {
+        this.qsoStore.updateCurrentUTCTime()
+      }, 1000)
     })
   },
   methods: {

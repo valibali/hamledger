@@ -18,6 +18,7 @@ export const useQsoStore = defineStore("qso", {
   state: () => ({
     currentSession: [] as QsoEntry[],
     allQsos: [] as QsoEntry[],
+    currentUTCTime: '',
     qsoForm: {
       callsign: "",
       band: "40m",
@@ -85,6 +86,16 @@ export const useQsoStore = defineStore("qso", {
     },
     updateQsoForm(field: keyof typeof this.qsoForm, value: string) {
       this.qsoForm[field] = value;
+    },
+    updateCurrentUTCTime() {
+      const now = new Date();
+      this.currentUTCTime = now.toLocaleTimeString('en-US', {
+        timeZone: 'UTC',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
     },
   },
   getters: {
