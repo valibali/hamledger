@@ -17,26 +17,10 @@ export default {
         OK: 'cz',
         DL: 'de',
         G: 'gb',
-        EA: 'es'
+        EA: 'es',
+        HA: 'hu',
+        HG: ''
       }
-    }
-  },
-  data() {
-    const store = useQsoStore()
-    return {
-      qsoStore: store,
-      currentSession: store.currentSession,
-      allQsos: store.allQsos,
-      sessionCount: store.sessionCount,
-      totalCount: store.totalCount,
-      prefixMap: {
-        F: 'fr',
-        HB9: 'ch',
-        OK: 'cz',
-        DL: 'de',
-        G: 'gb',
-        EA: 'es'
-      },
     }
   },
   methods: {
@@ -103,7 +87,7 @@ export default {
       </thead>
       <tbody>
         <tr v-for="entry in currentSession" :key="entry.callsign + entry.datetime">
-          <td>{{ new Date(entry.datetime).toLocaleDateString('en-US', { 
+          <td>{{ new Date(entry.datetime).toLocaleDateString('en-US', {
             timeZone: 'UTC',
             year: 'numeric',
             month: '2-digit',
@@ -117,20 +101,17 @@ export default {
             second: '2-digit'
           }) }}</td>
           <td>
-            <img
-              v-if="getCountryCodeForCallsign(entry.callsign) !== 'xx'"
+            <img v-if="getCountryCodeForCallsign(entry.callsign) !== 'xx'"
               :src="`https://flagcdn.com/h40/${getCountryCodeForCallsign(entry.callsign)}.png`"
-              :alt="getCountryCodeForCallsign(entry.callsign)"
-              class="callsign-flag"
-            />
+              :alt="getCountryCodeForCallsign(entry.callsign)" class="callsign-flag" />
             {{ entry.callsign }}
           </td>
           <td>{{ entry.band }}</td>
           <td>{{ entry.freqRx }}</td>
           <td>{{ entry.freqTx }}</td>
           <td>{{ entry.mode }}</td>
-          <td>{{ entry.rstr1 }}</td>
-          <td>{{ entry.rstr2 }}</td>
+          <td>{{ entry.rstr }}</td>
+          <td>{{ entry.rstt }}</td>
           <td>{{ entry.remark }}</td>
           <td>{{ entry.notes }}</td>
         </tr>
