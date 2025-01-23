@@ -62,9 +62,9 @@ export const useQsoStore = defineStore("qso", {
         newQso.freqTx = parseFloat(rigStore.txFrequency);
       }
 
-      // Only add optional fields if they have content
-      if (this.qsoForm.rstr) newQso.rstr = this.qsoForm.rstr;
-      if (this.qsoForm.rstt) newQso.rstt = this.qsoForm.rstt;
+      // Use form values or defaults for RST
+      newQso.rstr = this.qsoForm.rstr || "59";
+      newQso.rstt = this.qsoForm.rstt || "59";
       if (this.qsoForm.remark?.trim()) newQso.remark = this.qsoForm.remark;
       if (this.qsoForm.notes?.trim()) newQso.notes = this.qsoForm.notes;
 
