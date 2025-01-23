@@ -50,26 +50,6 @@ export default {
       }
       return 'xx'
     },
-    startResize(e: MouseEvent, th: HTMLElement) {
-      this.resizing = th;
-      this.startX = e.pageX;
-      this.startWidth = th.offsetWidth;
-      document.addEventListener('mousemove', this.resize);
-      document.addEventListener('mouseup', this.stopResize);
-    },
-    resize(e: MouseEvent) {
-      if (this.resizing) {
-        const width = this.startWidth + (e.pageX - this.startX);
-        if (width > 50) { // Minimum width
-          this.resizing.style.width = `${width}px`;
-        }
-      }
-    },
-    stopResize() {
-      this.resizing = null;
-      document.removeEventListener('mousemove', this.resize);
-      document.removeEventListener('mouseup', this.stopResize);
-    }
   },
   watch: {
     'qsoStore.currentSession': {
