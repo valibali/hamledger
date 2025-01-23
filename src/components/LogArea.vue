@@ -70,6 +70,8 @@ export default {
     <table class="qso-table">
       <thead>
         <tr>
+          <th>Date</th>
+          <th>Time</th>
           <th>Callsign</th>
           <th>Band</th>
           <th>Freq. RX</th>
@@ -77,7 +79,6 @@ export default {
           <th>Mode</th>
           <th>RSTr</th>
           <th>RSTr</th>
-          <th>Date/Time</th>
           <th>Remark</th>
           <th>Notes</th>
         </tr>
@@ -99,7 +100,8 @@ export default {
           <td>{{ entry.mode }}</td>
           <td>{{ entry.rstr1 }}</td>
           <td>{{ entry.rstr2 }}</td>
-          <td>{{ entry.datetime }}</td>
+          <td>{{ new Date(entry.datetime).toLocaleDateString() }}</td>
+          <td>{{ new Date(entry.datetime).toLocaleTimeString() }}</td>
           <td>{{ entry.remark }}</td>
           <td>{{ entry.notes }}</td>
         </tr>
