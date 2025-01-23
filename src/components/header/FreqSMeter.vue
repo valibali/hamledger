@@ -1,4 +1,6 @@
 <script lang="ts">
+
+/* Bring this to the store once the rig control is implemented */
 interface MajorTick {
   label: string;
   color: string;

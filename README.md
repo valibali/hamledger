@@ -100,3 +100,7 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE) wi
 - The Vue.js team for the amazing framework
 - The Electron team for making cross-platform desktop apps possible
 - The amateur radio community for inspiration and feedback
+
+
+All the best, 
+HA5XB Balazs
