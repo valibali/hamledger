@@ -85,6 +85,8 @@ export default {
       </thead>
       <tbody>
         <tr v-for="entry in currentSession" :key="entry.callsign + entry.datetime">
+          <td>{{ new Date(entry.datetime).toLocaleDateString() }}</td>
+          <td>{{ new Date(entry.datetime).toLocaleTimeString() }}</td>
           <td>
             <img
               v-if="getCountryCodeForCallsign(entry.callsign) !== 'xx'"
@@ -100,8 +102,6 @@ export default {
           <td>{{ entry.mode }}</td>
           <td>{{ entry.rstr1 }}</td>
           <td>{{ entry.rstr2 }}</td>
-          <td>{{ new Date(entry.datetime).toLocaleDateString() }}</td>
-          <td>{{ new Date(entry.datetime).toLocaleTimeString() }}</td>
           <td>{{ entry.remark }}</td>
           <td>{{ entry.notes }}</td>
         </tr>
