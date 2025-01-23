@@ -44,6 +44,10 @@ export const useRigStore = defineStore('rig', {
     },
     toggleSplit() {
       this.splitActive = !this.splitActive
+      if (!this.splitActive) {
+        // When disabling split, set TX frequency same as RX
+        this.txFrequency = this.frequency
+      }
       // TODO: Send split command to rig
     }
   }

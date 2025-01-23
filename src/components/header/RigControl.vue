@@ -22,6 +22,9 @@ export default {
     },
     rigModel() {
       return this.rigStore.rigModel
+    },
+    splitActive() {
+      return this.rigStore.splitActive
     }
   },
   methods: {
@@ -48,8 +51,8 @@ export default {
         <button class="stop-btn" @click="handleDisconnect">Disconnect</button>
         <button 
           class="split-btn" 
-          :class="{ active: rigStore.splitActive }"
-          @click="rigStore.toggleSplit"
+          :class="{ active: splitActive }"
+          @click="() => rigStore.toggleSplit()"
         >
           Split
         </button>
