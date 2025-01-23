@@ -47,7 +47,13 @@ export default {
   <div class="header-center freq-s-meter">
     <div class="freq-s-meter-content">
       <div class="freq-display">
-        <span v-if="rigStore.splitActive" class="split-badge">SPLIT</span>
+        <button 
+          class="split-badge mode-badge" 
+          :class="{ active: rigStore.splitActive }"
+          @click="rigStore.toggleSplit()"
+        >
+          TX SPLIT
+        </button>
         <div class="rig-frequency" @click="isEditing = true">
           <div class="freq-main">
             <input v-if="isEditing" 
@@ -95,15 +101,6 @@ export default {
         </div>
       </div>
 
-      <div class="freq-controls">
-        <button 
-          class="mode-badge split-badge" 
-          :class="{ active: rigStore.splitActive }"
-          @click="rigStore.toggleSplit()"
-        >
-          TX SPLIT
-        </button>
-      </div>
 
       <div class="rig-mode-badges">
         <template v-for="mode in rigStore.modes" :key="mode.value">
