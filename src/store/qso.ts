@@ -25,13 +25,6 @@ export const useQsoStore = defineStore("qso", {
     allQsos: [] as QsoEntry[],
     currentUTCTime: "",
     initialized: false,
-  }),
-  actions: {
-    async init() {
-      if (!this.initialized) {
-        await this.initializeStore();
-      }
-    },
     qsoForm: {
       callsign: "",
       band: "40m",
@@ -42,9 +35,14 @@ export const useQsoStore = defineStore("qso", {
       utc: "",
       remark: "",
       notes: "",
-    },
+    }
   }),
   actions: {
+    async init() {
+      if (!this.initialized) {
+        await this.initializeStore();
+      }
+    },
     async addQso() {
       const now = new Date();
       const utcDateStr = now.toLocaleDateString("en-US", {
