@@ -1,5 +1,7 @@
 <script lang="ts">
 import { useQsoStore } from '../../store/qso'
+import { useRigStore } from '../../store/rig';
+import { BAND_RANGES, getBandFromFrequency } from '../../utils/bands';
 
 export default {
   name: 'QsoInput',
