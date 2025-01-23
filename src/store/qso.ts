@@ -5,7 +5,7 @@ interface QsoEntry {
   callsign: string;
   band: string;
   freqRx: number;
-  freqTx?: number;
+  freqTx?: number | string;
   mode: string;
   rstr?: string;
   rstt?: string;
@@ -58,7 +58,9 @@ export const useQsoStore = defineStore("qso", {
       };
 
       // Handle TX frequency
-      newQso.freqTx = rigStore.splitActive ? parseFloat(rigStore.txFrequency) : "--";
+      newQso.freqTx = rigStore.splitActive
+        ? parseFloat(rigStore.txFrequency)
+        : "--";
 
       // Use form values or defaults for RST
       newQso.rstr = this.qsoForm.rstr || "59";
