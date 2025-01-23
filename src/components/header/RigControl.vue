@@ -55,17 +55,9 @@ export default {
 
       <div class="rig-mode-badges">
         <template v-for="mode in modes" :key="mode.value">
-          <input 
-            type="radio" 
-            :id="'mode-' + mode.value.toLowerCase()" 
-            :value="mode.value"
-            v-model="selectedMode"
-            name="rig-mode"
-          />
-          <label 
-            :for="'mode-' + mode.value.toLowerCase()" 
-            class="mode-badge"
-          >
+          <input type="radio" :id="'mode-' + mode.value.toLowerCase()" :value="mode.value" v-model="selectedMode"
+            name="rig-mode" />
+          <label :for="'mode-' + mode.value.toLowerCase()" class="mode-badge">
             {{ mode.label }}
           </label>
         </template>
