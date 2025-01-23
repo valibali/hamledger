@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
 import { useRigStore } from "./rig";
-import PouchDB from 'pouchdb-browser';
+import PouchDB from "pouchdb-browser";
 
-const db = new PouchDB<QsoEntry>('hamlogger');
+const db = new PouchDB<QsoEntry>("hamlogger");
 
 interface QsoEntry {
   _id?: string;
@@ -38,7 +38,7 @@ export const useQsoStore = defineStore("qso", {
     },
   }),
   actions: {
-    addQso() {
+    async addQso() {
       const now = new Date();
       const utcDateStr = now.toLocaleDateString("en-US", {
         timeZone: "UTC",
@@ -78,15 +78,15 @@ export const useQsoStore = defineStore("qso", {
       try {
         const response = await db.post({
           ...newQso,
-          _id: new Date().toISOString()
+          _id: new Date().toISOString(),
         });
-        
+
         if (response.ok) {
           this.currentSession.push(newQso);
           this.allQsos.push(newQso);
         }
       } catch (error) {
-        console.error('Failed to save QSO:', error);
+        console.error("Failed to save QSO:", error);
       }
 
       // Reset form
@@ -110,12 +110,12 @@ export const useQsoStore = defineStore("qso", {
         try {
           const result = await db.allDocs({
             include_docs: true,
-            attachments: true
+            attachments: true,
           });
-          this.allQsos = result.rows.map(row => row.doc as QsoEntry);
+          this.allQsos = result.rows.map((row) => row.doc as QsoEntry);
           this.initialized = true;
         } catch (error) {
-          console.error('Failed to initialize QSO store:', error);
+          console.error("Failed to initialize QSO store:", error);
         }
       }
     },
