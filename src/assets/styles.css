@@ -225,7 +225,6 @@ input:hover {
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem;
-  min-width: 33.333%;
 }
 /* Additional container below the title if needed */
 .freq-s-meter-content {
