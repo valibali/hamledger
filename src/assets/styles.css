@@ -197,7 +197,6 @@ input:hover {
   font-size: 0.9rem;
   text-transform: uppercase;
   border: 1px solid var(--main-color);
-  transition: background 0.2s, color 0.2s;
 }
 
 .rig-mode-badges input[type="radio"]:checked + .mode-badge {
