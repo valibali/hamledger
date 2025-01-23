@@ -4,12 +4,24 @@ import { useRigStore } from '../../store/rig'
 export default {
   name: 'RigControl',
   data() {
-    const store = useRigStore()
     return {
-      rigStore: store,
-      modes: store.modes,
-      selectedMode: store.selectedMode,
-      rigModel: store.rigModel
+      rigStore: useRigStore()
+    }
+  },
+  computed: {
+    modes() {
+      return this.rigStore.modes
+    },
+    selectedMode: {
+      get() {
+        return this.rigStore.selectedMode
+      },
+      set(newMode: string) {
+        this.rigStore.setMode(newMode)
+      }
+    },
+    rigModel() {
+      return this.rigStore.rigModel
     }
   },
   methods: {
@@ -18,23 +30,6 @@ export default {
     },
     handleDisconnect() {
       this.rigStore.handleDisconnect()
-    }
-  },
-  watch: {
-    'rigStore.modes': {
-      handler(newModes) {
-        this.modes = newModes
-      },
-      deep: true
-    },
-    'rigStore.selectedMode'(newMode) {
-      this.selectedMode = newMode
-    },
-    'selectedMode'(newMode) {
-      this.rigStore.setMode(newMode)
-    },
-    'rigStore.rigModel'(newModel) {
-      this.rigModel = newModel
     }
   }
 }
