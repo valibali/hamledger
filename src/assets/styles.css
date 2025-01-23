@@ -109,7 +109,6 @@ input:hover {
 .app-header {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   background: #333;
   padding: 1rem;
   border-radius: 5px;
@@ -121,6 +120,8 @@ input:hover {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  align-items: flex-start;
 }
 
 /* Just a container to keep the content below the title */
@@ -223,6 +224,7 @@ input:hover {
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem;
+  min-width: 33.333%;
 }
 /* Additional container below the title if needed */
 .freq-s-meter-content {
@@ -342,6 +344,7 @@ input:hover {
   flex-direction: column;
   gap: 0.5rem;
   align-items: flex-end;
+  flex: 1;
 }
 /* Additional container to keep content below the title */
 .prop-clock-weather-content {
