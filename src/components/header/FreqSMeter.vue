@@ -1,4 +1,5 @@
 <script lang="ts">
+import { useRigStore } from '../../store/rig'
 
 /* Bring this to the store once the rig control is implemented */
 interface MajorTick {
@@ -9,10 +10,12 @@ interface MajorTick {
 export default {
   name: 'FreqSMeter',
   data() {
+    const store = useRigStore()
     return {
-      frequency: '7.093',
-      unit: 'kHz',
+      rigStore: store,
       isEditing: false,
+      isTxEditing: false,
+      unit: 'kHz',
       majorTicks: [
         { label: "S1", color: "white" },
         { label: "S3", color: "white" },
@@ -43,11 +46,31 @@ export default {
 <template>
   <div class="header-center freq-s-meter">
     <div class="freq-s-meter-content">
-      <div class="rig-frequency" @click="isEditing = true">
-        <input v-if="isEditing" type="text" v-model="frequency" @blur="isEditing = false"
-          @keyup.enter="isEditing = false"
-          style="background: transparent; border: none; color: inherit; font: inherit; text-align: right; width: 80px;">
-        <span v-else>{{ frequency }} {{ unit }}</span>
+      <div class="freq-display">
+        <span v-if="rigStore.splitActive" class="split-badge">SPLIT</span>
+        <div class="rig-frequency" @click="isEditing = true">
+          <input v-if="isEditing" 
+                 type="text" 
+                 :value="rigStore.frequency"
+                 @input="e => rigStore.setFrequency((e.target as HTMLInputElement).value)"
+                 @blur="isEditing = false"
+                 @keyup.enter="isEditing = false"
+                 style="background: transparent; border: none; color: inherit; font: inherit; text-align: right; width: 80px;">
+          <template v-else>
+            <span>{{ rigStore.frequency }}</span>
+            <span v-if="rigStore.splitActive" class="tx-freq" @click.stop="isTxEditing = true">
+              <input v-if="isTxEditing"
+                     type="text"
+                     :value="rigStore.txFrequency"
+                     @input="e => rigStore.setTxFrequency((e.target as HTMLInputElement).value)"
+                     @blur="isTxEditing = false"
+                     @keyup.enter="isTxEditing = false"
+                     style="background: transparent; border: none; color: inherit; font: inherit; width: 60px;">
+              <span v-else>({{ rigStore.txFrequency }})</span>
+            </span>
+            <span class="freq-unit">{{ unit }}</span>
+          </template>
+        </div>
       </div>
 
       <div class="s-meter">

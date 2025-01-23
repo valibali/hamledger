@@ -197,11 +197,40 @@ body {
   align-items: center;
   gap: 0.5rem;
 }
+.freq-display {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.split-badge {
+  background: transparent;
+  color: var(--main-color);
+  border: 1px solid var(--main-color);
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
 .rig-frequency {
   font-size: 3rem;
   font-weight: bold;
   color: #ffffff;
-  margin-bottom: 1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.tx-freq {
+  font-size: 1.5rem;
+  color: var(--main-color);
+  cursor: pointer;
+}
+
+.freq-unit {
+  font-size: 2rem;
 }
 /* S-meter */
 .s-meter {

@@ -16,7 +16,9 @@ export const useRigStore = defineStore('rig', {
       { value: 'DATA', label: 'DATA' }
     ] as Mode[],
     selectedMode: 'CW',
-    frequency: '7.093 kHz',
+    frequency: '7.093',
+    txFrequency: '7.095',
+    splitActive: false,
     rigModel: 'YAESU FT-450A'
   }),
   actions: {
@@ -35,6 +37,14 @@ export const useRigStore = defineStore('rig', {
     setFrequency(freq: string) {
       this.frequency = freq
       // TODO: Send frequency change command to rig
+    },
+    setTxFrequency(freq: string) {
+      this.txFrequency = freq
+      // TODO: Send TX frequency change command to rig
+    },
+    toggleSplit() {
+      this.splitActive = !this.splitActive
+      // TODO: Send split command to rig
     }
   }
 })
