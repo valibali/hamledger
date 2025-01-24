@@ -53,13 +53,13 @@ export default {
 <template>
   <main class="log-container">
     <h2 class="section-title">Log Area</h2>
-    <nav class="tab-nav">
-      <button class="tab-btn active">New session</button>
+    <div class="log-header">
       <div class="qso-count">
         <span>This session: {{ sessionCount }} QSO</span>
         <span>All: {{ totalCount }} QSO</span>
+        <button class="tab-btn active">New session</button>
       </div>
-    </nav>
+    </div>
 
     <table class="qso-table">
       <thead>

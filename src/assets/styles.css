@@ -543,28 +543,13 @@ input:hover {
   border-radius: 5px;
   padding: 1rem;
 }
-.tab-nav {
+.log-header {
   display: flex;
-  align-items: center;
-  background: #333;
-  border-radius: 5px 5px 0 0;
+  justify-content: flex-end;
   margin-bottom: 1rem;
 }
-.tab-btn {
-  background: #444;
-  border: none;
-  color: var(--gray-color);
-  padding: 0.6rem 1rem;
-  cursor: pointer;
-  border-radius: 3px;
-  margin-right: 0.5rem;
-}
-.tab-btn.active {
-  background: var(--main-color);
-  color: #000;
-}
+
 .qso-count {
-  margin-left: auto;
   background: #444;
   border: 1px solid #777;
   padding: 0.5rem 1rem;
@@ -573,8 +558,23 @@ input:hover {
   font-size: 0.9rem;
   color: var(--gray-color);
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tab-btn {
+  background: #444;
+  border: none;
+  color: var(--gray-color);
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  border-radius: 3px;
+  margin-left: 1rem;
+}
+
+.tab-btn.active {
+  background: var(--main-color);
+  color: #000;
 }
 
 /* QSO Table */
