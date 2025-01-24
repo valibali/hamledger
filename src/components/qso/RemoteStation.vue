@@ -18,14 +18,14 @@ export default {
     isValid() {
       return this.qsoStore.isCallsignValid
     },
-    async stationData() {
+    async stationData(): Promise<StationData> {
       if (this.isValid && this.callsign) {
         if (!this.stationDataCache) {
-          this.stationDataCache = await fetchQRZData(this.callsign)
+          this.stationDataCache = fetchQRZData(this.callsign)
         }
         return this.stationDataCache
       }
-      
+
       return {
         flag: '',
         name: '',
@@ -49,11 +49,7 @@ export default {
     <div v-if="isValid && callsign" class="remote-station-boxes">
       <!-- Box 1: Station details -->
       <div class="station-block station-remote">
-        <img v-if="stationData.flag"
-          :src="stationData.flag"
-          :alt="stationData.country"
-          class="station-flag"
-        />
+        <img v-if="stationData.flag" :src="stationData.flag" :alt="stationData.country" class="station-flag" />
         <div class="station-info">
           <p class="station-name">Remote: {{ stationData.name || 'Loading...' }}</p>
           <p class="station-qth">QTH: {{ stationData.qth || 'Loading...' }}</p>
