@@ -11,12 +11,16 @@ export default {
     }
   },
   computed: {
+    callsign() {
+      return this.qsoStore.qsoForm.callsign
+    },
+    isValid() {
+      return this.qsoStore.isCallsignValid
+    },
     async stationData() {
-      const callsign = this.qsoStore.qsoForm.callsign
-      
-      if (this.qsoStore.isCallsignValid && callsign) {
+      if (this.isValid && this.callsign) {
         if (!this.stationDataCache) {
-          this.stationDataCache = await fetchQRZData(callsign)
+          this.stationDataCache = await fetchQRZData(this.callsign)
         }
         return this.stationDataCache
       }
@@ -30,7 +34,7 @@ export default {
     }
   },
   watch: {
-    'qsoStore.qsoForm.callsign'() {
+    callsign() {
       // Reset cache when callsign changes
       this.stationDataCache = null
     }
@@ -41,7 +45,7 @@ export default {
 <template>
   <section class="remote-station-section">
     <h2 class="section-title">Remote Station</h2>
-    <div v-if="qsoStore.isCallsignValid && qsoStore.qsoForm.callsign" class="remote-station-boxes">
+    <div v-if="isValid && callsign" class="remote-station-boxes">
       <!-- Box 1: Station details -->
       <div class="station-block station-remote">
         <img v-if="stationData.flag"
