@@ -7,17 +7,12 @@ declare global {
     electronAPI: {
       addQso: (qso: any) => Promise<any>;
       getAllDocs: () => Promise<any>;
-    }
+    };
   }
 }
 
-const CALLSIGN_REGEX = /^(([A-Z]{1,2}[0-9]{1,4}[A-Z]{1,3})|([0-9]{1,2}[A-Z]{1,4}))$/;
-
-export function isValidCallsign(callsign: string): boolean {
-  return CALLSIGN_REGEX.test(callsign.toUpperCase());
-}
-
-const CALLSIGN_REGEX = /((2[A-Z]{1,2}|[BFGIKMNRW][A-Z]{0,2}|3[A-CE-Z][A-Z]{0,1}|4[A-MO-Z][A-Z]{0,1}|[5-9OUX][A-Z][A-Z]{0,1})([0-9][0-9A-Z]{0,3}[A-Z])|([ACDLP][2-9A-Z][A-Z]{0,1}|E[2-7A-Z][A-Z]{0,1}|H[2-46-9A-Z][A-Z]{0,1}|[JTV][2-8A-Z][A-Z]{0,1}|S[2-35-9A-RT-Z][A-Z]{0,1}|Y[2-9A-Y][A-Z]{0,1}|Z[238A-Z][A-Z]{0,1})([0-9A-Z]{0,3}[A-Z]))/;
+const CALLSIGN_REGEX =
+  /^(([A-Z]{1,2}[0-9]{1,4}[A-Z]{1,3})|([0-9]{1,2}[A-Z]{1,4}))$/;
 
 export function isValidCallsign(callsign: string): boolean {
   return CALLSIGN_REGEX.test(callsign.toUpperCase());
@@ -58,28 +53,28 @@ export const useQsoStore = defineStore("qso", {
     currentUTCTime: "",
     initialized: false,
     stationInfo: {
-      flag: 'https://flagcdn.com/h80/hu.png',
-      name: 'JOHN DOE',
-      weather: '19°C, Cloudy',
-      qth: 'New York, NY',
-      localTime: '22:15',
+      flag: "https://flagcdn.com/h80/hu.png",
+      name: "JOHN DOE",
+      weather: "19°C, Cloudy",
+      qth: "New York, NY",
+      localTime: "22:15",
       greetings: [
         {
-          label: 'Appropriate greeting',
-          greeting: 'Hello',
-          ipa: 'həˈləʊ'
+          label: "Appropriate greeting",
+          greeting: "Hello",
+          ipa: "həˈləʊ",
         },
         {
-          label: 'Thank you',
-          greeting: 'Thanks',
-          ipa: 'θæŋks'
+          label: "Thank you",
+          greeting: "Thanks",
+          ipa: "θæŋks",
         },
         {
-          label: 'Good luck',
-          greeting: 'Good luck',
-          ipa: 'ɡʊd lʌk'
-        }
-      ]
+          label: "Good luck",
+          greeting: "Good luck",
+          ipa: "ɡʊd lʌk",
+        },
+      ],
     } as StationInfo,
     qsoForm: {
       callsign: "",
@@ -91,7 +86,7 @@ export const useQsoStore = defineStore("qso", {
       utc: "",
       remark: "",
       notes: "",
-    }
+    },
   }),
   actions: {
     async init() {
@@ -196,7 +191,9 @@ export const useQsoStore = defineStore("qso", {
     sessionCount: (state) => state.currentSession.length,
     totalCount: (state) => state.allQsos.length,
     isCallsignValid: (state) => {
-      return state.qsoForm.callsign ? isValidCallsign(state.qsoForm.callsign) : true;
-    }
+      return state.qsoForm.callsign
+        ? isValidCallsign(state.qsoForm.callsign)
+        : true;
+    },
   },
 });
