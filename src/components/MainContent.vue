@@ -16,6 +16,11 @@ export default {
   setup() {
     const currentView = ref('qso')
     return { currentView }
+  },
+  methods: {
+    handleViewChange(view: string) {
+      this.currentView = view;
+    }
   }
 }
 </script>

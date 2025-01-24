@@ -18,8 +18,8 @@ export default {
 
 <template>
   <div class="app-container">
-    <Sidebar />
-    <MainContent />
+    <Sidebar @view-change="(view) => $refs.mainContent.handleViewChange(view)" />
+    <MainContent ref="mainContent" />
   </div>
 </template>
 
