@@ -52,8 +52,8 @@ export default {
 
 <template>
   <main class="log-container">
-    <h2 class="section-title">Log Area</h2>
     <div class="log-header">
+      <h2 class="section-title">Log Area</h2>
       <div class="qso-count">
         <span>This session: {{ sessionCount }} QSO</span>
         <span>All: {{ totalCount }} QSO</span>

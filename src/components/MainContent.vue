@@ -27,8 +27,8 @@ export default {
 
 <template>
   <div class="main-content">
-    <AppHeader />
     <template v-if="currentView === 'qso'">
+      <AppHeader />
       <QsoPanel />
       <LogArea />
     </template>

@@ -545,7 +545,7 @@ input:hover {
 }
 .log-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   margin-bottom: 1rem;
 }
 
@@ -560,6 +560,7 @@ input:hover {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-left: auto;
 }
 
 .tab-btn {

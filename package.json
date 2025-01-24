@@ -55,10 +55,11 @@
     "@types/pouchdb-browser": "^6.1.5",
     "events": "^3.3.0",
     "pinia": "^2.1.7",
-    "pouchdb-browser": "^9.0.0",
+    "pouchdb": "^9.0.0",
     "vue": "^3.2.25"
   },
   "devDependencies": {
+    "@types/pouchdb": "^6.4.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/test-utils": "^2.4.3",
     "concurrently": "^7.2.2",
