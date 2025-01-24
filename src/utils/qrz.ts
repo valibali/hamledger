@@ -1,12 +1,6 @@
-interface QRZResponse {
-  flag?: string;
-  name?: string;
-  qth?: string;
-  country?: string;
-  error?: string;
-}
+import { StationData } from '../types/station'
 
-export async function fetchQRZData(callsign: string): Promise<QRZResponse> {
+export async function fetchQRZData(callsign: string): Promise<StationData> {
   try {
     // TODO: Implement actual QRZ.com API integration
     // This is a mock implementation for now

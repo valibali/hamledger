@@ -1,13 +1,14 @@
 <script lang="ts">
 import { useQsoStore } from '../../store/qso'
 import { fetchQRZData } from '../../utils/qrz'
+import { StationData } from '../../types/station'
 
 export default {
   name: 'RemoteStation',
   data() {
     return {
       qsoStore: useQsoStore(),
-      stationDataCache: null as any
+      stationDataCache: null as StationData | null
     }
   },
   computed: {
