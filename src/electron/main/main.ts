@@ -1,8 +1,19 @@
 // src/electron/main/main.ts
 import { join } from "path";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
+import PouchDB from 'pouchdb';
+import fs from 'fs';
 
 const isDev = process.env.npm_lifecycle_event === "app:dev" ? true : false;
+
+// Initialize PouchDB
+const dbPath = join(app.getPath('userData'), 'hamlogger.db');
+const db = new PouchDB(dbPath);
+
+// Ensure the database directory exists
+if (!fs.existsSync(dbPath)) {
+  fs.mkdirSync(dbPath, { recursive: true });
+}
 
 function createWindow() {
   // Create the browser window.
@@ -29,9 +40,33 @@ function createWindow() {
   // );
 }
 
+// Set up IPC handlers for database operations
+ipcMain.handle('qso:add', async (_, qso) => {
+  try {
+    const response = await db.post(qso);
+    // Write to JSON file as backup
+    const jsonPath = join(app.getPath('userData'), 'hamlogger.json');
+    const allDocs = await db.allDocs({ include_docs: true });
+    const jsonData = allDocs.rows.map(row => row.doc);
+    fs.writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2));
+    return { ok: true, id: response.id };
+  } catch (error) {
+    console.error('Failed to save QSO:', error);
+    return { ok: false, error };
+  }
+});
+
+ipcMain.handle('qso:getAllDocs', async () => {
+  try {
+    return await db.allDocs({ include_docs: true });
+  } catch (error) {
+    console.error('Failed to get all docs:', error);
+    return { rows: [] };
+  }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   createWindow();
   app.on("activate", function () {

@@ -1,8 +1,6 @@
 import { defineStore } from "pinia";
 import { useRigStore } from "./rig";
-import PouchDB from "pouchdb-browser";
-
-const db = new PouchDB<QsoEntry>("hamlogger");
+import { ipcRenderer } from 'electron';
 
 interface QsoEntry {
   _id?: string;
@@ -79,9 +77,9 @@ export const useQsoStore = defineStore("qso", {
       newQso.remark = this.qsoForm.remark?.trim() || "--";
       newQso.notes = this.qsoForm.notes?.trim() || "--";
 
-      // Save to PouchDB and update state
+      // Send to main process to save
       try {
-        const response = await db.post({
+        const response = await ipcRenderer.invoke('qso:add', {
           ...newQso,
           _id: new Date().toISOString(),
         });
@@ -113,10 +111,7 @@ export const useQsoStore = defineStore("qso", {
     async initializeStore() {
       if (!this.initialized) {
         try {
-          const result = await db.allDocs({
-            include_docs: true,
-            attachments: true,
-          });
+          const result = await ipcRenderer.invoke('qso:getAllDocs');
           this.allQsos = result.rows.map((row) => row.doc as QsoEntry);
           this.initialized = true;
         } catch (error) {
