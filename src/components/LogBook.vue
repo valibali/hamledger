@@ -1,5 +1,6 @@
 <script lang="ts">
 import { useQsoStore } from '../store/qso'
+import { getCountryCodeForCallsign } from '../utils/callsign'
 
 export default {
   name: 'LogBook',
@@ -16,27 +17,6 @@ export default {
     }
   },
   methods: {
-    getCountryCodeForCallsign(callsign: string): string {
-      const prefixMap: { [key: string]: string } = {
-        F: 'fr',
-        HB9: 'ch',
-        OK: 'cz',
-        DL: 'de',
-        G: 'gb',
-        EA: 'es',
-        HA: 'hu',
-        HG: 'hu'
-      }
-      
-      callsign = callsign.toUpperCase()
-      const knownPrefixes = Object.keys(prefixMap).sort((a, b) => b.length - a.length)
-      for (const prefix of knownPrefixes) {
-        if (callsign.startsWith(prefix)) {
-          return prefixMap[prefix]
-        }
-      }
-      return 'xx'
-    }
   }
 }
 </script>
