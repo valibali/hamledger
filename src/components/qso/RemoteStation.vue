@@ -57,7 +57,7 @@ export default {
         <div class="station-info">
           <p class="station-name">Remote: {{ qrzData.name || 'Loading...' }}</p>
           <p class="station-qth">QTH: {{ qrzData.qth || 'Loading...' }}</p>
-          <p v-if="stationData.country" class="station-country">Country: {{ stationData.country }}</p>
+          <p class="station-country">Country: {{ stationData.country || 'Loading...' }}</p>
         </div>
       </div>
     </div>

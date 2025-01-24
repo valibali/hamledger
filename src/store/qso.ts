@@ -53,10 +53,9 @@ export const useQsoStore = defineStore("qso", {
     currentUTCTime: "",
     initialized: false,
     stationInfo: {
-      flag: "https://flagcdn.com/h80/hu.png",
-      name: "JOHN DOE",
+      flag: "",
+      country: "",
       weather: "19°C, Cloudy",
-      qth: "New York, NY",
       localTime: "22:15",
       greetings: [
         {

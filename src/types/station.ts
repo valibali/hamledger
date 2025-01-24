@@ -1,6 +1,7 @@
 export interface QRZData {
   name: string;
   qth: string;
+  country: string;
 }
 
 export interface StationData {
