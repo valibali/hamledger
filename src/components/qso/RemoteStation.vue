@@ -18,26 +18,25 @@ export default {
     isValid() {
       return this.qsoStore.isCallsignValid
     },
-    async stationData(): Promise<StationData> {
-      if (this.isValid && this.callsign) {
-        if (!this.stationDataCache) {
-          this.stationDataCache = fetchQRZData(this.callsign)
+    stationData(): StationData {
+      if (!this.stationDataCache) {
+        return {
+          flag: '',
+          name: '',
+          qth: '',
+          country: ''
         }
-        return this.stationDataCache
       }
-
-      return {
-        flag: '',
-        name: '',
-        qth: '',
-        country: ''
-      }
+      return this.stationDataCache
     }
   },
   watch: {
-    callsign() {
-      // Reset cache when callsign changes
+    async callsign() {
+      // Reset cache and fetch new data when callsign changes
       this.stationDataCache = null
+      if (this.isValid && this.callsign) {
+        this.stationDataCache = await fetchQRZData(this.callsign)
+      }
     }
   }
 }
