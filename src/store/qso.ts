@@ -16,6 +16,19 @@ export function isValidCallsign(callsign: string): boolean {
   return CALLSIGN_REGEX.test(callsign.toUpperCase());
 }
 
+interface StationInfo {
+  flag: string;
+  name: string;
+  weather: string;
+  qth: string;
+  localTime: string;
+  greetings: {
+    greeting: string;
+    ipa: string;
+    label: string;
+  }[];
+}
+
 interface QsoEntry {
   _id?: string;
   _rev?: string;
@@ -37,6 +50,30 @@ export const useQsoStore = defineStore("qso", {
     allQsos: [] as QsoEntry[],
     currentUTCTime: "",
     initialized: false,
+    stationInfo: {
+      flag: 'https://flagcdn.com/h80/hu.png',
+      name: 'JOHN DOE',
+      weather: '19°C, Cloudy',
+      qth: 'New York, NY',
+      localTime: '22:15',
+      greetings: [
+        {
+          label: 'Appropriate greeting',
+          greeting: 'Hello',
+          ipa: 'həˈləʊ'
+        },
+        {
+          label: 'Thank you',
+          greeting: 'Thanks',
+          ipa: 'θæŋks'
+        },
+        {
+          label: 'Good luck',
+          greeting: 'Good luck',
+          ipa: 'ɡʊd lʌk'
+        }
+      ]
+    } as StationInfo,
     qsoForm: {
       callsign: "",
       band: "40m",
