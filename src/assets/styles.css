@@ -17,6 +17,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+  overflow: hidden;
+}
+
 /**************************************
  * Sidebar + Main Content Layout
  **************************************/
