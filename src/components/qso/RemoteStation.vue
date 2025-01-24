@@ -7,7 +7,21 @@ export default {
   data() {
     return {
       qsoStore: useQsoStore(),
-      stationData: {
+      stationDataCache: null as any
+    }
+  },
+  computed: {
+    async stationData() {
+      const callsign = this.qsoStore.qsoForm.callsign
+      
+      if (this.qsoStore.isCallsignValid && callsign) {
+        if (!this.stationDataCache) {
+          this.stationDataCache = await fetchQRZData(callsign)
+        }
+        return this.stationDataCache
+      }
+      
+      return {
         flag: '',
         name: '',
         qth: '',
@@ -16,20 +30,9 @@ export default {
     }
   },
   watch: {
-    'qsoStore.qsoForm.callsign': {
-      async handler(newCallsign: string) {
-        if (this.qsoStore.isCallsignValid && newCallsign) {
-          this.stationData = await fetchQRZData(newCallsign)
-        } else {
-          this.stationData = {
-            flag: '',
-            name: '',
-            qth: '',
-            country: ''
-          }
-        }
-      },
-      immediate: true
+    'qsoStore.qsoForm.callsign'() {
+      // Reset cache when callsign changes
+      this.stationDataCache = null
     }
   }
 }
