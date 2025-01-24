@@ -455,6 +455,11 @@ input:hover {
   font-weight: 700;
   color: lightgreen;
 }
+
+.qso-input-group input.invalid-callsign {
+  background-color: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+}
 .qso-input-group.small {
   width: 80px;
 }

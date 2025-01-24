@@ -10,6 +10,11 @@ export default {
     const rigStore = useRigStore()
     return { qsoStore, rigStore }
   },
+  computed: {
+    isCallsignValid() {
+      return this.qsoStore.isCallsignValid
+    }
+  },
   data() {
     return {
       callsignInput: null as HTMLInputElement | null,
@@ -86,7 +91,9 @@ export default {
     <div class="qso-input-content">
       <div class="qso-input-group">
         <label for="callsign">Callsign</label>
-        <input ref="callsignInput" type="text" id="callsign" :value="qsoStore.qsoForm.callsign"
+        <input ref="callsignInput" type="text" id="callsign" 
+          :value="qsoStore.qsoForm.callsign"
+          :class="{ 'invalid-callsign': !isCallsignValid && qsoStore.qsoForm.callsign }"
           @input="(e) => qsoStore.updateQsoForm('callsign', (e.target as HTMLInputElement).value)"
           @keydown="handleKeydown" />
       </div>

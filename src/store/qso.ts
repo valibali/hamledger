@@ -142,5 +142,8 @@ export const useQsoStore = defineStore("qso", {
   getters: {
     sessionCount: (state) => state.currentSession.length,
     totalCount: (state) => state.allQsos.length,
+    isCallsignValid: (state) => {
+      return state.qsoForm.callsign ? isValidCallsign(state.qsoForm.callsign) : true;
+    }
   },
 });
