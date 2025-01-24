@@ -3,14 +3,26 @@ import { useQsoStore } from '../store/qso'
 
 export default {
   name: 'LogArea',
+  setup() {
+    const qsoStore = useQsoStore()
+    return { qsoStore }
+  },
+  computed: {
+    currentSession() {
+      return this.qsoStore.currentSession
+    },
+    allQsos() {
+      return this.qsoStore.allQsos
+    },
+    sessionCount() {
+      return this.qsoStore.sessionCount
+    },
+    totalCount() {
+      return this.qsoStore.totalCount
+    }
+  },
   data() {
-    const store = useQsoStore()
     return {
-      qsoStore: store,
-      currentSession: store.currentSession,
-      allQsos: store.allQsos,
-      sessionCount: store.sessionCount,
-      totalCount: store.totalCount,
       prefixMap: {
         F: 'fr',
         HB9: 'ch',
@@ -35,26 +47,6 @@ export default {
       return 'xx'
     },
   },
-  watch: {
-    'qsoStore.currentSession': {
-      handler(newSession) {
-        this.currentSession = newSession
-      },
-      deep: true
-    },
-    'qsoStore.allQsos': {
-      handler(newQsos) {
-        this.allQsos = newQsos
-      },
-      deep: true
-    },
-    'qsoStore.sessionCount'(newCount) {
-      this.sessionCount = newCount
-    },
-    'qsoStore.totalCount'(newCount) {
-      this.totalCount = newCount
-    }
-  }
 }
 </script>
 

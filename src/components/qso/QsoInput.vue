@@ -5,12 +5,13 @@ import { BAND_RANGES, getBandFromFrequency } from '../../utils/bands';
 
 export default {
   name: 'QsoInput',
-  data() {
+  setup() {
     const qsoStore = useQsoStore()
     const rigStore = useRigStore()
+    return { qsoStore, rigStore }
+  },
+  data() {
     return {
-      qsoStore,
-      rigStore,
       callsignInput: null as HTMLInputElement | null,
       bands: BAND_RANGES.map(band => ({
         value: band.name,
@@ -21,27 +22,22 @@ export default {
   computed: {
     currentBand() {
       const freq = parseFloat(this.rigStore.frequency);
-      return getBandFromFrequency(freq);
+      const band = getBandFromFrequency(freq);
+      if (band) {
+        this.qsoStore.updateQsoForm('band', band);
+      }
+      return band;
     },
     modes() {
       return this.rigStore.modes;
-    }
-  },
-  watch: {
-    'rigStore.frequency': {
-      handler(newFreq) {
-        const band = getBandFromFrequency(parseFloat(newFreq));
-        if (band) {
-          this.qsoStore.updateQsoForm('band', band);
-        }
-      },
-      immediate: true
     },
-    'rigStore.selectedMode': {
-      handler(newMode) {
-        this.qsoStore.updateQsoForm('mode', newMode);
+    currentMode: {
+      get() {
+        return this.rigStore.selectedMode;
       },
-      immediate: true
+      set(newMode: string) {
+        this.qsoStore.updateQsoForm('mode', newMode);
+      }
     }
   },
   mounted() {
