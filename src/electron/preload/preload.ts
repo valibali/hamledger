@@ -1,13 +1,7 @@
 // src/electron/preload/preload.ts
-// All of the Node.js APIs are available in the preload process.
-// It has the same sandbox as a Chrome extension.
-window.addEventListener("DOMContentLoaded", () => {
-  const replaceText = (selector: any, text: any) => {
-    const element = document.getElementById(selector);
-    if (element) element.innerText = text;
-  };
+import { contextBridge, ipcRenderer } from 'electron'
 
-  for (const dependency of ["chrome", "node", "electron"]) {
-    replaceText(`${dependency}-version`, process.versions[dependency]);
-  }
-});
+contextBridge.exposeInMainWorld('electronAPI', {
+  addQso: (qso: any) => ipcRenderer.invoke('qso:add', qso),
+  getAllDocs: () => ipcRenderer.invoke('qso:getAllDocs')
+})

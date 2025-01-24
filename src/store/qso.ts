@@ -1,6 +1,14 @@
 import { defineStore } from "pinia";
 import { useRigStore } from "./rig";
-import { ipcRenderer } from 'electron';
+
+declare global {
+  interface Window {
+    electronAPI: {
+      addQso: (qso: any) => Promise<any>;
+      getAllDocs: () => Promise<any>;
+    }
+  }
+}
 
 interface QsoEntry {
   _id?: string;
@@ -79,7 +87,7 @@ export const useQsoStore = defineStore("qso", {
 
       // Send to main process to save
       try {
-        const response = await ipcRenderer.invoke('qso:add', {
+        const response = await window.electronAPI.addQso({
           ...newQso,
           _id: new Date().toISOString(),
         });
@@ -111,7 +119,7 @@ export const useQsoStore = defineStore("qso", {
     async initializeStore() {
       if (!this.initialized) {
         try {
-          const result = await ipcRenderer.invoke('qso:getAllDocs');
+          const result = await window.electronAPI.getAllDocs();
           this.allQsos = result.rows.map((row) => row.doc as QsoEntry);
           this.initialized = true;
         } catch (error) {
