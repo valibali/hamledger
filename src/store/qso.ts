@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { useRigStore } from "./rig";
+import { StationData } from "../types/station";
 
 declare global {
   interface Window {
@@ -8,6 +9,12 @@ declare global {
       getAllDocs: () => Promise<any>;
     }
   }
+}
+
+const CALLSIGN_REGEX = /^(([A-Z]{1,2}[0-9]{1,4}[A-Z]{1,3})|([0-9]{1,2}[A-Z]{1,4}))$/;
+
+export function isValidCallsign(callsign: string): boolean {
+  return CALLSIGN_REGEX.test(callsign.toUpperCase());
 }
 
 const CALLSIGN_REGEX = /((2[A-Z]{1,2}|[BFGIKMNRW][A-Z]{0,2}|3[A-CE-Z][A-Z]{0,1}|4[A-MO-Z][A-Z]{0,1}|[5-9OUX][A-Z][A-Z]{0,1})([0-9][0-9A-Z]{0,3}[A-Z])|([ACDLP][2-9A-Z][A-Z]{0,1}|E[2-7A-Z][A-Z]{0,1}|H[2-46-9A-Z][A-Z]{0,1}|[JTV][2-8A-Z][A-Z]{0,1}|S[2-35-9A-RT-Z][A-Z]{0,1}|Y[2-9A-Y][A-Z]{0,1}|Z[238A-Z][A-Z]{0,1})([0-9A-Z]{0,3}[A-Z]))/;
