@@ -17,6 +17,7 @@ export default {
     }
   },
   methods: {
+    getCountryCodeForCallsign
   }
 }
 </script>
@@ -62,8 +63,7 @@ export default {
           <td>
             <img v-if="getCountryCodeForCallsign(entry.callsign) !== 'xx'"
               :src="`https://flagcdn.com/h40/${getCountryCodeForCallsign(entry.callsign)}.png`"
-              :alt="getCountryCodeForCallsign(entry.callsign)" 
-              class="callsign-flag" />
+              :alt="getCountryCodeForCallsign(entry.callsign)" class="callsign-flag" />
             {{ entry.callsign }}
           </td>
           <td>{{ entry.band }}</td>

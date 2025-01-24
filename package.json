@@ -52,8 +52,10 @@
     }
   },
   "dependencies": {
+    "@types/node-fetch": "^2.6.12",
     "@types/pouchdb-browser": "^6.1.5",
     "events": "^3.3.0",
+    "node-fetch": "^3.3.2",
     "pinia": "^2.1.7",
     "pouchdb": "^9.0.0",
     "vue": "^3.2.25"

@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { useRigStore } from "./rig";
-import { StationData } from "../types/station";
+import { StationData, QRZData } from "../types/station";
 
 declare global {
   interface Window {

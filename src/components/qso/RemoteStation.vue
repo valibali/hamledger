@@ -1,7 +1,7 @@
 <script lang="ts">
 import { useQsoStore } from '../../store/qso'
 import { fetchQRZData } from '../../utils/qrz'
-import { QRZData } from '../../types/station'
+import { QRZData, StationData } from '../../types/station'
 
 export default {
   name: 'RemoteStation',
@@ -55,7 +55,7 @@ export default {
       <div class="station-block station-remote">
         <img v-if="stationData.flag" :src="stationData.flag" :alt="stationData.country" class="station-flag" />
         <div class="station-info">
-          <p class="station-name">Remote: {{ qrzData.name || 'Loading...' }}</p>
+          <p class="station-name">Remote: {{ qrzData.name || callsign }}</p>
           <p class="station-qth">QTH: {{ qrzData.qth || 'Loading...' }}</p>
           <p class="station-country">Country: {{ stationData.country || 'Loading...' }}</p>
         </div>

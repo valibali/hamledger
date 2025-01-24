@@ -26,6 +26,7 @@ export default {
     return {}
   },
   methods: {
+    getCountryCodeForCallsign
   },
 }
 </script>
