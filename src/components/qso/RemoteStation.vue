@@ -1,26 +1,36 @@
 <script lang="ts">
 import { useQsoStore } from '../../store/qso'
 import { fetchQRZData } from '../../utils/qrz'
-import { computed } from 'vue'
 
 export default {
   name: 'RemoteStation',
-  setup() {
-    const qsoStore = useQsoStore()
-
-    const stationData = computed(async () => {
-      if (qsoStore.isCallsignValid && qsoStore.qsoForm.callsign) {
-        return await fetchQRZData(qsoStore.qsoForm.callsign)
-      }
-      return {
+  data() {
+    return {
+      qsoStore: useQsoStore(),
+      stationData: {
         flag: '',
         name: '',
         qth: '',
         country: ''
       }
-    })
-
-    return { qsoStore, stationData }
+    }
+  },
+  watch: {
+    'qsoStore.qsoForm.callsign': {
+      async handler(newCallsign: string) {
+        if (this.qsoStore.isCallsignValid && newCallsign) {
+          this.stationData = await fetchQRZData(newCallsign)
+        } else {
+          this.stationData = {
+            flag: '',
+            name: '',
+            qth: '',
+            country: ''
+          }
+        }
+      },
+      immediate: true
+    }
   }
 }
 </script>
