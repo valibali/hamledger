@@ -181,6 +181,9 @@ export const useQsoStore = defineStore("qso", {
         second: "2-digit",
       });
     },
+    updateStationInfo(updates: Partial<StationData>) {
+      this.stationInfo = { ...this.stationInfo, ...updates };
+    },
   },
   getters: {
     sessionCount: (state) => state.currentSession.length,

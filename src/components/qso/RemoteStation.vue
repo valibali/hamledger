@@ -1,14 +1,14 @@
 <script lang="ts">
 import { useQsoStore } from '../../store/qso'
 import { fetchQRZData } from '../../utils/qrz'
-import { StationData } from '../../types/station'
+import { QRZData } from '../../types/station'
 
 export default {
   name: 'RemoteStation',
   data() {
     return {
       qsoStore: useQsoStore(),
-      stationDataCache: null as StationData | null
+      qrzDataCache: null as QRZData | null
     }
   },
   computed: {
@@ -18,24 +18,29 @@ export default {
     isValid() {
       return this.qsoStore.isCallsignValid
     },
-    stationData(): StationData {
-      if (!this.stationDataCache) {
+    stationData() {
+      return this.qsoStore.stationInfo
+    },
+    qrzData(): QRZData {
+      if (!this.qrzDataCache) {
         return {
-          flag: '',
           name: '',
-          qth: '',
-          country: ''
+          qth: ''
         }
       }
-      return this.stationDataCache
+      return this.qrzDataCache
     }
   },
   watch: {
     async callsign() {
       // Reset cache and fetch new data when callsign changes
-      this.stationDataCache = null
+      this.qrzDataCache = null
       if (this.isValid && this.callsign) {
-        this.stationDataCache = await fetchQRZData(this.callsign)
+        const qrzData = await fetchQRZData(this.callsign)
+        if (!(qrzData instanceof Error)) {
+          this.qrzDataCache = qrzData
+          this.qsoStore.updateStationInfo({ qrzData })
+        }
       }
     }
   }
@@ -50,8 +55,8 @@ export default {
       <div class="station-block station-remote">
         <img v-if="stationData.flag" :src="stationData.flag" :alt="stationData.country" class="station-flag" />
         <div class="station-info">
-          <p class="station-name">Remote: {{ stationData.name || 'Loading...' }}</p>
-          <p class="station-qth">QTH: {{ stationData.qth || 'Loading...' }}</p>
+          <p class="station-name">Remote: {{ qrzData.name || 'Loading...' }}</p>
+          <p class="station-qth">QTH: {{ qrzData.qth || 'Loading...' }}</p>
           <p v-if="stationData.country" class="station-country">Country: {{ stationData.country }}</p>
         </div>
       </div>
