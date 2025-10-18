@@ -330,20 +330,28 @@ export const useRigStore = defineStore('rig', {
 
     // Frequency control
     async setFrequency(frequency: number) {
-      if (!this.connection.connected) return { success: false, error: 'Not connected' };
+      // Optimistically update the local state
+      this.rigState.frequency = frequency;
+
+      if (!this.connection.connected) {
+        console.log('Not connected, only updating local state');
+        return { success: true };
+      }
 
       try {
         const response = await rigctldService.setFrequency(frequency);
 
-        if (response.success) {
-          this.rigState.frequency = frequency;
-        } else {
+        if (!response.success) {
           this.error = response.error || 'Failed to set frequency';
+          // Optional: revert the change if the call fails
+          // await this.updateRigState();
         }
 
         return response;
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Unknown error';
+        // Optional: revert the change on error
+        // await this.updateRigState();
         return { success: false, error: this.error };
       }
     },
