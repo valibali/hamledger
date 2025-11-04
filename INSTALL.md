@@ -134,6 +134,42 @@ rigctld --version
 3. When asked about CAT Control, check "Enable CAT Control"
 4. Enter `rigctld` as the rigctld path
 
+
+### Mac Installation
+
+#### 1. Install HamLedger
+
+1. Download the latest Mac version from the [Releases](https://github.com/valibali/hamledger/releases) page
+2. Run the `HamLedger_x.x.x_macos_arm64.dmg` installer (For Apple Silicon) or `HamLedger_x.x.x_macos_x64.dmg` (For Intel)
+3. Follow the installation wizard instructions
+4. Launch HamLedger after installation
+
+#### 2. Install Hamlib (for CAT Control)
+
+If you want to use CAT control functionality (radio control), you need to install Hamlib. 
+The easiest method is installing Brew:
+
+1. Press Command+Space and type Terminal and press enter/return key.
+2. Copy and paste the following command in Terminal app:
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+and press enter/return key. Wait for the command to finish. If you are prompted to enter a password, please type your Mac user's login password and press ENTER. Mind you, as you type your password, it won't be visible on your Terminal (for security reasons), but rest assured it will work.
+3. Now, copy/paste and run this command to make brew command available inside the Terminal: `echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile`
+4. Copy and paste the following command: `brew install hamlib` and press enter/return key. Wait for the command to finish.
+
+#### 3. Verify Hamlib Installation
+
+```bash
+rigctld --version
+```
+
+#### 4. Configure HamLedger
+
+1. Launch HamLedger
+2. Go through the Setup Wizard
+3. When asked about CAT Control, check "Enable CAT Control"
+4. Enter `rigctld` as the rigctld path
+
+
 ### Troubleshooting
 
 #### Windows
@@ -142,7 +178,7 @@ rigctld --version
 - **Permission errors**: Run Command Prompt as Administrator when testing
 - **Antivirus blocking**: Add Hamlib folder to antivirus exceptions
 
-#### Linux
+#### Mac and Linux
 
 - **Permission denied for serial ports**: Add your user to the `dialout` group:
 
@@ -152,4 +188,4 @@ rigctld --version
 
   Then log out and back in.
 
-- **rigctld not found**: Make sure Hamlib is installed using your distribution's package manager
+- **rigctld not found**: Make sure Hamlib is installed using your distribution's package manager or brew in case of Mac.
