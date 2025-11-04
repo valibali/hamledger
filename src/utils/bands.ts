@@ -2,7 +2,6 @@ import { ConfigHelper } from './configHelper';
 
 export interface BandRange {
   name: string;
-  shortName: string;
   min: number; // kHz
   max: number; // kHz
   IARU1: { min: number; max: number }; // IARU Region 1 (Europe, Africa, Middle East, Northern Asia)
@@ -15,7 +14,6 @@ export const BAND_RANGES: BandRange[] = [
   // LF/MF bands
   {
     name: '2200m',
-    shortName: '2200',
     min: 135.7,
     max: 137.8,
     IARU1: { min: 135.7, max: 137.8 },
@@ -24,7 +22,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '630m',
-    shortName: '630',
     min: 472,
     max: 479,
     IARU1: { min: 472, max: 479 },
@@ -33,7 +30,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '160m',
-    shortName: '160',
     min: 1800,
     max: 2000,
     IARU1: { min: 1810, max: 2000 },
@@ -43,7 +39,6 @@ export const BAND_RANGES: BandRange[] = [
   // HF bands
   {
     name: '80m',
-    shortName: '80',
     min: 3500,
     max: 4000,
     IARU1: { min: 3500, max: 3800 },
@@ -52,7 +47,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '60m',
-    shortName: '60',
     min: 5351.5,
     max: 5366.5,
     IARU1: { min: 5351.5, max: 5366.5 },
@@ -61,7 +55,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '40m',
-    shortName: '40',
     min: 7000,
     max: 7300,
     IARU1: { min: 7000, max: 7200 },
@@ -70,7 +63,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '30m',
-    shortName: '30',
     min: 10100,
     max: 10150,
     IARU1: { min: 10100, max: 10150 },
@@ -79,7 +71,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '20m',
-    shortName: '20',
     min: 14000,
     max: 14350,
     IARU1: { min: 14000, max: 14350 },
@@ -88,7 +79,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '17m',
-    shortName: '17',
     min: 18068,
     max: 18168,
     IARU1: { min: 18068, max: 18168 },
@@ -97,7 +87,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '15m',
-    shortName: '15',
     min: 21000,
     max: 21450,
     IARU1: { min: 21000, max: 21450 },
@@ -106,7 +95,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '12m',
-    shortName: '12',
     min: 24890,
     max: 24990,
     IARU1: { min: 24890, max: 24990 },
@@ -115,7 +103,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '10m',
-    shortName: '10',
     min: 28000,
     max: 29700,
     IARU1: { min: 28000, max: 29700 },
@@ -125,7 +112,6 @@ export const BAND_RANGES: BandRange[] = [
   // VHF bands
   {
     name: '6m',
-    shortName: '6',
     min: 50000,
     max: 54000,
     IARU1: { min: 50000, max: 52000 },
@@ -134,7 +120,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '4m',
-    shortName: '4',
     min: 70000,
     max: 70500,
     IARU1: { min: 70000, max: 70500 },
@@ -143,7 +128,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '2m',
-    shortName: '2',
     min: 144000,
     max: 148000,
     IARU1: { min: 144000, max: 146000 },
@@ -153,7 +137,6 @@ export const BAND_RANGES: BandRange[] = [
   // UHF bands
   {
     name: '70cm',
-    shortName: '70',
     min: 420000,
     max: 450000,
     IARU1: { min: 430000, max: 440000 },
@@ -162,7 +145,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '33cm',
-    shortName: '33',
     min: 902000,
     max: 928000,
     IARU1: { min: 902000, max: 928000 },
@@ -171,7 +153,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '23cm',
-    shortName: '23',
     min: 1240000,
     max: 1300000,
     IARU1: { min: 1240000, max: 1300000 },
@@ -181,7 +162,6 @@ export const BAND_RANGES: BandRange[] = [
   // SHF bands
   {
     name: '13cm',
-    shortName: '13',
     min: 2300000,
     max: 2450000,
     IARU1: { min: 2300000, max: 2450000 },
@@ -190,7 +170,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '9cm',
-    shortName: '9',
     min: 3300000,
     max: 3500000,
     IARU1: { min: 3300000, max: 3500000 },
@@ -199,7 +178,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '6cm',
-    shortName: '6',
     min: 5650000,
     max: 5925000,
     IARU1: { min: 5650000, max: 5925000 },
@@ -208,7 +186,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '3cm',
-    shortName: '3cm',
     min: 10000000,
     max: 10500000,
     IARU1: { min: 10000000, max: 10500000 },
@@ -217,7 +194,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '1.2cm',
-    shortName: '1.2cm',
     min: 24000000,
     max: 24250000,
     IARU1: { min: 24000000, max: 24250000 },
@@ -226,7 +202,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '6mm',
-    shortName: '6mm',
     min: 47000000,
     max: 47200000,
     IARU1: { min: 47000000, max: 47200000 },
@@ -235,7 +210,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '4mm',
-    shortName: '4mm',
     min: 75500000,
     max: 81000000,
     IARU1: { min: 75500000, max: 81000000 },
@@ -244,7 +218,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '2.5mm',
-    shortName: '2.5mm',
     min: 119980000,
     max: 120020000,
     IARU1: { min: 119980000, max: 120020000 },
@@ -253,7 +226,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '2mm',
-    shortName: '2mm',
     min: 142000000,
     max: 149000000,
     IARU1: { min: 142000000, max: 149000000 },
@@ -262,7 +234,6 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '1mm',
-    shortName: '1mm',
     min: 241000000,
     max: 250000000,
     IARU1: { min: 241000000, max: 250000000 },
@@ -279,15 +250,15 @@ export function getBandFromFrequency(freq: number): BandRange | null {
   return BAND_RANGES.find(band => freqKHz >= band.min && freqKHz <= band.max) || null;
 }
 
-export function getBandByShortName(shortName: string): BandRange | null {
-  return BAND_RANGES.find(band => band.shortName === shortName) || null;
+export function getBandByName(name: string): BandRange | null {
+  return BAND_RANGES.find(band => band.name === name) || null;
 }
 
 export function getRegionalBandRange(
-  shortName: string,
+  name: string,
   region?: IARURegion
 ): { min: number; max: number } | null {
-  const band = getBandByShortName(shortName);
+  const band = getBandByName(name);
   if (!band) return null;
 
   // Use provided region or try to get from config, fallback to IARU1
@@ -306,11 +277,11 @@ export function getConfiguredRegion(): IARURegion {
   }
 }
 
-export function getAllBandShortNames(): string[] {
-  return BAND_RANGES.map(band => band.shortName);
+export function getAllBandNames(): string[] {
+  return BAND_RANGES.map(band => band.name);
 }
 
-export function getBandFrequencyRange(shortName: string): { min: number; max: number } | null {
-  const band = getBandByShortName(shortName);
+export function getBandFrequencyRange(name: string): { min: number; max: number } | null {
+  const band = getBandByName(name);
   return band ? { min: band.min, max: band.max } : null;
 }

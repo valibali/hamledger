@@ -174,21 +174,21 @@ export default {
     },
     getAvailableBands() {
       return BAND_RANGES.filter(band =>
-        ['160', '80', '60', '40', '30', '20', '17', '15', '12', '10', '6', '2', '70'].includes(
-          band.shortName
+        ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m', '70cm'].includes(
+          band.name
         )
       );
     },
-    async toggleBandInConfig(field: ConfigField, bandShortName: string, event: Event) {
+    async toggleBandInConfig(field: ConfigField, bandName: string, event: Event) {
       const target = event.target as HTMLInputElement;
       const currentBands = [...field.value];
 
       if (target.checked) {
-        if (!currentBands.includes(bandShortName)) {
-          currentBands.push(bandShortName);
+        if (!currentBands.includes(bandName)) {
+          currentBands.push(bandName);
         }
       } else {
-        const index = currentBands.indexOf(bandShortName);
+        const index = currentBands.indexOf(bandName);
         if (index > -1) {
           currentBands.splice(index, 1);
         }
@@ -209,7 +209,7 @@ export default {
       }
     },
     async selectAllHFBands(field: ConfigField) {
-      const hfBands = ['160', '80', '60', '40', '30', '20', '17', '15', '12', '10'];
+      const hfBands = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m'];
       await configHelper.updateSetting(field.path, field.key, hfBands);
 
       const fieldIndex = this.configFields.findIndex(
@@ -224,7 +224,7 @@ export default {
       }
     },
     async selectAllVHFUHFBands(field: ConfigField) {
-      const vhfUhfBands = ['6', '2', '70'];
+      const vhfUhfBands = ['6m', '2m', '70cm'];
       const currentBands = [...field.value];
       const newBands = [
         ...currentBands,
@@ -613,14 +613,14 @@ export default {
                 <div class="band-grid">
                   <label
                     v-for="band in getAvailableBands()"
-                    :key="band.shortName"
+                    :key="band.name"
                     class="band-checkbox"
                   >
                     <input
                       type="checkbox"
-                      :value="band.shortName"
-                      :checked="field.value.includes(band.shortName)"
-                      @change="toggleBandInConfig(field, band.shortName, $event)"
+                      :value="band.name"
+                      :checked="field.value.includes(band.name)"
+                      @change="toggleBandInConfig(field, band.name, $event)"
                     />
                     <span class="band-label">{{ band.name }}</span>
                   </label>
