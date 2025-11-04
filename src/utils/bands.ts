@@ -199,7 +199,7 @@ export const BAND_RANGES: BandRange[] = [
   },
   {
     name: '6cm',
-    shortName: '6cm',
+    shortName: '6',
     min: 5650000,
     max: 5925000,
     IARU1: { min: 5650000, max: 5925000 },
