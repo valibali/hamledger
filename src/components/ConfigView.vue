@@ -629,7 +629,7 @@ export default {
                       :checked="field.value.includes(band.shortName)"
                       @change="toggleBandInConfig(field, band.shortName, $event)"
                     />
-                    <span class="band-label">{{ band.name }} ({{ getBandDisplayName(band.shortName) }})</span>
+                    <span class="band-label">{{ band.name }}</span>
                   </label>
                 </div>
               </div>
