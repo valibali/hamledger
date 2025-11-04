@@ -114,6 +114,13 @@ export default {
         displayNames[categoryName] || categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
       );
     },
+    getBandDisplayName(shortName: string): string {
+      // Handle special cases for band display names
+      if (shortName.includes('cm') || shortName.includes('mm')) {
+        return shortName; // Already has the unit
+      }
+      return shortName + 'm'; // Add 'm' for meter bands
+    },
     getFieldId(field: ConfigField): string {
       return configHelper.getFieldId(field);
     },
