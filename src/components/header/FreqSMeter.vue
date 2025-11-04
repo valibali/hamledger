@@ -11,6 +11,7 @@ export default {
       rigStore: store,
       isEditing: false,
       isTxEditing: false,
+      editingFrequency: '',
       unit: 'MHz',
       smeterHelper: smeterHelper,
     };
@@ -72,6 +73,20 @@ export default {
     },
   },
   methods: {
+    startEditing() {
+      this.editingFrequency = this.frequency;
+      this.isEditing = true;
+      this.$nextTick(() => {
+        if (this.$refs.freqInput) {
+          this.$refs.freqInput.focus();
+          this.$refs.freqInput.select();
+        }
+      });
+    },
+    finishEditing() {
+      this.rigStore.setFrequencyFromString(this.editingFrequency);
+      this.isEditing = false;
+    },
     async toggleSplit() {
       console.log('FreqSMeter: toggleSplit called');
       console.log('Current split state:', this.rigStore.rigState.split);
@@ -91,15 +106,16 @@ export default {
         <button class="split-btn mode-badge" :class="{ active: splitActive }" @click="toggleSplit">
           SPLIT
         </button>
-        <div class="rig-frequency" @click="isEditing = true">
+        <div class="rig-frequency" @click="startEditing">
           <div class="freq-main">
             <input
               v-if="isEditing"
               type="text"
-              v-model="frequency"
-              @blur="isEditing = false"
-              @keyup.enter="isEditing = false"
+              v-model="editingFrequency"
+              @blur="finishEditing"
+              @keyup.enter="finishEditing"
               class="freq-input"
+              ref="freqInput"
             />
             <template v-else>
               <span class="freq-main-part">{{ frequencyParts.main }}</span><span class="freq-decimal-dot">.</span><span class="freq-hz-part">{{ frequencyParts.hz }}</span>
