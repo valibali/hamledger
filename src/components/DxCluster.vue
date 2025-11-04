@@ -273,6 +273,14 @@ export default defineComponent({
       }
     },
 
+    getBandDisplayName(shortName: string): string {
+      // Handle special cases for band display names
+      if (shortName.includes('cm') || shortName.includes('mm')) {
+        return shortName; // Already has the unit
+      }
+      return shortName + 'm'; // Add 'm' for meter bands
+    },
+
     generateScaleTicks(): { major: ScaleTick[]; minor: ScaleTick[] } {
       const range = this.dxStore.actualFrequencyRange;
       if (!range) return { major: [], minor: [] };
@@ -349,7 +357,7 @@ export default defineComponent({
 
 <template>
   <div class="dx-cluster">
-    <h2 class="section-title">DX Cluster - {{ filters.selectedBand }}m band</h2>
+    <h2 class="section-title">DX Cluster - {{ getBandDisplayName(filters.selectedBand) }} band</h2>
 
     <div class="dx-cluster-main">
       <!-- Frequency Scale and Spots -->
@@ -478,7 +486,7 @@ export default defineComponent({
               :class="['filter-btn-small', { active: filters.selectedBand === band }]"
               @click="selectBand(band)"
             >
-              {{ band }}m
+              {{ getBandDisplayName(band) }}
             </button>
           </div>
         </div>
