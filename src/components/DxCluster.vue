@@ -273,11 +273,6 @@ export default defineComponent({
       }
     },
 
-    getBandDisplayName(bandName: string): string {
-      // Return the band name as-is since it already contains the proper unit
-      return bandName;
-    },
-
     generateScaleTicks(): { major: ScaleTick[]; minor: ScaleTick[] } {
       const range = this.dxStore.actualFrequencyRange;
       if (!range) return { major: [], minor: [] };

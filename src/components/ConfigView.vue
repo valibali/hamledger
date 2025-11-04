@@ -372,7 +372,7 @@ export default {
       this.isValidating = true;
       try {
         let result;
-        const rigctldPath = field.value.trim();
+        const rigctldPath = (field.value as string).trim();
 
         if (this.isWindows) {
           // Check if it's an absolute path (contains : or starts with \ or /)
