@@ -154,40 +154,48 @@ A hívójel bevitele után 500ms késleltetéssel automatikusan lekérdezi:
 
 ## Rig Vezérlés (CAT Control)
 
-### Kapcsolat Beállítás
+### Windows Beállítás (Részletes)
 
-#### Rigctld Konfiguráció
-- **Host**: Alapértelmezetten localhost
-- **Port**: Alapértelmezetten 4532
-- **Rig Model**: Opcionális, de ajánlott
-- **COM Port**: Soros port beállítás
+#### Hamlib Telepítés
+A HamLedger automatikusan telepíti a Hamlib-et Windows rendszeren, de ehhez admin jogosultságok szükségesek. Kattints a "Install Hamlib" gombra a setup wizard 6. lépésében, és engedélyezd az admin hozzáférést amikor a rendszer kéri. A telepítés során a program letölti a legfrissebb Hamlib verziót és telepíti a Program Files könyvtárba.
 
-#### Automatikus Funkciók
-- **Frekvencia szinkronizálás**: Rig → Alkalmazás
-- **Sáv detektálás**: Frekvencia alapú automatikus sáv
-- **Mód szinkronizálás**: LSB/USB/CW/DATA
+#### Tűzfal Konfiguráció
+A CAT vezérlés működéséhez a Windows Defender tűzfalban kivételeket kell létrehozni a HamLedger.exe és rigctld.exe számára. Az alkalmazás automatikusan felajánlja ezt a setup során - kattints "Yes" amikor a Windows UAC kéri az engedélyt. Ha manuálisan szeretnéd beállítani: Windows Security → Firewall & network protection → Allow an app through firewall → Add both HamLedger and rigctld.
 
-### Kapcsolat Állapotok
+#### Core Isolation Figyelmeztetés
+Windows 10/11 rendszereken a Core Isolation (Memory Integrity) funkció megakadályozhatja a Hamlib működését. Ha a CAT vezérlés nem működik, kapcsold ki ezt a funkciót: Windows Security → Device Security → Core Isolation Details → Memory Integrity (kapcsold ki). Ez csökkenti a rendszer biztonságát, ezért csak akkor tedd meg, ha szükséges.
 
-#### Állapot Jelzők
-- **Zöld**: Kapcsolódva és működik
-- **Piros**: Kapcsolat megszakadt
-- **Sárga**: Kapcsolódás folyamatban
-- **Kék**: WSJT-X mód aktív
+### Linux Beállítás (Részletes)
 
-#### Vezérlő Gombok
-- **Connect**: Kapcsolat létrehozása
-- **Reconnect**: Újrakapcsolódás
-- **Disconnect**: Kapcsolat bontása
-- **Settings**: Beállítások módosítása
+#### Hamlib Telepítés
+Linux rendszereken manuálisan kell telepíteni a Hamlib-et a csomagkezelővel. Ubuntu/Debian: `sudo apt install libhamlib-utils`, Fedora/CentOS: `sudo dnf install hamlib`. A telepítés után ellenőrizd hogy a rigctld elérhető: `which rigctld` paranccsal.
+
+#### Dialout Csoport Beállítás
+A soros port eléréséhez a felhasználót hozzá kell adni a dialout csoporthoz: `sudo usermod -a -G dialout $USER`. Ezután jelentkezz ki és vissza, vagy használd a `newgrp dialout` parancsot. Ellenőrizd a tagságot: `groups` paranccsal.
+
+### Rigctld Konfiguráció
+
+#### Alapbeállítások
+A Settings gombra kattintva állítsd be a kapcsolat paramétereit: Host (általában localhost), Port (4532), Rig Model (válaszd ki a rádió típusát a listából), COM Port (pl. COM3 Windows-on vagy /dev/ttyUSB0 Linux-on). A rig model kiválasztása javítja a kompatibilitást és engedélyezi a speciális funkciókat.
+
+#### Kapcsolat Létrehozása
+A Connect gombbal indítsd el a kapcsolatot - a státusz zöldre vált ha sikeres. Ha sárga marad, ellenőrizd a COM port beállításokat és hogy a rádió be van-e kapcsolva CAT módban. A Reconnect gomb újraindítja a kapcsolatot, a Disconnect bontja azt.
+
+### Automatikus Funkciók
+
+#### Frekvencia Szinkronizálás
+A kapcsolat létrejötte után a HamLedger automatikusan követi a rádió frekvenciáját és frissíti a QSO beviteli mezőket. A frekvencia változtatása a rádiónál azonnal megjelenik az alkalmazásban, és automatikusan beállítja a megfelelő sávot a QSO formban.
+
+#### Mód Szinkronizálás
+A rádió módváltása (LSB/USB/CW/DATA) automatikusan szinkronizálódik az alkalmazással. A HamLedger felismeri a digitális módokat és megfelelően beállítja a QSO beviteli mezőket.
 
 ### Hibaelhárítás
 
-#### Gyakori Problémák
-- **rigctld nem található**: PATH beállítás ellenőrzése
-- **Port foglalt**: Más alkalmazás használja
-- **Soros port hozzáférés**: Linux dialout csoport
-- **Tűzfal blokkolás**: Windows kivételek
+#### Gyakori Windows Problémák
+Ha a "rigctld not found" hibaüzenet jelenik meg, ellenőrizd hogy a Hamlib telepítve van-e és a PATH környezeti változóban szerepel. Ha a port foglalt, más alkalmazás (pl. másik CAT program) használhatja - zárd be azokat. Tűzfal problémák esetén add hozzá manuálisan a kivételeket.
+
+#### Gyakori Linux Problémák
+Soros port hozzáférési problémák esetén ellenőrizd a dialout csoport tagságot és a port jogosultságokat (`ls -l /dev/ttyUSB*`). Ha a rigctld nem található, telepítsd újra a hamlib csomagot és ellenőrizd a PATH-t.
 
 ## Frekvencia és S-Meter
 
@@ -258,63 +266,43 @@ A hívójel bevitele után 500ms késleltetéssel automatikusan lekérdezi:
 
 ## DX Cluster
 
-### Spot Megjelenítés
+### Spot Megjelenítés és Navigáció
 
-#### Frekvencia Skála
-- **Vertikális elrendezés**: Frekvencia alapú pozicionálás
-- **Nagyobb és kisebb osztások**: 10 részre osztott skála
-- **MHz címkék**: Frekvencia értékek megjelenítése
+#### Frekvencia Skála Használata
+A DX Cluster egy vertikális frekvencia skálát használ ahol minden spot a pontos frekvenciája alapján pozicionálódik. A skála bal oldalán látható a frekvencia értékek MHz-ben, nagyobb és kisebb osztásokkal a könnyebb tájékozódás érdekében. A spotok két oszlopban jelennek meg: az újabbak balra, a régebbiek jobbra, automatikus átlátszósági effekttel az életkor alapján.
 
-#### Spot Címkék
-- **Két oszlop**: Újabb és régebbi spotok
-- **Átlátszóság**: Kor alapú fade-out effekt
-- **Színkódolás**: 
-  - Zöld keret: Már dolgozott állomás
-  - Kék jobb szél: LOTW
-  - Narancs jobb szél: eQSL
+#### Spot Információk és Színkódolás
+Minden spot címke tartalmazza a hívójelet, és színkódolással jelzi a státuszt: zöld keret jelzi ha már dolgoztad az állomást, kék jobb szél a LOTW megerősítést, narancs jobb szél az eQSL státuszt. A spotok automatikusan frissülnek és eltűnnek egy idő után, így mindig a legfrissebb információkat látod.
 
-### Nagyító Funkció
+### Nagyító Funkció Használata
 
-#### Aktiválás
-- **Mouse hover**: Spot felett lebegés
-- **±5 kHz tartomány**: Közeli spotok megjelenítése
-- **Részletes információk**: Frekvencia, mód, idő, spotter
+#### Aktiválás és Működés
+Ha az egérmutatót egy spot fölé viszed, automatikusan megjelenik a nagyító ablak amely az adott frekvencia ±5 kHz tartományában lévő összes spotot megjeleníti. Ez különösen hasznos zsúfolt sávokban ahol több állomás is közel van egymáshoz. A nagyító ablak részletes információkat mutat: pontos frekvencia, mód, idő, spotter hívójel és megjegyzések.
 
-#### Tartalom
-- **Callsign és frekvencia**: Nagy betűkkel
-- **Mód és idő**: Kiegészítő információk
-- **Spotter lista**: Több spotter esetén
-- **Worked státusz**: Zöld/narancs jelzés
+#### Részletes Spot Adatok
+A nagyító ablakban minden spot külön sorban jelenik meg, worked státusszal és QSL információkkal. Kattinthatsz bármelyik spotra a nagyítóban is, ugyanúgy működik mint a fő nézetben. A nagyító automatikusan eltűnik ha elviszed róla az egeret.
 
-### Szűrők
+### Szűrési Rendszer
 
-#### Sáv Szűrő
-- **Elérhető sávok**: Dinamikus lista a spotok alapján
-- **Egy sáv kiválasztás**: Aktív szűrő megjelenítése
+#### Sáv Szűrő Használata
+A jobb oldali szűrő panelen válaszd ki a kívánt sávot - csak az adott sávban lévő spotok jelennek meg. A sáv lista dinamikusan frissül a beérkező spotok alapján, így csak azok a sávok láthatók ahol jelenleg van aktivitás. Egyszerre csak egy sáv választható ki, de a "Band" gombra kattintva visszatérhetsz az összes sáv nézetéhez.
 
-#### Kontinens Szűrők
-- **DX**: Távoli állomás kontinense
-- **DE**: Spotter kontinense
-- **Többszörös kiválasztás**: Kombinálható szűrők
+#### Kontinens Szűrők (DX és DE)
+A DX szűrő a távoli állomás (akit spotoltak) kontinensét jelöli, a DE szűrő pedig a spotter kontinensét. Például ha csak európai állomásokat szeretnél látni, válaszd az EU-t a DX szűrőnél. Ha csak európai spotterek jelentéseit akarod, válaszd az EU-t a DE szűrőnél. Több kontinens is kiválasztható egyszerre a kombinált szűréshez.
 
-#### Mód Szűrők
-- **PHONE, CW, FT8, FT4, RTTY, PSK31**
-- **Többszörös kiválasztás**: Kombinálható módok
+#### Mód és Egyéb Szűrők
+A mód szűrőkkel (PHONE, CW, FT8, stb.) csak a kiválasztott módokban működő állomásokat jelenítheted meg. A "Valid" kapcsoló csak a validált spotokat mutatja, kiszűrve a hamis vagy hibás jelentéseket. A spot szám beállítással (25-200) korlátozhatod a megjelenített spotok számát a teljesítmény optimalizálásához.
 
-#### Egyéb Opciók
-- **Valid**: Csak validált spotok
-- **Spot szám**: 25, 50, 65, 100, 200 opciók
+### Spot Kattintás és QSO Integráció
 
-### Spot Kattintás
+#### Automatikus Rig Beállítás
+Amikor rákattintasz egy spotra, a HamLedger automatikusan beállítja a rig frekvenciáját (ha CAT vezérlés aktív) és a megfelelő módot. A frekvencia konvertálódik kHz-ről Hz-re a rig számára, a mód pedig intelligensen választódik ki: PHONE spotok LSB-re (<10 MHz) vagy USB-re (≥10 MHz), CW spotok CW módra, digitális spotok DATA módra.
 
-#### Automatikus Beállítások
-- **Rig frekvencia**: kHz → Hz konverzió
-- **Mód beállítás**: 
-  - PHONE → LSB (<10 MHz) vagy USB (≥10 MHz)
-  - CW → CW
-  - Digital → DATA
-- **QSO form**: Hívójel automatikus kitöltés
-- **Állomás info**: Automatikus lekérdezés
+#### QSO Form Automatikus Kitöltés
+A spot kattintás után a hívójel automatikusan bekerül a QSO beviteli mezőbe, és elindul a QRZ.com lekérdezés (ha be van állítva) az állomás információinak megszerzéséhez. A sáv és mód mezők is automatikusan frissülnek a spot adatai alapján, így azonnal kezdheted a QSO-t anélkül hogy manuálisan állítanád be ezeket.
+
+#### Worked Állomás Jelzés
+A rendszer automatikusan ellenőrzi hogy az adott hívójelet már dolgoztad-e korábban, és zöld kerettel jelöli ezeket a spotokat. Ez segít elkerülni a duplikált QSO-kat és gyorsan azonosítani az új állomásokat.
 
 ## Napló Terület
 
@@ -377,37 +365,35 @@ A hívójel bevitele után 500ms késleltetéssel automatikusan lekérdezi:
 - **Export**: Kiválasztott QSO-k exportálása
 - **Törlés**: Többszörös QSO törlés (megerősítéssel)
 
-### QSO Részletek
+### QSO Részletek és Szerkesztés
 
-#### Detail Dialog
-- **Teljes információ**: Minden QSO adat megjelenítése
-- **Állomás adatok**: QRZ.com integráció
-- **Térkép**: OpenStreetMap beágyazás
-- **Szerkesztés**: "Edit QSO" gomb
+#### QSO Detail Dialog Megnyitása
+Bármelyik QSO sorra kattintva megnyílik a részletes nézet amely minden információt megjelenít az adott QSO-ról. A dialog bal oldalán látható a hívójel nagy betűkkel, az ország zászlója és az állomás neve (QRZ.com adatok alapján). A jobb oldalon táblázatos formában jelennek meg a QSO adatok: dátum/idő, sáv, mód, frekvenciák, RST jelentések és QSL státusz.
 
-#### Edit Dialog
-- **Minden mező szerkeszthető**: Inline szerkesztés
-- **Validáció**: Valós idejű ellenőrzés
-- **Mentés**: PouchDB frissítés
-- **Törlés**: Megerősítéssel
+#### Állomás Információk és Térkép
+A dialog alsó részében láthatók a részletes állomás adatok: ország, grid square, QTH, helyi idő és időjárás információk. Ha rendelkezésre állnak koordináták, egy beágyazott OpenStreetMap térkép mutatja az állomás pontos helyét. A térkép interaktív, nagyítható és mozgatható a jobb tájékozódás érdekében.
+
+#### QSO Szerkesztés Módja
+Az "Edit QSO" gombra kattintva átváltasz szerkesztési módba ahol minden mező módosítható. A szerkesztő form ugyanazokat a mezőket tartalmazza mint a QSO bevitel: hívójel, sáv, mód, frekvenciák, RST jelentések, dátum/idő, megjegyzések és QSL státusz. A változtatások valós időben validálódnak, hibás adatok esetén piros kerettel jelezve a problémát.
+
+#### Mentés és Törlés
+A "Save Changes" gomb elmenti a módosításokat az adatbázisba és frissíti a naplót. A "Delete QSO" gomb megerősítés után véglegesen törli a QSO-t - ez a művelet nem visszavonható! A "Cancel" gombbal eldobhatod a változtatásokat és visszatérhetsz a részletes nézethez.
+
+#### Batch Szerkesztés Lehetőségek
+A LogBook nézetben a "Batch Select" móddal több QSO-t is kiválaszthatsz egyszerre szerkesztéshez. Ez hasznos QSL státusz tömeges frissítéséhez, exportáláshoz vagy törléshez. A kiválasztott QSO-k száma megjelenik a felületen, és különböző batch műveletek érhetők el: QSL státusz változtatás, export vagy törlés.
 
 ## QSL Kártya Kezelés
 
 ### QSL Státusz Rendszer
 
-#### Státusz Kódok
-- **N**: Not sent/received (Piros)
-- **P**: Print label (Narancs) - PDF generálás
-- **L**: Label printed (Kék) - Nyomtatásra kész
-- **S**: Sent (Sárga) - Elküldve
-- **R**: Received (Zöld) - Megérkezett
-- **B**: Both (Kék) - Mindkét irány
-- **Q**: QSL requested (Lila) - Kérve
+#### Státusz Kódok és Színek
+A QSL státusz egy egyszerű betűkóddal és színkódolással jelzi a QSL kártya állapotát minden QSO-nál. **N** (piros) = még nem küldött/kapott, **P** (narancs) = címke nyomtatásra vár, **L** (kék) = címke kinyomtatva, **S** (sárga) = elküldve, **R** (zöld) = megérkezett, **B** (kék) = mindkét irányban rendben, **Q** (lila) = QSL kérve. Minden státusz más színnel jelenik meg a könnyebb azonosítás érdekében.
 
-#### Státusz Váltás
-- **Bal klik**: Előre ciklikus váltás
-- **Jobb klik**: Hátra ciklikus váltás
-- **Tooltip**: Státusz jelentések és használati útmutató
+#### Státusz Váltás Módjai
+A QSL státusz mezőre bal egérgombbal kattintva előre léphetsz a státuszok között (N→P→L→S→R→B→Q→N), jobb egérgombbal pedig visszafelé. A tooltip mindig megmutatja az aktuális státusz jelentését és a használati útmutatót. Ez lehetővé teszi a gyors státusz frissítést anélkül hogy külön dialógust kellene megnyitni.
+
+#### Automatikus Címke Generálás
+Amikor a státuszt "P"-re (Print label) állítod, a rendszer automatikusan felajánlja a QSL címke PDF generálását. A program lekérdezi a QRZ.com adatbázisból a címzett adatait (név, cím) és létrehoz egy nyomtatható PDF fájlt a QSO adatokkal. A sikeres generálás után a státusz automatikusan "L"-re (Label printed) vált.
 
 ### Címke Generálás
 
