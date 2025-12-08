@@ -326,10 +326,19 @@ export default {
       };
       this.updateVisibleRange();
     },
-    async cycleQslStatus(qso) {
+    async cycleQslStatus(qso, reverse = false) {
       const statusCycle = ['N', 'L', 'S', 'R', 'B', 'Q'];
       const currentIndex = statusCycle.indexOf(qso.qslStatus || 'N');
-      const nextIndex = (currentIndex + 1) % statusCycle.length;
+      
+      let nextIndex;
+      if (reverse) {
+        // Cycle backwards
+        nextIndex = currentIndex === 0 ? statusCycle.length - 1 : currentIndex - 1;
+      } else {
+        // Cycle forwards
+        nextIndex = (currentIndex + 1) % statusCycle.length;
+      }
+      
       const newStatus = statusCycle[nextIndex];
 
       try {
@@ -640,8 +649,9 @@ export default {
                 <span 
                   class="qsl-status clickable" 
                   :class="'qsl-' + (entry.qslStatus || 'N').toLowerCase()"
-                  @click.stop="cycleQslStatus(entry)"
-                  :title="'Click to change QSL status. Current: ' + getQslStatusDescription(entry.qslStatus || 'N')"
+                  @click.stop="cycleQslStatus(entry, false)"
+                  @contextmenu.prevent.stop="cycleQslStatus(entry, true)"
+                  :title="'Left click: cycle forward (N→L→S→R→B→Q→N), Right click: cycle backward. Current: ' + getQslStatusDescription(entry.qslStatus || 'N')"
                 >
                   {{ entry.qslStatus || 'N' }}
                 </span>
