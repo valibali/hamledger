@@ -210,6 +210,17 @@ export default {
           <input type="text" id="remark" v-model="editedQso.remark" />
         </div>
 
+        <div class="form-group">
+          <label for="qslStatus">QSL Status</label>
+          <select id="qslStatus" v-model="editedQso.qslStatus">
+            <option value="N">N - Not sent/received</option>
+            <option value="S">S - Sent</option>
+            <option value="R">R - Received</option>
+            <option value="B">B - Both sent and received</option>
+            <option value="Q">Q - QSL requested</option>
+          </select>
+        </div>
+
         <div class="form-group full-width">
           <label for="notes">Notes</label>
           <textarea id="notes" v-model="editedQso.notes" rows="3"></textarea>
