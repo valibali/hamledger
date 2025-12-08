@@ -66,7 +66,9 @@ export const useDxClusterStore = defineStore('dxCluster', {
       try {
         const params: URLSearchParams = new URLSearchParams();
         params.append('a', this.filters.pageLength.toString());
-        params.append('b', this.filters.selectedBand);
+        // Remove 'm' suffix from band for API parameter
+        const bandNumber = this.filters.selectedBand.replace('m', '');
+        params.append('b', bandNumber);
 
         this.filters.selectedCdx.forEach((cdx: string) => params.append('cdx', cdx));
         this.filters.selectedCde.forEach((cde: string) => params.append('cde', cde));
