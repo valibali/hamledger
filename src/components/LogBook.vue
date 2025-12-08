@@ -367,18 +367,11 @@ export default {
       let newStatus = statusCycle[nextIndex];
 
       try {
-        // If changing to P (Print label) from N or L, ask for confirmation
-        if (newStatus === 'P' && ['N', 'L'].includes(qso.qslStatus || 'N')) {
+        // If changing to P (Print label) from any status, ask for confirmation
+        if (newStatus === 'P') {
           this.labelConfirmQso = qso;
           this.showLabelConfirmDialog = true;
           return; // Don't proceed with status change yet
-        }
-
-        // If changing to P (Print label), generate PDF first
-        if (newStatus === 'P') {
-          await this.generateQslLabel(qso, false);
-          // After successful PDF generation, change status to 'L'
-          newStatus = 'L';
         }
 
         const updatedQso = {
@@ -759,10 +752,13 @@ export default {
       if (!this.labelConfirmQso) return;
       
       try {
-        // Just change status to 'P' without generating label
+        // If QSO is already 'P', keep it as 'P', otherwise change to 'P'
+        const currentStatus = this.labelConfirmQso.qslStatus || 'N';
+        const newStatus = currentStatus === 'P' ? 'P' : 'P';
+        
         const updatedQso = {
           ...this.labelConfirmQso,
-          qslStatus: 'P',
+          qslStatus: newStatus,
         };
 
         await this.qsoStore.updateQso(updatedQso);
@@ -770,12 +766,12 @@ export default {
         // Update the local entry immediately for better UX
         const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (this.labelConfirmQso._id || this.labelConfirmQso.id));
         if (sessionIndex !== -1) {
-          this.qsoStore.currentSession[sessionIndex].qslStatus = 'P';
+          this.qsoStore.currentSession[sessionIndex].qslStatus = newStatus;
         }
 
         const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (this.labelConfirmQso._id || this.labelConfirmQso.id));
         if (allIndex !== -1) {
-          this.qsoStore.allQsos[allIndex].qslStatus = 'P';
+          this.qsoStore.allQsos[allIndex].qslStatus = newStatus;
         }
       } catch (error) {
         console.error('Failed to update QSL status:', error);
