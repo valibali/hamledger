@@ -217,6 +217,7 @@ export default {
           <label for="qslStatus">QSL Status</label>
           <select id="qslStatus" v-model="editedQso.qslStatus">
             <option value="N">N - Not sent/received</option>
+            <option value="L">L - Label printed</option>
             <option value="S">S - Sent</option>
             <option value="R">R - Received</option>
             <option value="B">B - Both sent and received</option>
