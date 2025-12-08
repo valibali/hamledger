@@ -368,6 +368,8 @@ export default {
         // If changing to P (Print label), generate PDF first
         if (newStatus === 'P') {
           await this.generateQslLabel(qso, false);
+          // After successful PDF generation, change status to 'L'
+          newStatus = 'L';
         }
 
         const updatedQso = {
@@ -571,6 +573,26 @@ export default {
           this.qslGenerationStatus.progress = 90;
           
           if (result.success) {
+            // After successful PDF generation, update all QSOs to 'L' status
+            for (const qso of selectedQsoObjects) {
+              const updatedQso = {
+                ...qso,
+                qslStatus: 'L',
+              };
+              await this.qsoStore.updateQso(updatedQso);
+              
+              // Update local arrays with 'L' status
+              const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+              if (sessionIndex !== -1) {
+                this.qsoStore.currentSession[sessionIndex].qslStatus = 'L';
+              }
+
+              const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+              if (allIndex !== -1) {
+                this.qsoStore.allQsos[allIndex].qslStatus = 'L';
+              }
+            }
+            
             this.qslGenerationStatus.success = true;
             this.qslGenerationStatus.filePath = result.filePath;
             this.qslGenerationStatus.progress = 100;
