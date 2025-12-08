@@ -1185,21 +1185,34 @@ ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
       doc.text(`Name: ${labelData.name}`, 10, 32);
     }
     
-    if (labelData.qth) {
-      // Split QTH into multiple lines if too long
-      const qthLines = doc.splitTextToSize(`QTH: ${labelData.qth}`, 85);
-      doc.text(qthLines, 10, 39);
+    let yPosition = 39;
+    
+    // Address line 1
+    if (labelData.addr1) {
+      const addr1Lines = doc.splitTextToSize(labelData.addr1, 85);
+      doc.text(addr1Lines, 10, yPosition);
+      yPosition += addr1Lines.length * 5; // 5mm per line
     }
     
+    // Address line 2
+    if (labelData.addr2) {
+      const addr2Lines = doc.splitTextToSize(labelData.addr2, 85);
+      doc.text(addr2Lines, 10, yPosition);
+      yPosition += addr2Lines.length * 5;
+    }
+    
+    // Country
     if (labelData.country) {
-      doc.text(`Country: ${labelData.country}`, 10, 53);
+      doc.text(`Country: ${labelData.country}`, 10, yPosition);
+      yPosition += 5;
     }
     
-    // QSO details
+    // QSO details - adjust position based on address length
+    const qsoDetailsY = Math.max(yPosition + 3, 63);
     doc.setFont('helvetica', 'bold');
-    doc.text('QSO Details:', 10, 63);
+    doc.text('QSO Details:', 10, qsoDetailsY);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Date: ${labelData.date} | Band: ${labelData.band} | Mode: ${labelData.mode} | RST: ${labelData.rst}`, 10, 69);
+    doc.text(`Date: ${labelData.date} | Band: ${labelData.band} | Mode: ${labelData.mode} | RST: ${labelData.rst}`, 10, qsoDetailsY + 6);
 
     // Save PDF
     const fileName = `QSL_Label_${labelData.callsign}_${labelData.date.replace(/\//g, '-')}.pdf`;

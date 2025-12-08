@@ -463,6 +463,31 @@ export const useQsoStore = defineStore('qso', {
       }
     },
 
+    async getFullQRZData(callsign: string) {
+      try {
+        // First try with the full callsign (including portable prefixes/suffixes)
+        let qrzData = await qrzService.getFullQRZData(callsign);
+
+        // If not found, try with base callsign (remove portable prefixes and suffixes)
+        if (qrzData instanceof Error) {
+          const baseCallsign = CallsignHelper.extractBaseCallsign(callsign);
+          if (baseCallsign !== callsign) {
+            qrzData = await qrzService.getFullQRZData(baseCallsign);
+          }
+        }
+
+        if (qrzData instanceof Error) {
+          console.warn('QRZ full data lookup failed for callsign:', callsign, qrzData.message);
+          return null;
+        }
+
+        return qrzData;
+      } catch (error) {
+        console.error('Error fetching full QRZ data:', error);
+        return null;
+      }
+    },
+
     // WSJT-X related actions
     async initializeWSJTX() {
       try {

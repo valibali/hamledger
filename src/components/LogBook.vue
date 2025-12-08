@@ -397,14 +397,18 @@ export default {
     },
     async generateQslLabel(qso) {
       try {
-        // Fetch station info to get QTH address
+        // Fetch station info to get address data
         await this.qsoStore.fetchStationInfo(qso.callsign);
         const stationInfo = this.qsoStore.stationInfo;
+        
+        // Get full QRZ data to access addr1 and addr2 fields
+        const qrzData = await this.qsoStore.getFullQRZData(qso.callsign);
         
         const labelData = {
           callsign: qso.callsign,
           name: stationInfo.baseData?.name || '',
-          qth: stationInfo.baseData?.qth || '',
+          addr1: qrzData?.addr1 || '',
+          addr2: qrzData?.addr2 || '',
           country: stationInfo.baseData?.country || '',
           date: new Date(qso.datetime).toLocaleDateString(),
           band: qso.band,
