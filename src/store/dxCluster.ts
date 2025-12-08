@@ -66,9 +66,22 @@ export const useDxClusterStore = defineStore('dxCluster', {
       try {
         const params: URLSearchParams = new URLSearchParams();
         params.append('a', this.filters.pageLength.toString());
-        // Remove 'm' suffix from band for API parameter
-        const bandNumber = this.filters.selectedBand.replace('m', '');
-        params.append('b', bandNumber);
+        
+        // Map band to API parameter
+        let bandParam = this.filters.selectedBand.replace('m', '');
+        if (this.filters.selectedBand === '2m') {
+          bandParam = 'VHF';
+        } else if (this.filters.selectedBand === '70cm') {
+          bandParam = 'UHF';
+        } else {
+          // Check if it's an SHF band (above 1 GHz)
+          const bandRange = getBandFrequencyRange(this.filters.selectedBand);
+          if (bandRange && bandRange.min >= 1000000) { // 1 GHz in kHz
+            bandParam = 'SHF';
+          }
+        }
+        
+        params.append('b', bandParam);
 
         this.filters.selectedCdx.forEach((cdx: string) => params.append('cdx', cdx));
         this.filters.selectedCde.forEach((cde: string) => params.append('cde', cde));
@@ -83,6 +96,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
 
         console.log('DX Cluster request URL params:', params.toString());
         console.log('Full URL would be: https://dxheat.com/source/spots/?' + params.toString());
+        console.log('Band mapping:', this.filters.selectedBand, '->', bandParam);
 
         const result = await window.electronAPI.fetchDxSpots(params.toString());
 
@@ -151,7 +165,19 @@ export const useDxClusterStore = defineStore('dxCluster', {
           }
         });
 
-        this.spots = processedSpots;
+        // Apply local filtering for SHF bands
+        let finalSpots = processedSpots;
+        if (bandParam === 'SHF') {
+          const bandRange = getBandFrequencyRange(this.filters.selectedBand);
+          if (bandRange) {
+            finalSpots = processedSpots.filter(spot => {
+              const freqKHz = parseFloat(spot.Frequency);
+              return freqKHz >= bandRange.min && freqKHz <= bandRange.max;
+            });
+          }
+        }
+
+        this.spots = finalSpots;
         this.lastFetchTime = new Date();
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Ismeretlen hiba történt';
