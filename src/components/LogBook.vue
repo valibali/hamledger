@@ -948,7 +948,7 @@ export default {
         <div class="loading-subtext">
           {{ qslGenerationStatus.progress }}% complete
           <span v-if="qslGenerationStatus.progress <= 70">
-            - Processing QSO data
+            - Fetching station info
           </span>
           <span v-else-if="qslGenerationStatus.progress <= 90">
             - Generating PDF
