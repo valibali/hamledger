@@ -1156,6 +1156,68 @@ async function handleWSJTXQSO(wsjtxQSO: WSJTXLoggedQSO): Promise<void> {
   }
 }
 
+// QSL Label generation handler
+ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
+  try {
+    const { jsPDF } = await import('jspdf');
+    
+    // Create new PDF document
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: [105, 74] // Standard envelope label size
+    });
+
+    // Set font
+    doc.setFont('helvetica', 'normal');
+    
+    // Title
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('QSL CARD ENVELOPE LABEL', 52.5, 15, { align: 'center' });
+    
+    // Station info
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`To: ${labelData.callsign}`, 10, 25);
+    
+    if (labelData.name) {
+      doc.text(`Name: ${labelData.name}`, 10, 32);
+    }
+    
+    if (labelData.qth) {
+      // Split QTH into multiple lines if too long
+      const qthLines = doc.splitTextToSize(`QTH: ${labelData.qth}`, 85);
+      doc.text(qthLines, 10, 39);
+    }
+    
+    if (labelData.country) {
+      doc.text(`Country: ${labelData.country}`, 10, 53);
+    }
+    
+    // QSO details
+    doc.setFont('helvetica', 'bold');
+    doc.text('QSO Details:', 10, 63);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Date: ${labelData.date} | Band: ${labelData.band} | Mode: ${labelData.mode} | RST: ${labelData.rst}`, 10, 69);
+
+    // Save PDF
+    const fileName = `QSL_Label_${labelData.callsign}_${labelData.date.replace(/\//g, '-')}.pdf`;
+    const filePath = join(app.getPath('downloads'), fileName);
+    
+    const pdfBuffer = doc.output('arraybuffer');
+    fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
+    
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('QSL label generation error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});
+
 // WSJT-X IPC handlers
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 ipcMain.handle('wsjtx:start', async (_, _port: number = 2237) => {

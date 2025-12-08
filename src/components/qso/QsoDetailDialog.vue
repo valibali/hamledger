@@ -514,6 +514,11 @@ export default {
   color: #fff;
 }
 
+.qsl-p {
+  background: #fd7e14;
+  color: #fff;
+}
+
 .qsl-l {
   background: #17a2b8;
   color: #fff;

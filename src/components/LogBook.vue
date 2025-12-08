@@ -341,7 +341,7 @@ export default {
       this.updateVisibleRange();
     },
     async cycleQslStatus(qso, reverse = false) {
-      const statusCycle = ['N', 'L', 'S', 'R', 'B', 'Q'];
+      const statusCycle = ['N', 'P', 'L', 'S', 'R', 'B', 'Q'];
       const currentIndex = statusCycle.indexOf(qso.qslStatus || 'N');
       
       let nextIndex;
@@ -356,6 +356,11 @@ export default {
       const newStatus = statusCycle[nextIndex];
 
       try {
+        // If changing to P (Print label), generate PDF first
+        if (newStatus === 'P') {
+          await this.generateQslLabel(qso);
+        }
+
         const updatedQso = {
           ...qso,
           qslStatus: newStatus,
@@ -381,6 +386,7 @@ export default {
     getQslStatusDescription(status) {
       const descriptions = {
         'N': 'Not sent/received',
+        'P': 'Print label',
         'L': 'Label printed',
         'S': 'Sent',
         'R': 'Received',
@@ -388,6 +394,36 @@ export default {
         'Q': 'QSL requested'
       };
       return descriptions[status] || 'Unknown';
+    },
+    async generateQslLabel(qso) {
+      try {
+        // Fetch station info to get QTH address
+        await this.qsoStore.fetchStationInfo(qso.callsign);
+        const stationInfo = this.qsoStore.stationInfo;
+        
+        const labelData = {
+          callsign: qso.callsign,
+          name: stationInfo.baseData?.name || '',
+          qth: stationInfo.baseData?.qth || '',
+          country: stationInfo.baseData?.country || '',
+          date: new Date(qso.datetime).toLocaleDateString(),
+          band: qso.band,
+          mode: qso.mode,
+          rst: qso.rstt || '59'
+        };
+
+        const result = await window.electronAPI.generateQslLabel(labelData);
+        
+        if (result.success) {
+          alert(`QSL label PDF generated successfully: ${result.filePath}`);
+        } else {
+          throw new Error(result.error || 'Failed to generate QSL label');
+        }
+      } catch (error) {
+        console.error('Failed to generate QSL label:', error);
+        alert('Error generating QSL label: ' + (error.message || error));
+        throw error; // Re-throw to prevent status change
+      }
     },
     toggleBatchMode() {
       this.batchMode = !this.batchMode;
@@ -429,22 +465,36 @@ export default {
       });
 
       try {
+        let successCount = 0;
+        
         for (const qso of selectedQsoObjects) {
-          const updatedQso = {
-            ...qso,
-            qslStatus: newStatus,
-          };
-          await this.qsoStore.updateQso(updatedQso);
-          
-          // Update local arrays
-          const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
-          if (sessionIndex !== -1) {
-            this.qsoStore.currentSession[sessionIndex].qslStatus = newStatus;
-          }
+          try {
+            // If changing to P (Print label), generate PDF first
+            if (newStatus === 'P') {
+              await this.generateQslLabel(qso);
+            }
 
-          const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
-          if (allIndex !== -1) {
-            this.qsoStore.allQsos[allIndex].qslStatus = newStatus;
+            const updatedQso = {
+              ...qso,
+              qslStatus: newStatus,
+            };
+            await this.qsoStore.updateQso(updatedQso);
+            
+            // Update local arrays
+            const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+            if (sessionIndex !== -1) {
+              this.qsoStore.currentSession[sessionIndex].qslStatus = newStatus;
+            }
+
+            const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+            if (allIndex !== -1) {
+              this.qsoStore.allQsos[allIndex].qslStatus = newStatus;
+            }
+            
+            successCount++;
+          } catch (error) {
+            console.error(`Failed to update QSO ${qso.callsign}:`, error);
+            // Continue with other QSOs
           }
         }
 
@@ -452,7 +502,11 @@ export default {
         this.selectedQsos.clear();
         this.showBatchActions = false;
         
-        alert(`${selectedQsoObjects.length} QSO QSL status updated to: ${newStatus} - ${this.getQslStatusDescription(newStatus)}`);
+        if (successCount === selectedQsoObjects.length) {
+          alert(`${successCount} QSO QSL status updated to: ${newStatus} - ${this.getQslStatusDescription(newStatus)}`);
+        } else {
+          alert(`${successCount} of ${selectedQsoObjects.length} QSOs updated successfully. Some failed - check console for details.`);
+        }
       } catch (error) {
         console.error('Batch QSL status update failed:', error);
         alert('Error during batch QSL status update: ' + (error.message || error));
@@ -681,6 +735,7 @@ export default {
         <div class="batch-action-group">
           <label>QSL Status:</label>
           <button class="batch-qsl-btn qsl-n" @click="batchUpdateQslStatus('N')" title="Not sent/received">N</button>
+          <button class="batch-qsl-btn qsl-p" @click="batchUpdateQslStatus('P')" title="Print label (generates PDF)">P</button>
           <button class="batch-qsl-btn qsl-l" @click="batchUpdateQslStatus('L')" title="Label printed (ready to send)">L</button>
           <button class="batch-qsl-btn qsl-s" @click="batchUpdateQslStatus('S')" title="Sent">S</button>
           <button class="batch-qsl-btn qsl-r" @click="batchUpdateQslStatus('R')" title="Received">R</button>
@@ -817,7 +872,7 @@ export default {
                   :class="'qsl-' + (entry.qslStatus || 'N').toLowerCase()"
                   @click.stop="cycleQslStatus(entry, false)"
                   @contextmenu.prevent.stop="cycleQslStatus(entry, true)"
-                  :title="'Left click: cycle forward, Right click: cycle backward. Current: ' + getQslStatusDescription(entry.qslStatus || 'N') + '. Status meanings: N=Not sent/received, L=Label printed (ready to send), S=Sent, R=Received, B=Both sent and received, Q=QSL requested'"
+                  :title="'Left click: cycle forward, Right click: cycle backward. Current: ' + getQslStatusDescription(entry.qslStatus || 'N') + '. Status meanings: N=Not sent/received, P=Print label (generates PDF), L=Label printed (ready to send), S=Sent, R=Received, B=Both sent and received, Q=QSL requested'"
                 >
                   {{ entry.qslStatus || 'N' }}
                 </span>
@@ -1345,6 +1400,11 @@ export default {
   color: #fff;
 }
 
+.qsl-p {
+  background: #fd7e14;
+  color: #fff;
+}
+
 .qsl-l {
   background: #17a2b8;
   color: #fff;
@@ -1450,6 +1510,11 @@ export default {
 
 .batch-qsl-btn.qsl-n {
   background: #e74c3c;
+  color: #fff;
+}
+
+.batch-qsl-btn.qsl-p {
+  background: #fd7e14;
   color: #fff;
 }
 
