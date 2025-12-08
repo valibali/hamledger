@@ -289,6 +289,7 @@ export const useQsoStore = defineStore('qso', {
       });
     },
     async fetchStationInfo(callsign: string): Promise<void | Error> {
+      this.stationInfo.qrzError = false;
       try {
         // Reset station info first to avoid showing stale data
         this.stationInfo = {
