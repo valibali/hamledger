@@ -25,7 +25,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
     filters: {
       selectedCdx: ['EU', 'NA', 'SA', 'AS', 'AF', 'OC', 'AN'],
       selectedCde: ['EU', 'NA', 'SA', 'AS', 'AF', 'OC', 'AN'],
-      selectedBand: '40',
+      selectedBand: '40m',
       selectedModes: ['PHONE'],
       validatedOnly: true,
       pageLength: 65,

@@ -99,9 +99,9 @@ export default {
             ⚠️ QRZ lookup failed. Please check your QRZ.com credentials in settings.
           </div>
           <p class="station-name">Remote: {{ stationInfo?.baseData?.name }}</p>
-          <p class="station-qth">QTH: {{ stationInfo?.baseData?.qth || 'Loading...' }}</p>
+          <p class="station-qth">QTH: {{ stationInfo?.baseData?.qth || 'N/A' }}</p>
           <p class="station-country">
-            Country: {{ stationInfo?.baseData?.country || 'Loading...' }}
+            Country: {{ stationInfo?.baseData?.country || 'N/A' }}
           </p>
           <template v-if="stationInfo?.geodata">
             <p class="station-coords-text">Lat: {{ stationInfo.geodata.lat?.toFixed(4) }}°</p>
