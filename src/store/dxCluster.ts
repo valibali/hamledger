@@ -71,7 +71,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
         let bandParam = this.filters.selectedBand.replace('m', '');
         if (this.filters.selectedBand === '2m') {
           bandParam = 'VHF';
-        } else if (this.filters.selectedBand === '70cm') {
+        } else if (this.filters.selectedBand === '70cm' || this.filters.selectedBand === '33cm' || this.filters.selectedBand === '23cm') {
           bandParam = 'UHF';
         } else {
           // Check if it's an SHF band (above 1 GHz)
