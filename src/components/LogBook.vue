@@ -367,8 +367,8 @@ export default {
       let newStatus = statusCycle[nextIndex];
 
       try {
-        // If changing to P (Print label) from any status, ask for confirmation
-        if (newStatus === 'P') {
+        // If clicking on P status (current is P and next would be P) or changing to P, ask for confirmation
+        if (newStatus === 'P' || (qso.qslStatus === 'P' && newStatus === 'L')) {
           this.labelConfirmQso = qso;
           this.showLabelConfirmDialog = true;
           return; // Don't proceed with status change yet
