@@ -52,6 +52,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     });
     console.log('✅ wsjtx:add-qso IPC listener set up in preload');
   },
-  generateQslLabel: (labelData: any) => ipcRenderer.invoke('qsl:generateLabel', labelData),
+  generateQslLabels: (labelDataArray: any[]) => ipcRenderer.invoke('qsl:generateLabels', labelDataArray),
   openFolder: (filePath: string) => ipcRenderer.invoke('system:openFolder', filePath),
 });

@@ -367,7 +367,7 @@ export default {
       try {
         // If changing to P (Print label), generate PDF first
         if (newStatus === 'P') {
-          await this.generateQslLabel(qso);
+          await this.generateQslLabel(qso, false);
         }
 
         const updatedQso = {
@@ -404,24 +404,26 @@ export default {
       };
       return descriptions[status] || 'Unknown';
     },
-    async generateQslLabel(qso) {
+    async generateQslLabel(qso, isBatchMode = false) {
       try {
-        // Show progress indicator
-        this.qslGenerationStatus = {
-          isGenerating: true,
-          progress: 0,
-          error: null,
-          success: false,
-          filePath: null
-        };
+        if (!isBatchMode) {
+          // Show progress indicator only for single QSO
+          this.qslGenerationStatus = {
+            isGenerating: true,
+            progress: 0,
+            error: null,
+            success: false,
+            filePath: null
+          };
+        }
 
         // Fetch station info to get address data
-        this.qslGenerationStatus.progress = 20;
+        if (!isBatchMode) this.qslGenerationStatus.progress = 20;
         await this.qsoStore.fetchStationInfo(qso.callsign);
         const stationInfo = this.qsoStore.stationInfo;
         
         // Get full QRZ data to access addr1 and addr2 fields
-        this.qslGenerationStatus.progress = 40;
+        if (!isBatchMode) this.qslGenerationStatus.progress = 40;
         const qrzData = await this.qsoStore.getFullQRZData(qso.callsign);
         
         const labelData = {
@@ -436,24 +438,34 @@ export default {
           rst: qso.rstt || '59'
         };
 
-        this.qslGenerationStatus.progress = 60;
-        const result = await window.electronAPI.generateQslLabel(labelData);
-        
-        this.qslGenerationStatus.progress = 100;
-        
-        if (result.success) {
-          this.qslGenerationStatus.success = true;
-          this.qslGenerationStatus.filePath = result.filePath;
-          this.showQslGenerationDialog = true;
+        if (isBatchMode) {
+          // Return label data for batch processing
+          return labelData;
         } else {
-          throw new Error(result.error || 'Failed to generate QSL label');
+          // Generate single label
+          if (!isBatchMode) this.qslGenerationStatus.progress = 60;
+          const result = await window.electronAPI.generateQslLabels([labelData]);
+          
+          if (!isBatchMode) this.qslGenerationStatus.progress = 100;
+          
+          if (result.success) {
+            this.qslGenerationStatus.success = true;
+            this.qslGenerationStatus.filePath = result.filePath;
+            this.showQslGenerationDialog = true;
+          } else {
+            throw new Error(result.error || 'Failed to generate QSL label');
+          }
         }
       } catch (error) {
         console.error('Failed to generate QSL label:', error);
-        this.qslGenerationStatus.error = error.message || error;
+        if (!isBatchMode) {
+          this.qslGenerationStatus.error = error.message || error;
+        }
         throw error; // Re-throw to prevent status change
       } finally {
-        this.qslGenerationStatus.isGenerating = false;
+        if (!isBatchMode) {
+          this.qslGenerationStatus.isGenerating = false;
+        }
       }
     },
     toggleBatchMode() {
@@ -497,12 +509,27 @@ export default {
 
       try {
         let successCount = 0;
+        let labelDataArray = [];
         
-        for (const qso of selectedQsoObjects) {
+        // Show progress indicator for batch operations
+        if (newStatus === 'P') {
+          this.qslGenerationStatus = {
+            isGenerating: true,
+            progress: 0,
+            error: null,
+            success: false,
+            filePath: null
+          };
+        }
+        
+        for (let i = 0; i < selectedQsoObjects.length; i++) {
+          const qso = selectedQsoObjects[i];
           try {
-            // If changing to P (Print label), generate PDF first
+            // If changing to P (Print label), collect label data for batch generation
             if (newStatus === 'P') {
-              await this.generateQslLabel(qso);
+              this.qslGenerationStatus.progress = Math.round((i / selectedQsoObjects.length) * 50);
+              const labelData = await this.generateQslLabel(qso, true);
+              labelDataArray.push(labelData);
             }
 
             const updatedQso = {
@@ -529,19 +556,40 @@ export default {
           }
         }
 
+        // Generate batch PDF if we collected label data
+        if (newStatus === 'P' && labelDataArray.length > 0) {
+          this.qslGenerationStatus.progress = 75;
+          const result = await window.electronAPI.generateQslLabels(labelDataArray);
+          this.qslGenerationStatus.progress = 100;
+          
+          if (result.success) {
+            this.qslGenerationStatus.success = true;
+            this.qslGenerationStatus.filePath = result.filePath;
+            this.showQslGenerationDialog = true;
+          } else {
+            throw new Error(result.error || 'Failed to generate QSL labels');
+          }
+        }
+
         // Clear selection after batch update
         this.selectedQsos.clear();
         this.showBatchActions = false;
         this.showQslStatusMenu = false;
         
-        if (successCount === selectedQsoObjects.length) {
-          alert(`${successCount} QSO QSL status updated to: ${newStatus} - ${this.getQslStatusDescription(newStatus)}`);
-        } else {
-          alert(`${successCount} of ${selectedQsoObjects.length} QSOs updated successfully. Some failed - check console for details.`);
+        if (newStatus !== 'P') {
+          if (successCount === selectedQsoObjects.length) {
+            alert(`${successCount} QSO QSL status updated to: ${newStatus} - ${this.getQslStatusDescription(newStatus)}`);
+          } else {
+            alert(`${successCount} of ${selectedQsoObjects.length} QSOs updated successfully. Some failed - check console for details.`);
+          }
         }
       } catch (error) {
         console.error('Batch QSL status update failed:', error);
         alert('Error during batch QSL status update: ' + (error.message || error));
+      } finally {
+        if (newStatus === 'P') {
+          this.qslGenerationStatus.isGenerating = false;
+        }
       }
     },
     async batchExportSelected() {

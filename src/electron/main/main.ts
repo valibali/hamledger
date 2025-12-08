@@ -1156,8 +1156,8 @@ async function handleWSJTXQSO(wsjtxQSO: WSJTXLoggedQSO): Promise<void> {
   }
 }
 
-// QSL Label generation handler
-ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
+// QSL Labels generation handler (supports batch)
+ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
   try {
     const { jsPDF } = await import('jspdf');
     
@@ -1169,90 +1169,117 @@ ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
     });
 
     // A4 dimensions: 210 x 297 mm
-    // 3x8 grid = 24 labels total
+    // 3x8 grid = 24 labels per page
     const pageWidth = 210;
     const pageHeight = 297;
     const cols = 3;
     const rows = 8;
+    const labelsPerPage = cols * rows;
     const labelWidth = pageWidth / cols;
     const labelHeight = pageHeight / rows;
     
-    // Generate 24 identical labels in 3x8 grid
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const x = col * labelWidth;
-        const y = row * labelHeight;
-        
-        // Draw border around each label
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.1);
-        doc.rect(x, y, labelWidth, labelHeight);
-        
-        // Set font for content
+    // Function to draw a single label
+    const drawLabel = (labelData, x, y) => {
+      // Draw border around each label
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.1);
+      doc.rect(x, y, labelWidth, labelHeight);
+      
+      // Set font for content
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      
+      // Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('QSL CARD', x + labelWidth/2, y + 8, { align: 'center' });
+      
+      // Station info
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      
+      let currentY = y + 15;
+      const leftMargin = x + 2;
+      const maxWidth = labelWidth - 4;
+      
+      // To: Callsign
+      doc.setFont('helvetica', 'bold');
+      doc.text(`To: ${labelData.callsign}`, leftMargin, currentY);
+      currentY += 4;
+      
+      // Name
+      if (labelData.name) {
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        
-        // Title
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text('QSL CARD', x + labelWidth/2, y + 8, { align: 'center' });
-        
-        // Station info
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        
-        let currentY = y + 15;
-        const leftMargin = x + 2;
-        const rightMargin = x + labelWidth - 2;
-        const maxWidth = labelWidth - 4;
-        
-        // To: Callsign
-        doc.setFont('helvetica', 'bold');
-        doc.text(`To: ${labelData.callsign}`, leftMargin, currentY);
-        currentY += 4;
-        
-        // Name
-        if (labelData.name) {
-          doc.setFont('helvetica', 'normal');
-          const nameLines = doc.splitTextToSize(`${labelData.name}`, maxWidth);
-          doc.text(nameLines, leftMargin, currentY);
-          currentY += nameLines.length * 3;
-        }
-        
-        // Address line 1
-        if (labelData.addr1) {
-          const addr1Lines = doc.splitTextToSize(labelData.addr1, maxWidth);
-          doc.text(addr1Lines, leftMargin, currentY);
-          currentY += addr1Lines.length * 3;
-        }
-        
-        // Address line 2
-        if (labelData.addr2) {
-          const addr2Lines = doc.splitTextToSize(labelData.addr2, maxWidth);
-          doc.text(addr2Lines, leftMargin, currentY);
-          currentY += addr2Lines.length * 3;
-        }
-        
-        // Country
-        if (labelData.country) {
-          doc.text(labelData.country, leftMargin, currentY);
-          currentY += 3;
-        }
-        
-        // QSO details at bottom
-        const qsoY = y + labelHeight - 8;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6);
-        doc.text('QSO:', leftMargin, qsoY);
-        doc.setFont('helvetica', 'normal');
-        const qsoDetails = `${labelData.date} ${labelData.band} ${labelData.mode} ${labelData.rst}`;
-        const qsoLines = doc.splitTextToSize(qsoDetails, maxWidth - 10);
-        doc.text(qsoLines, leftMargin + 8, qsoY);
+        const nameLines = doc.splitTextToSize(`${labelData.name}`, maxWidth);
+        doc.text(nameLines, leftMargin, currentY);
+        currentY += nameLines.length * 3;
       }
+      
+      // Address line 1
+      if (labelData.addr1) {
+        const addr1Lines = doc.splitTextToSize(labelData.addr1, maxWidth);
+        doc.text(addr1Lines, leftMargin, currentY);
+        currentY += addr1Lines.length * 3;
+      }
+      
+      // Address line 2
+      if (labelData.addr2) {
+        const addr2Lines = doc.splitTextToSize(labelData.addr2, maxWidth);
+        doc.text(addr2Lines, leftMargin, currentY);
+        currentY += addr2Lines.length * 3;
+      }
+      
+      // Country
+      if (labelData.country) {
+        doc.text(labelData.country, leftMargin, currentY);
+        currentY += 3;
+      }
+      
+      // QSO details at bottom
+      const qsoY = y + labelHeight - 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.text('QSO:', leftMargin, qsoY);
+      doc.setFont('helvetica', 'normal');
+      const qsoDetails = `${labelData.date} ${labelData.band} ${labelData.mode} ${labelData.rst}`;
+      const qsoLines = doc.splitTextToSize(qsoDetails, maxWidth - 10);
+      doc.text(qsoLines, leftMargin + 8, qsoY);
+    };
+
+    let currentPage = 0;
+    let labelIndex = 0;
+
+    // Process each unique label data
+    for (const labelData of labelDataArray) {
+      // Calculate position on current page
+      const positionOnPage = labelIndex % labelsPerPage;
+      const row = Math.floor(positionOnPage / cols);
+      const col = positionOnPage % cols;
+      
+      // Add new page if needed (except for first page)
+      if (positionOnPage === 0 && labelIndex > 0) {
+        doc.addPage();
+        currentPage++;
+      }
+      
+      const x = col * labelWidth;
+      const y = row * labelHeight;
+      
+      // Draw the label
+      drawLabel(labelData, x, y);
+      
+      labelIndex++;
     }
 
-    // Save PDF
-    const fileName = `QSL_Labels_${labelData.callsign}_${labelData.date.replace(/\//g, '-')}.pdf`;
+    // Generate filename
+    let fileName;
+    if (labelDataArray.length === 1) {
+      fileName = `QSL_Labels_${labelDataArray[0].callsign}_${labelDataArray[0].date.replace(/\//g, '-')}.pdf`;
+    } else {
+      const timestamp = new Date().toISOString().split('T')[0];
+      fileName = `QSL_Labels_Batch_${labelDataArray.length}_QSOs_${timestamp}.pdf`;
+    }
+    
     const filePath = join(app.getPath('downloads'), fileName);
     
     const pdfBuffer = doc.output('arraybuffer');
@@ -1260,7 +1287,7 @@ ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
     
     return { success: true, filePath };
   } catch (error) {
-    console.error('QSL label generation error:', error);
+    console.error('QSL labels generation error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
