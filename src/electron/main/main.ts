@@ -1160,7 +1160,7 @@ async function handleWSJTXQSO(wsjtxQSO: WSJTXLoggedQSO): Promise<void> {
 ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
   try {
     const { jsPDF } = await import('jspdf');
-    
+
     // Create new PDF document - A4 format
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -1177,36 +1177,36 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
     const labelsPerPage = cols * rows;
     const labelWidth = pageWidth / cols;
     const labelHeight = pageHeight / rows;
-    
+
     // Function to draw a single label
     const drawLabel = (labelData: any, x: number, y: number) => {
       // Draw border around each label
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.1);
       doc.rect(x, y, labelWidth, labelHeight);
-      
+
       // Set font for content
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      
+
       // Title
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.text('QSL CARD', x + labelWidth/2, y + 8, { align: 'center' });
-      
+      doc.text('QSL CARD', x + labelWidth / 2, y + 8, { align: 'center' });
+
       // Station info
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
-      
+
       let currentY = y + 15;
       const leftMargin = x + 2;
       const maxWidth = labelWidth - 4;
-      
+
       // To: Callsign
       doc.setFont('helvetica', 'bold');
       doc.text(`To: ${labelData.callsign}`, leftMargin, currentY);
       currentY += 4;
-      
+
       // Name
       if (labelData.name) {
         doc.setFont('helvetica', 'normal');
@@ -1214,27 +1214,27 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
         doc.text(nameLines, leftMargin, currentY);
         currentY += nameLines.length * 3;
       }
-      
+
       // Address line 1
       if (labelData.addr1) {
         const addr1Lines = doc.splitTextToSize(labelData.addr1, maxWidth);
         doc.text(addr1Lines, leftMargin, currentY);
         currentY += addr1Lines.length * 3;
       }
-      
+
       // Address line 2
       if (labelData.addr2) {
         const addr2Lines = doc.splitTextToSize(labelData.addr2, maxWidth);
         doc.text(addr2Lines, leftMargin, currentY);
         currentY += addr2Lines.length * 3;
       }
-      
+
       // Country
       if (labelData.country) {
         doc.text(labelData.country, leftMargin, currentY);
         currentY += 3;
       }
-      
+
       // QSO details at bottom
       const qsoY = y + labelHeight - 8;
       doc.setFont('helvetica', 'bold');
@@ -1255,19 +1255,19 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
       const positionOnPage = labelIndex % labelsPerPage;
       const row = Math.floor(positionOnPage / cols);
       const col = positionOnPage % cols;
-      
+
       // Add new page if needed (except for first page)
       if (positionOnPage === 0 && labelIndex > 0) {
         doc.addPage();
         currentPage++;
       }
-      
+
       const x = col * labelWidth;
       const y = row * labelHeight;
-      
+
       // Draw the label
       drawLabel(labelData, x, y);
-      
+
       labelIndex++;
     }
 
@@ -1279,12 +1279,12 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
       const timestamp = new Date().toISOString().split('T')[0];
       fileName = `QSL_Labels_Batch_${labelDataArray.length}_QSOs_${timestamp}.pdf`;
     }
-    
+
     const filePath = join(app.getPath('downloads'), fileName);
-    
+
     const pdfBuffer = doc.output('arraybuffer');
     fs.writeFileSync(filePath, new Uint8Array(pdfBuffer));
-    
+
     return { success: true, filePath };
   } catch (error) {
     console.error('QSL labels generation error:', error);
@@ -1340,6 +1340,7 @@ ipcMain.handle('wsjtx:status', async () => {
 // Open folder handler
 ipcMain.handle('system:openFolder', async (_, filePath: string) => {
   try {
+    ##AI! A `require()` style import is forbidden.
     const { shell } = require('electron');
     const path = require('path');
     const folderPath = path.dirname(filePath);
