@@ -53,6 +53,8 @@ export default {
         filePath: null
       },
       showQslGenerationDialog: false,
+      showLabelConfirmDialog: false,
+      labelConfirmQso: null,
       filters: {
         searchText: '',
         selectedBand: '',
@@ -365,6 +367,13 @@ export default {
       let newStatus = statusCycle[nextIndex];
 
       try {
+        // If changing to P (Print label) from N or L, ask for confirmation
+        if (newStatus === 'P' && ['N', 'L'].includes(qso.qslStatus || 'N')) {
+          this.labelConfirmQso = qso;
+          this.showLabelConfirmDialog = true;
+          return; // Don't proceed with status change yet
+        }
+
         // If changing to P (Print label), generate PDF first
         if (newStatus === 'P') {
           await this.generateQslLabel(qso, false);
@@ -711,6 +720,70 @@ export default {
     toggleQslStatusMenu() {
       this.showQslStatusMenu = !this.showQslStatusMenu;
     },
+    closeLabelConfirmDialog() {
+      this.showLabelConfirmDialog = false;
+      this.labelConfirmQso = null;
+    },
+    async confirmGenerateLabel() {
+      if (!this.labelConfirmQso) return;
+      
+      try {
+        await this.generateQslLabel(this.labelConfirmQso, false);
+        
+        // After successful PDF generation, change status to 'L'
+        const updatedQso = {
+          ...this.labelConfirmQso,
+          qslStatus: 'L',
+        };
+
+        await this.qsoStore.updateQso(updatedQso);
+        
+        // Update the local entry immediately for better UX
+        const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (this.labelConfirmQso._id || this.labelConfirmQso.id));
+        if (sessionIndex !== -1) {
+          this.qsoStore.currentSession[sessionIndex].qslStatus = 'L';
+        }
+
+        const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (this.labelConfirmQso._id || this.labelConfirmQso.id));
+        if (allIndex !== -1) {
+          this.qsoStore.allQsos[allIndex].qslStatus = 'L';
+        }
+      } catch (error) {
+        console.error('Failed to generate QSL label:', error);
+        alert('Error generating QSL label: ' + (error.message || error));
+      } finally {
+        this.closeLabelConfirmDialog();
+      }
+    },
+    async skipLabelGeneration() {
+      if (!this.labelConfirmQso) return;
+      
+      try {
+        // Just change status to 'P' without generating label
+        const updatedQso = {
+          ...this.labelConfirmQso,
+          qslStatus: 'P',
+        };
+
+        await this.qsoStore.updateQso(updatedQso);
+        
+        // Update the local entry immediately for better UX
+        const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (this.labelConfirmQso._id || this.labelConfirmQso.id));
+        if (sessionIndex !== -1) {
+          this.qsoStore.currentSession[sessionIndex].qslStatus = 'P';
+        }
+
+        const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (this.labelConfirmQso._id || this.labelConfirmQso.id));
+        if (allIndex !== -1) {
+          this.qsoStore.allQsos[allIndex].qslStatus = 'P';
+        }
+      } catch (error) {
+        console.error('Failed to update QSL status:', error);
+        alert('Error updating QSL status: ' + (error.message || error));
+      } finally {
+        this.closeLabelConfirmDialog();
+      }
+    },
   },
 };
 </script>
@@ -984,6 +1057,19 @@ export default {
             class="progress-bar-fill"
             :style="{ width: `${qslGenerationStatus.progress}%` }"
           ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Label Generation Confirmation Dialog -->
+    <div v-if="showLabelConfirmDialog" class="modal-overlay" @click="closeLabelConfirmDialog">
+      <div class="label-confirm-dialog" @click.stop>
+        <h3>Generate Envelope Label?</h3>
+        <p>Do you want to generate an envelope address label for <strong>{{ labelConfirmQso?.callsign }}</strong>?</p>
+        <div class="dialog-actions">
+          <button class="generate-btn" @click="confirmGenerateLabel">Yes, Generate Label</button>
+          <button class="skip-btn" @click="skipLabelGeneration">No, Skip</button>
+          <button class="cancel-btn" @click="closeLabelConfirmDialog">Cancel</button>
         </div>
       </div>
     </div>
@@ -2016,6 +2102,70 @@ export default {
 }
 
 .close-btn:hover {
+  background: #777;
+}
+
+.label-confirm-dialog {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 2rem;
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.label-confirm-dialog h3 {
+  margin: 0 0 1rem 0;
+  color: var(--main-color);
+  font-size: 1.2rem;
+}
+
+.label-confirm-dialog p {
+  margin: 0 0 2rem 0;
+  color: var(--gray-color);
+  line-height: 1.4;
+}
+
+.generate-btn {
+  background: var(--main-color);
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #000;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+.generate-btn:hover {
+  background: #e6d700;
+}
+
+.skip-btn {
+  background: #f39c12;
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+.skip-btn:hover {
+  background: #e67e22;
+}
+
+.cancel-btn {
+  background: #666;
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.cancel-btn:hover {
   background: #777;
 }
 </style>
