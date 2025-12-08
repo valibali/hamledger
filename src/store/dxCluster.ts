@@ -165,9 +165,9 @@ export const useDxClusterStore = defineStore('dxCluster', {
           }
         });
 
-        // Apply local filtering for SHF bands
+        // Apply local filtering for UHF and SHF bands
         let finalSpots = processedSpots;
-        if (bandParam === 'SHF') {
+        if (bandParam === 'UHF' || bandParam === 'SHF') {
           const bandRange = getBandFrequencyRange(this.filters.selectedBand);
           if (bandRange) {
             finalSpots = processedSpots.filter(spot => {
