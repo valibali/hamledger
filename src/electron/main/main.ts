@@ -1219,7 +1219,7 @@ ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
     const filePath = join(app.getPath('downloads'), fileName);
     
     const pdfBuffer = doc.output('arraybuffer');
-    fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
+    fs.writeFileSync(filePath, new Uint8Array(pdfBuffer));
     
     return { success: true, filePath };
   } catch (error) {
