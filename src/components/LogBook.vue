@@ -44,6 +44,14 @@ export default {
       batchMode: false,
       selectedQsos: new Set<string>(),
       showBatchActions: false,
+      qslGenerationStatus: {
+        isGenerating: false,
+        progress: 0,
+        error: null,
+        success: false,
+        filePath: null
+      },
+      showQslGenerationDialog: false,
       filters: {
         searchText: '',
         selectedBand: '',
@@ -397,11 +405,22 @@ export default {
     },
     async generateQslLabel(qso) {
       try {
+        // Show progress indicator
+        this.qslGenerationStatus = {
+          isGenerating: true,
+          progress: 0,
+          error: null,
+          success: false,
+          filePath: null
+        };
+
         // Fetch station info to get address data
+        this.qslGenerationStatus.progress = 20;
         await this.qsoStore.fetchStationInfo(qso.callsign);
         const stationInfo = this.qsoStore.stationInfo;
         
         // Get full QRZ data to access addr1 and addr2 fields
+        this.qslGenerationStatus.progress = 40;
         const qrzData = await this.qsoStore.getFullQRZData(qso.callsign);
         
         const labelData = {
@@ -416,17 +435,24 @@ export default {
           rst: qso.rstt || '59'
         };
 
+        this.qslGenerationStatus.progress = 60;
         const result = await window.electronAPI.generateQslLabel(labelData);
         
+        this.qslGenerationStatus.progress = 100;
+        
         if (result.success) {
-          alert(`QSL label PDF generated successfully: ${result.filePath}`);
+          this.qslGenerationStatus.success = true;
+          this.qslGenerationStatus.filePath = result.filePath;
+          this.showQslGenerationDialog = true;
         } else {
           throw new Error(result.error || 'Failed to generate QSL label');
         }
       } catch (error) {
         console.error('Failed to generate QSL label:', error);
-        alert('Error generating QSL label: ' + (error.message || error));
+        this.qslGenerationStatus.error = error.message || error;
         throw error; // Re-throw to prevent status change
+      } finally {
+        this.qslGenerationStatus.isGenerating = false;
       }
     },
     toggleBatchMode() {
@@ -534,6 +560,21 @@ export default {
       } catch (error) {
         console.error('Batch export failed:', error);
         alert('Error during export: ' + (error.message || error));
+      }
+    },
+    closeQslGenerationDialog() {
+      this.showQslGenerationDialog = false;
+      this.qslGenerationStatus = {
+        isGenerating: false,
+        progress: 0,
+        error: null,
+        success: false,
+        filePath: null
+      };
+    },
+    async openQslFolder() {
+      if (this.qslGenerationStatus.filePath) {
+        await window.electronAPI.openFolder(this.qslGenerationStatus.filePath);
       }
     },
   },
@@ -751,6 +792,34 @@ export default {
           <button class="batch-export-btn" @click="batchExportSelected">
             Export selected
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QSL Generation Progress -->
+    <div v-if="qslGenerationStatus.isGenerating" class="qsl-generation-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <span class="loading-text">Generating QSL Labels...</span>
+        <div class="loading-subtext">{{ qslGenerationStatus.progress }}% complete</div>
+        <div class="progress-bar-container">
+          <div
+            class="progress-bar-fill"
+            :style="{ width: `${qslGenerationStatus.progress}%` }"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QSL Generation Success Dialog -->
+    <div v-if="showQslGenerationDialog" class="modal-overlay" @click="closeQslGenerationDialog">
+      <div class="qsl-generation-dialog" @click.stop>
+        <h3>QSL Labels Generated Successfully</h3>
+        <p>Your QSL labels have been generated and saved to:</p>
+        <div class="file-path">{{ qslGenerationStatus.filePath }}</div>
+        <div class="dialog-actions">
+          <button class="open-folder-btn" @click="openQslFolder">Open Folder</button>
+          <button class="close-btn" @click="closeQslGenerationDialog">Close</button>
         </div>
       </div>
     </div>
@@ -1572,5 +1641,79 @@ export default {
 
 .qso-table tbody tr.selected:hover {
   background: rgba(155, 89, 182, 0.3);
+}
+
+.qsl-generation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  border-radius: 5px;
+}
+
+.qsl-generation-dialog {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 2rem;
+  min-width: 400px;
+  max-width: 600px;
+}
+
+.qsl-generation-dialog h3 {
+  margin: 0 0 1rem 0;
+  color: var(--main-color);
+  font-size: 1.2rem;
+}
+
+.qsl-generation-dialog p {
+  margin: 0 0 1rem 0;
+  color: var(--gray-color);
+}
+
+.file-path {
+  background: #2b2b2b;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 1rem 0;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #fff;
+  word-break: break-all;
+}
+
+.open-folder-btn {
+  background: var(--main-color);
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #000;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+.open-folder-btn:hover {
+  background: #e6d700;
+}
+
+.close-btn {
+  background: #666;
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.close-btn:hover {
+  background: #777;
 }
 </style>

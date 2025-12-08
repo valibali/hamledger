@@ -1161,61 +1161,98 @@ ipcMain.handle('qsl:generateLabel', async (_, labelData) => {
   try {
     const { jsPDF } = await import('jspdf');
     
-    // Create new PDF document
+    // Create new PDF document - A4 format
     const doc = new jsPDF({
-      orientation: 'landscape',
+      orientation: 'portrait',
       unit: 'mm',
-      format: [105, 74] // Standard envelope label size
+      format: 'a4'
     });
 
-    // Set font
-    doc.setFont('helvetica', 'normal');
+    // A4 dimensions: 210 x 297 mm
+    // 3x8 grid = 24 labels total
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const cols = 3;
+    const rows = 8;
+    const labelWidth = pageWidth / cols;
+    const labelHeight = pageHeight / rows;
     
-    // Title
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('QSL CARD ENVELOPE LABEL', 52.5, 15, { align: 'center' });
-    
-    // Station info
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`To: ${labelData.callsign}`, 10, 25);
-    
-    if (labelData.name) {
-      doc.text(`Name: ${labelData.name}`, 10, 32);
+    // Generate 24 identical labels in 3x8 grid
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = col * labelWidth;
+        const y = row * labelHeight;
+        
+        // Draw border around each label
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.1);
+        doc.rect(x, y, labelWidth, labelHeight);
+        
+        // Set font for content
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        
+        // Title
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text('QSL CARD', x + labelWidth/2, y + 8, { align: 'center' });
+        
+        // Station info
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        
+        let currentY = y + 15;
+        const leftMargin = x + 2;
+        const rightMargin = x + labelWidth - 2;
+        const maxWidth = labelWidth - 4;
+        
+        // To: Callsign
+        doc.setFont('helvetica', 'bold');
+        doc.text(`To: ${labelData.callsign}`, leftMargin, currentY);
+        currentY += 4;
+        
+        // Name
+        if (labelData.name) {
+          doc.setFont('helvetica', 'normal');
+          const nameLines = doc.splitTextToSize(`${labelData.name}`, maxWidth);
+          doc.text(nameLines, leftMargin, currentY);
+          currentY += nameLines.length * 3;
+        }
+        
+        // Address line 1
+        if (labelData.addr1) {
+          const addr1Lines = doc.splitTextToSize(labelData.addr1, maxWidth);
+          doc.text(addr1Lines, leftMargin, currentY);
+          currentY += addr1Lines.length * 3;
+        }
+        
+        // Address line 2
+        if (labelData.addr2) {
+          const addr2Lines = doc.splitTextToSize(labelData.addr2, maxWidth);
+          doc.text(addr2Lines, leftMargin, currentY);
+          currentY += addr2Lines.length * 3;
+        }
+        
+        // Country
+        if (labelData.country) {
+          doc.text(labelData.country, leftMargin, currentY);
+          currentY += 3;
+        }
+        
+        // QSO details at bottom
+        const qsoY = y + labelHeight - 8;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.text('QSO:', leftMargin, qsoY);
+        doc.setFont('helvetica', 'normal');
+        const qsoDetails = `${labelData.date} ${labelData.band} ${labelData.mode} ${labelData.rst}`;
+        const qsoLines = doc.splitTextToSize(qsoDetails, maxWidth - 10);
+        doc.text(qsoLines, leftMargin + 8, qsoY);
+      }
     }
-    
-    let yPosition = 39;
-    
-    // Address line 1
-    if (labelData.addr1) {
-      const addr1Lines = doc.splitTextToSize(labelData.addr1, 85);
-      doc.text(addr1Lines, 10, yPosition);
-      yPosition += addr1Lines.length * 5; // 5mm per line
-    }
-    
-    // Address line 2
-    if (labelData.addr2) {
-      const addr2Lines = doc.splitTextToSize(labelData.addr2, 85);
-      doc.text(addr2Lines, 10, yPosition);
-      yPosition += addr2Lines.length * 5;
-    }
-    
-    // Country
-    if (labelData.country) {
-      doc.text(`Country: ${labelData.country}`, 10, yPosition);
-      yPosition += 5;
-    }
-    
-    // QSO details - adjust position based on address length
-    const qsoDetailsY = Math.max(yPosition + 3, 63);
-    doc.setFont('helvetica', 'bold');
-    doc.text('QSO Details:', 10, qsoDetailsY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Date: ${labelData.date} | Band: ${labelData.band} | Mode: ${labelData.mode} | RST: ${labelData.rst}`, 10, qsoDetailsY + 6);
 
     // Save PDF
-    const fileName = `QSL_Label_${labelData.callsign}_${labelData.date.replace(/\//g, '-')}.pdf`;
+    const fileName = `QSL_Labels_${labelData.callsign}_${labelData.date.replace(/\//g, '-')}.pdf`;
     const filePath = join(app.getPath('downloads'), fileName);
     
     const pdfBuffer = doc.output('arraybuffer');
@@ -1271,4 +1308,21 @@ ipcMain.handle('wsjtx:status', async () => {
       running: wsjtxService.isRunning(),
     },
   };
+});
+
+// Open folder handler
+ipcMain.handle('system:openFolder', async (_, filePath: string) => {
+  try {
+    const { shell } = require('electron');
+    const path = require('path');
+    const folderPath = path.dirname(filePath);
+    await shell.openPath(folderPath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening folder:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 });
