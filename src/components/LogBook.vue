@@ -375,7 +375,7 @@ export default {
         }
       } catch (error) {
         console.error('Failed to update QSL status:', error);
-        alert('Hiba történt a QSL státusz frissítése során: ' + (error.message || error));
+        alert('Error updating QSL status: ' + (error.message || error));
       }
     },
     getQslStatusDescription(status) {
@@ -452,10 +452,10 @@ export default {
         this.selectedQsos.clear();
         this.showBatchActions = false;
         
-        alert(`${selectedQsoObjects.length} QSO QSL státusza frissítve: ${newStatus}`);
+        alert(`${selectedQsoObjects.length} QSO QSL status updated to: ${newStatus} - ${this.getQslStatusDescription(newStatus)}`);
       } catch (error) {
         console.error('Batch QSL status update failed:', error);
-        alert('Hiba történt a batch QSL státusz frissítése során: ' + (error.message || error));
+        alert('Error during batch QSL status update: ' + (error.message || error));
       }
     },
     async batchExportSelected() {
@@ -469,13 +469,13 @@ export default {
       try {
         const result = await this.qsoStore.exportAdif(selectedQsoObjects);
         if (result.success) {
-          alert(`${selectedQsoObjects.length} kiválasztott QSO sikeresen exportálva!`);
+          alert(`${selectedQsoObjects.length} selected QSOs exported successfully!`);
         } else {
-          alert('Export hiba: ' + (result.error || 'Ismeretlen hiba'));
+          alert('Export error: ' + (result.error || 'Unknown error'));
         }
       } catch (error) {
         console.error('Batch export failed:', error);
-        alert('Hiba történt az export során: ' + (error.message || error));
+        alert('Error during export: ' + (error.message || error));
       }
     },
   },
@@ -670,27 +670,27 @@ export default {
     <!-- Batch Actions Panel -->
     <div v-if="batchMode" class="batch-panel">
       <div class="batch-info">
-        <span class="batch-count">{{ selectedQsos.size }} QSO kiválasztva</span>
+        <span class="batch-count">{{ selectedQsos.size }} QSOs selected</span>
         <div class="batch-selection-actions">
-          <button class="batch-select-btn" @click="selectAllVisible">Összes látható</button>
-          <button class="batch-select-btn" @click="deselectAll">Kijelölés törlése</button>
+          <button class="batch-select-btn" @click="selectAllVisible">Select all visible</button>
+          <button class="batch-select-btn" @click="deselectAll">Clear selection</button>
         </div>
       </div>
       
       <div v-if="showBatchActions" class="batch-actions">
         <div class="batch-action-group">
-          <label>QSL Státusz:</label>
-          <button class="batch-qsl-btn qsl-n" @click="batchUpdateQslStatus('N')">N</button>
-          <button class="batch-qsl-btn qsl-l" @click="batchUpdateQslStatus('L')">L</button>
-          <button class="batch-qsl-btn qsl-s" @click="batchUpdateQslStatus('S')">S</button>
-          <button class="batch-qsl-btn qsl-r" @click="batchUpdateQslStatus('R')">R</button>
-          <button class="batch-qsl-btn qsl-b" @click="batchUpdateQslStatus('B')">B</button>
-          <button class="batch-qsl-btn qsl-q" @click="batchUpdateQslStatus('Q')">Q</button>
+          <label>QSL Status:</label>
+          <button class="batch-qsl-btn qsl-n" @click="batchUpdateQslStatus('N')" title="Not sent/received">N</button>
+          <button class="batch-qsl-btn qsl-l" @click="batchUpdateQslStatus('L')" title="Label printed (ready to send)">L</button>
+          <button class="batch-qsl-btn qsl-s" @click="batchUpdateQslStatus('S')" title="Sent">S</button>
+          <button class="batch-qsl-btn qsl-r" @click="batchUpdateQslStatus('R')" title="Received">R</button>
+          <button class="batch-qsl-btn qsl-b" @click="batchUpdateQslStatus('B')" title="Both sent and received">B</button>
+          <button class="batch-qsl-btn qsl-q" @click="batchUpdateQslStatus('Q')" title="QSL requested">Q</button>
         </div>
         
         <div class="batch-action-group">
           <button class="batch-export-btn" @click="batchExportSelected">
-            Export kiválasztottak
+            Export selected
           </button>
         </div>
       </div>
@@ -817,7 +817,7 @@ export default {
                   :class="'qsl-' + (entry.qslStatus || 'N').toLowerCase()"
                   @click.stop="cycleQslStatus(entry, false)"
                   @contextmenu.prevent.stop="cycleQslStatus(entry, true)"
-                  :title="'Left click: cycle forward (N→L→S→R→B→Q→N), Right click: cycle backward. Current: ' + getQslStatusDescription(entry.qslStatus || 'N')"
+                  :title="'Left click: cycle forward, Right click: cycle backward. Current: ' + getQslStatusDescription(entry.qslStatus || 'N') + '. Status meanings: N=Not sent/received, L=Label printed (ready to send), S=Sent, R=Received, B=Both sent and received, Q=QSL requested'"
                 >
                   {{ entry.qslStatus || 'N' }}
                 </span>
