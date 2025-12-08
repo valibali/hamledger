@@ -25,16 +25,29 @@ interface PropagationData {
   lastUpdated?: string;
 }
 
-interface DxSpotData {
-  spots?: Array<{
-    Nr: number;
-    Spotter: string;
-    Frequency: string;
-    DXCall: string;
-    Time: string;
-    Date: string;
-  }>;
-}
+interface DxSpotData extends Array<{
+  Nr: number;
+  Spotter: string;
+  Frequency: string;
+  DXCall: string;
+  Time: string;
+  Date: string;
+  Beacon: boolean;
+  MM: boolean;
+  AM: boolean;
+  Valid: boolean;
+  EQSL?: boolean;
+  LOTW?: boolean;
+  LOTW_Date?: string;
+  DXHomecall: string;
+  Comment: string;
+  Flag: string;
+  Band: number;
+  Mode: string;
+  Continent_dx: string;
+  Continent_spotter: string;
+  DXLocator?: string;
+}> {}
 
 interface RigConnectionData {
   connected: boolean;
