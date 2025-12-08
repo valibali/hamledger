@@ -203,13 +203,8 @@ export const useQsoStore = defineStore('qso', {
             this.allQsos[allIndex] = updatedQsoWithNewRev;
           }
 
-          // Refresh the store to ensure we have the latest data
-          this.isLoading = true;
-          try {
-            await this.initializeStore();
-          } finally {
-            this.isLoading = false;
-          }
+          // No need to refresh the entire store for a simple QSL status update
+          // The local arrays are already updated above
         } else {
           throw new Error(`Update failed: ${response.error || 'Unknown error'}`);
         }
