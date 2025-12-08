@@ -65,10 +65,10 @@ Az alkalmazás első indításakor egy beállítási varázsló vezeti végig a 
 - Helyi tárolás biztonsági megjegyzésekkel
 
 #### 6. lépés: CAT Control Beállítás
-- **Windows**: Automatikus Hamlib telepítés
-- **Linux**: Telepítési útmutatók és parancsok
-- Tűzfal kivételek konfigurálása
-- rigctld útvonal beállítása
+- **Windows**: Automatikus Hamlib telepítés admin jogokkal és tűzfal konfigurációval
+- **Linux**: Telepítési útmutatók és parancsok dialout csoport beállítással
+- Tűzfal kivételek konfigurálása Windows Defender számára
+- rigctld útvonal beállítása és COM port konfiguráció
 
 ## Főképernyő Áttekintés
 
