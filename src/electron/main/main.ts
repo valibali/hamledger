@@ -1179,7 +1179,7 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
     const labelHeight = pageHeight / rows;
     
     // Function to draw a single label
-    const drawLabel = (labelData, x, y) => {
+    const drawLabel = (labelData: any, x: number, y: number) => {
       // Draw border around each label
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.1);
