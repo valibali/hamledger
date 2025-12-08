@@ -1190,31 +1190,33 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
 
-      // Title
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text('QSL CARD', x + labelWidth / 2, y + 8, { align: 'center' });
-
       // Station info
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
 
-      let currentY = y + 15;
+      let currentY = y + 8;
       const leftMargin = x + 2;
       const maxWidth = labelWidth - 4;
 
-      // To: Callsign
-      doc.setFont('helvetica', 'bold');
-      doc.text(`To: ${labelData.callsign}`, leftMargin, currentY);
-      currentY += 4;
-
-      // Name
+      // Primary info: Name with callsign in brackets
       if (labelData.name) {
-        doc.setFont('helvetica', 'normal');
-        const nameLines = doc.splitTextToSize(`${labelData.name}`, maxWidth);
-        doc.text(nameLines, leftMargin, currentY);
-        currentY += nameLines.length * 3;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        const primaryInfo = `${labelData.name} (${labelData.callsign})`;
+        const primaryLines = doc.splitTextToSize(primaryInfo, maxWidth);
+        doc.text(primaryLines, leftMargin, currentY);
+        currentY += primaryLines.length * 4;
+      } else {
+        // If no name, just show callsign
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(labelData.callsign, leftMargin, currentY);
+        currentY += 4;
       }
+
+      // Reset to normal font for address
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
 
       // Address line 1
       if (labelData.addr1) {
@@ -1238,13 +1240,11 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
 
       // QSO details at bottom
       const qsoY = y + labelHeight - 8;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6);
-      doc.text('QSO:', leftMargin, qsoY);
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
       const qsoDetails = `${labelData.date} ${labelData.band} ${labelData.mode} ${labelData.rst}`;
-      const qsoLines = doc.splitTextToSize(qsoDetails, maxWidth - 10);
-      doc.text(qsoLines, leftMargin + 8, qsoY);
+      const qsoLines = doc.splitTextToSize(qsoDetails, maxWidth);
+      doc.text(qsoLines, leftMargin, qsoY);
     };
 
     let currentPage = 0;
