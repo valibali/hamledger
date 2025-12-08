@@ -596,7 +596,11 @@ export default {
               <td>{{ entry.rstt }}</td>
               <td>{{ entry.remark }}</td>
               <td>{{ entry.notes }}</td>
-              <td>{{ entry.qslStatus || 'N' }}</td>
+              <td>
+                <span class="qsl-status" :class="'qsl-' + (entry.qslStatus || 'N').toLowerCase()">
+                  {{ entry.qslStatus || 'N' }}
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1088,5 +1092,40 @@ export default {
   to {
     transform: rotate(360deg);
   }
+}
+
+.qsl-status {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+  min-width: 20px;
+}
+
+.qsl-n {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.qsl-s {
+  background: #f39c12;
+  color: #fff;
+}
+
+.qsl-r {
+  background: #27ae60;
+  color: #fff;
+}
+
+.qsl-b {
+  background: #3498db;
+  color: #fff;
+}
+
+.qsl-q {
+  background: #9b59b6;
+  color: #fff;
 }
 </style>

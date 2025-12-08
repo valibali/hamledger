@@ -180,6 +180,12 @@ export default {
                 <label>RST Sent</label>
                 <span>{{ qso.rstt }}</span>
               </div>
+              <div class="info-item">
+                <label>QSL Status</label>
+                <span class="qsl-status" :class="'qsl-' + (qso.qslStatus || 'N').toLowerCase()">
+                  {{ qso.qslStatus || 'N' }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -476,5 +482,40 @@ export default {
 
 .offline-notice p {
   margin: 0;
+}
+
+.qsl-status {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+  min-width: 20px;
+}
+
+.qsl-n {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.qsl-s {
+  background: #f39c12;
+  color: #fff;
+}
+
+.qsl-r {
+  background: #27ae60;
+  color: #fff;
+}
+
+.qsl-b {
+  background: #3498db;
+  color: #fff;
+}
+
+.qsl-q {
+  background: #9b59b6;
+  color: #fff;
 }
 </style>
