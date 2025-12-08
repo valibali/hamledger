@@ -45,6 +45,7 @@ export default {
         searchText: '',
         selectedBand: '',
         selectedMode: '',
+        selectedQslStatus: '',
         dateFrom: '',
         dateTo: '',
         useRegex: false,
@@ -103,6 +104,11 @@ export default {
         filtered = filtered.filter(qso => qso.mode === this.filters.selectedMode);
       }
 
+      // QSL Status filter
+      if (this.filters.selectedQslStatus) {
+        filtered = filtered.filter(qso => (qso.qslStatus || 'N') === this.filters.selectedQslStatus);
+      }
+
       // Date range filter
       if (this.filters.dateFrom) {
         const fromDate = new Date(this.filters.dateFrom);
@@ -135,6 +141,10 @@ export default {
     uniqueModes() {
       const modes = [...new Set(this.allQsos.map(qso => qso.mode).filter(Boolean))];
       return modes.sort();
+    },
+    uniqueQslStatuses() {
+      const statuses = [...new Set(this.allQsos.map(qso => qso.qslStatus || 'N'))];
+      return statuses.sort();
     },
     filteredCount() {
       return this.filteredQsos.length;
@@ -318,6 +328,7 @@ export default {
         searchText: '',
         selectedBand: '',
         selectedMode: '',
+        selectedQslStatus: '',
         dateFrom: '',
         dateTo: '',
         useRegex: false,
@@ -441,6 +452,16 @@ export default {
             <option value="">All</option>
             <option v-for="mode in uniqueModes" :key="mode as string" :value="mode">
               {{ mode }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>QSL Status:</label>
+          <select v-model="filters.selectedQslStatus" class="filter-select">
+            <option value="">All</option>
+            <option v-for="status in uniqueQslStatuses" :key="status as string" :value="status">
+              {{ status }} - {{ getQslStatusDescription(status) }}
             </option>
           </select>
         </div>
