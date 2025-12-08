@@ -1,7 +1,8 @@
 // src/electron/main/main.ts
 import { join } from 'path';
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import fs from 'fs';
+import path from 'path';
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Socket } from 'net';
@@ -1340,9 +1341,6 @@ ipcMain.handle('wsjtx:status', async () => {
 // Open folder handler
 ipcMain.handle('system:openFolder', async (_, filePath: string) => {
   try {
-    ##AI! A `require()` style import is forbidden.
-    const { shell } = require('electron');
-    const path = require('path');
     const folderPath = path.dirname(filePath);
     await shell.openPath(folderPath);
     return { success: true };
