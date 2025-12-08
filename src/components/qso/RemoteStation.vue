@@ -5,6 +5,11 @@ import { CallsignHelper } from '../../utils/callsign';
 
 export default {
   name: 'RemoteStation',
+  data() {
+    return {
+      debounceTimer: null as NodeJS.Timeout | null,
+    };
+  },
   setup() {
     const qsoStore = useQsoStore();
     return { qsoStore };
@@ -12,6 +17,19 @@ export default {
   methods: {
     getPortableSuffixMeaning(suffix: string): string {
       return CallsignHelper.getPortableSuffixMeaning(suffix) || suffix;
+    },
+    async debouncedFetchStationInfo(callsign: string) {
+      // Clear any existing timer
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+      }
+
+      // Set a new timer
+      this.debounceTimer = setTimeout(async () => {
+        if (this.isValid && callsign && callsign.length >= 3) {
+          await this.qsoStore.fetchStationInfo(callsign);
+        }
+      }, 500); // 500ms debounce delay
     },
   },
   computed: {
@@ -29,11 +47,37 @@ export default {
     }
   },
   watch: {
-    async callsign(newCallsign: string) {
-      if (this.isValid && newCallsign) {
-        await this.qsoStore.fetchStationInfo(newCallsign);
+    callsign(newCallsign: string) {
+      // Clear QRZ error state when callsign changes
+      this.qsoStore.stationInfo.qrzError = false;
+      
+      if (newCallsign) {
+        this.debouncedFetchStationInfo(newCallsign);
+      } else {
+        // Clear timer if callsign is empty
+        if (this.debounceTimer) {
+          clearTimeout(this.debounceTimer);
+        }
+        // Reset station info when callsign is cleared
+        this.qsoStore.stationInfo = {
+          baseData: {},
+          geodata: {},
+          flag: '',
+          weather: '',
+          localTime: '',
+          greetings: [],
+          distance: undefined,
+          portableSuffix: null,
+          qrzError: false,
+        };
       }
     },
+  },
+  beforeUnmount() {
+    // Clean up timer when component is destroyed
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
   },
 };
 </script>

@@ -289,7 +289,9 @@ export const useQsoStore = defineStore('qso', {
       });
     },
     async fetchStationInfo(callsign: string): Promise<void | Error> {
+      // Always reset QRZ error state at the beginning
       this.stationInfo.qrzError = false;
+      
       try {
         // Reset station info first to avoid showing stale data
         this.stationInfo = {
@@ -324,30 +326,32 @@ export const useQsoStore = defineStore('qso', {
         const portableSuffix = CallsignHelper.getPortableSuffix(callsign);
         this.stationInfo.portableSuffix = portableSuffix;
 
-        // Try to get additional info from QRZ
-        // Reset QRZ error state at the beginning of each lookup
-        this.stationInfo.qrzError = false;
+        // Try to get additional info from QRZ only if callsign looks complete
+        if (callsign.length >= 3 && CallsignHelper.isValidCallsign(callsign)) {
+          // First try with the full callsign (including portable prefixes/suffixes)
+          let qrzData = await qrzService.lookupStationByCallsign(callsign);
 
-        // First try with the full callsign (including portable prefixes/suffixes)
-        let qrzData = await qrzService.lookupStationByCallsign(callsign);
-
-        // If not found, try with base callsign (remove portable prefixes and suffixes)
-        if (qrzData instanceof Error) {
-          const baseCallsign = CallsignHelper.extractBaseCallsign(callsign);
-          if (baseCallsign !== callsign) {
-            qrzData = await qrzService.lookupStationByCallsign(baseCallsign);
+          // If not found, try with base callsign (remove portable prefixes and suffixes)
+          if (qrzData instanceof Error) {
+            const baseCallsign = CallsignHelper.extractBaseCallsign(callsign);
+            if (baseCallsign !== callsign) {
+              qrzData = await qrzService.lookupStationByCallsign(baseCallsign);
+            }
           }
-        }
 
-        if (qrzData instanceof Error) {
-          this.stationInfo.qrzError = true;
-          console.error('QRZ lookup failed:', qrzData);
-        } else {
-          // Explicitly set qrzError to false on successful lookup
-          this.stationInfo.qrzError = false;
-          this.stationInfo.baseData.name = qrzData.name;
-          this.stationInfo.baseData.grid = qrzData.grid;
-          this.stationInfo.baseData.qth = qrzData.qth;
+          if (qrzData instanceof Error) {
+            // Only set error state for complete callsigns that fail lookup
+            if (callsign.length >= 4) {
+              this.stationInfo.qrzError = true;
+              console.warn('QRZ lookup failed for complete callsign:', callsign, qrzData.message);
+            }
+          } else {
+            // Successful lookup - ensure error state is cleared
+            this.stationInfo.qrzError = false;
+            this.stationInfo.baseData.name = qrzData.name;
+            this.stationInfo.baseData.grid = qrzData.grid;
+            this.stationInfo.baseData.qth = qrzData.qth;
+          }
         }
 
         // Try to get coordinates in order of preference:
