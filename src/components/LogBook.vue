@@ -362,7 +362,7 @@ export default {
         nextIndex = (currentIndex + 1) % statusCycle.length;
       }
       
-      const newStatus = statusCycle[nextIndex];
+      let newStatus = statusCycle[nextIndex];
 
       try {
         // If changing to P (Print label), generate PDF first
