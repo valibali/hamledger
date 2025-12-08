@@ -1186,65 +1186,55 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
       doc.setLineWidth(0.1);
       doc.rect(x, y, labelWidth, labelHeight);
 
-      // Set font for content
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-
-      // Station info
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-
-      let currentY = y + 8;
-      const leftMargin = x + 2;
-      const maxWidth = labelWidth - 4;
+      // Center the address content vertically
+      let currentY = y + 12;
+      const leftMargin = x + 4;
+      const maxWidth = labelWidth - 8;
 
       // Primary info: Name with callsign in brackets
       if (labelData.name) {
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         const primaryInfo = `${labelData.name} (${labelData.callsign})`;
         const primaryLines = doc.splitTextToSize(primaryInfo, maxWidth);
         doc.text(primaryLines, leftMargin, currentY);
-        currentY += primaryLines.length * 4;
+        currentY += primaryLines.length * 5;
       } else {
         // If no name, just show callsign
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.text(labelData.callsign, leftMargin, currentY);
-        currentY += 4;
+        currentY += 5;
       }
 
       // Reset to normal font for address
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(9);
+
+      // Add some spacing after name/callsign
+      currentY += 2;
 
       // Address line 1
       if (labelData.addr1) {
         const addr1Lines = doc.splitTextToSize(labelData.addr1, maxWidth);
         doc.text(addr1Lines, leftMargin, currentY);
-        currentY += addr1Lines.length * 3;
+        currentY += addr1Lines.length * 4;
       }
 
       // Address line 2
       if (labelData.addr2) {
         const addr2Lines = doc.splitTextToSize(labelData.addr2, maxWidth);
         doc.text(addr2Lines, leftMargin, currentY);
-        currentY += addr2Lines.length * 3;
+        currentY += addr2Lines.length * 4;
       }
 
-      // Country
+      // Country (emphasized)
       if (labelData.country) {
-        doc.text(labelData.country, leftMargin, currentY);
-        currentY += 3;
+        currentY += 2; // Extra spacing before country
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(labelData.country.toUpperCase(), leftMargin, currentY);
       }
-
-      // QSO details at bottom
-      const qsoY = y + labelHeight - 8;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6);
-      const qsoDetails = `${labelData.date} ${labelData.band} ${labelData.mode} ${labelData.rst}`;
-      const qsoLines = doc.splitTextToSize(qsoDetails, maxWidth);
-      doc.text(qsoLines, leftMargin, qsoY);
     };
 
     let currentPage = 0;
