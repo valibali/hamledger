@@ -25,10 +25,9 @@ interface PropagationData {
   lastUpdated?: string;
 }
 
-type DxSpotData = Array<{
+interface RawDxSpot {
   Nr: number;
   Spotter: string;
-  Spotters: string[]; // Array of all spotters for this callsign/frequency
   Frequency: string;
   DXCall: string;
   Time: string;
@@ -44,11 +43,13 @@ type DxSpotData = Array<{
   Comment: string;
   Flag: string;
   Band: number;
-  Mode?: string; // Optional because some spots don't have Mode field
+  Mode?: string;
   Continent_dx: string;
   Continent_spotter: string;
   DXLocator?: string;
-}>;
+}
+
+type DxSpotData = RawDxSpot[];
 
 interface RigConnectionData {
   connected: boolean;

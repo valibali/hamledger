@@ -91,68 +91,67 @@ export const useDxClusterStore = defineStore('dxCluster', {
         }
 
         // Process and deduplicate spots
-        const rawSpots: DxSpot[] = result.data.map(
-          (spot: any): DxSpot => ({
-            Nr: spot.Nr || 0,
-            Spotter: spot.Spotter || '',
-            Frequency: spot.Frequency || '0',
-            DXCall: spot.DXCall || '',
-            Time: spot.Time || '',
-            Date: spot.Date || '',
-            Beacon: spot.Beacon || false,
-            MM: spot.MM || false,
-            AM: spot.AM || false,
-            Valid: spot.Valid || false,
-            EQSL: spot.EQSL,
-            LOTW: spot.LOTW,
-            LOTW_Date: spot.LOTW_Date,
-            DXHomecall: spot.DXHomecall || '',
-            Comment: spot.Comment || '',
-            Flag: spot.Flag || '',
-            Band: spot.Band || 0,
-            Mode: spot.Mode || 'UNKNOWN',
-            Continent_dx: spot.Continent_dx || '',
-            Continent_spotter: spot.Continent_spotter || '',
-            DXLocator: spot.DXLocator,
-            Spotters: [], // Initialize empty array, will be populated during deduplication
-          })
-        );
+        const processedSpots: DxSpot[] = [];
+        const spotIndex: Record<string, number> = {};
 
-        // Deduplicate spots by callsign and frequency
-        const spotMap = new Map<string, DxSpot>();
+        result.data.forEach((rawSpot) => {
+          const spot: DxSpot = {
+            Nr: rawSpot.Nr || 0,
+            Spotter: rawSpot.Spotter || '',
+            Frequency: rawSpot.Frequency || '0',
+            DXCall: rawSpot.DXCall || '',
+            Time: rawSpot.Time || '',
+            Date: rawSpot.Date || '',
+            Beacon: rawSpot.Beacon || false,
+            MM: rawSpot.MM || false,
+            AM: rawSpot.AM || false,
+            Valid: rawSpot.Valid || false,
+            EQSL: rawSpot.EQSL,
+            LOTW: rawSpot.LOTW,
+            LOTW_Date: rawSpot.LOTW_Date,
+            DXHomecall: rawSpot.DXHomecall || '',
+            Comment: rawSpot.Comment || '',
+            Flag: rawSpot.Flag || '',
+            Band: rawSpot.Band || 0,
+            Mode: rawSpot.Mode || 'UNKNOWN',
+            Continent_dx: rawSpot.Continent_dx || '',
+            Continent_spotter: rawSpot.Continent_spotter || '',
+            DXLocator: rawSpot.DXLocator,
+            Spotters: [rawSpot.Spotter || ''],
+          };
 
-        rawSpots.forEach((spot: DxSpot) => {
-          const key: string = `${spot.DXCall}-${spot.Frequency}`;
+          const key = `${spot.DXCall}-${spot.Frequency}`;
+          const existingIndex = spotIndex[key];
 
-          if (spotMap.has(key)) {
-            const existingSpot: DxSpot = spotMap.get(key)!;
+          if (existingIndex !== undefined) {
+            const existingSpot = processedSpots[existingIndex];
+            
             // Add spotter to the list if not already present
             if (!existingSpot.Spotters.includes(spot.Spotter)) {
               existingSpot.Spotters.push(spot.Spotter);
             }
+
             // Keep the most recent time
-            const existingTime: Date = new Date(
+            const existingTime = new Date(
               `20${existingSpot.Date.split('/')[2]}-${existingSpot.Date.split('/')[1]}-${existingSpot.Date.split('/')[0]}T${existingSpot.Time}:00Z`
             );
-            const newTime: Date = new Date(
+            const newTime = new Date(
               `20${spot.Date.split('/')[2]}-${spot.Date.split('/')[1]}-${spot.Date.split('/')[0]}T${spot.Time}:00Z`
             );
 
             if (newTime > existingTime) {
               existingSpot.Time = spot.Time;
               existingSpot.Date = spot.Date;
-              existingSpot.Spotter = spot.Spotter; // Update primary spotter to most recent
+              existingSpot.Spotter = spot.Spotter;
             }
           } else {
             // First occurrence of this callsign/frequency combination
-            spotMap.set(key, {
-              ...spot,
-              Spotters: [spot.Spotter],
-            });
+            spotIndex[key] = processedSpots.length;
+            processedSpots.push(spot);
           }
         });
 
-        this.spots = Array.from(spotMap.values());
+        this.spots = processedSpots;
         this.lastFetchTime = new Date();
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Ismeretlen hiba történt';
