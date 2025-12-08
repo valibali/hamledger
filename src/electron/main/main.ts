@@ -1237,7 +1237,6 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
       }
     };
 
-    let currentPage = 0;
     let labelIndex = 0;
 
     // Process each unique label data
@@ -1250,7 +1249,6 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
       // Add new page if needed (except for first page)
       if (positionOnPage === 0 && labelIndex > 0) {
         doc.addPage();
-        currentPage++;
       }
 
       const x = col * labelWidth;
