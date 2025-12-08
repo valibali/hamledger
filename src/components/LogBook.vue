@@ -326,6 +326,46 @@ export default {
       };
       this.updateVisibleRange();
     },
+    async cycleQslStatus(qso) {
+      const statusCycle = ['N', 'L', 'S', 'R', 'B', 'Q'];
+      const currentIndex = statusCycle.indexOf(qso.qslStatus || 'N');
+      const nextIndex = (currentIndex + 1) % statusCycle.length;
+      const newStatus = statusCycle[nextIndex];
+
+      try {
+        const updatedQso = {
+          ...qso,
+          qslStatus: newStatus,
+        };
+
+        await this.qsoStore.updateQso(updatedQso);
+        
+        // Update the local entry immediately for better UX
+        const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+        if (sessionIndex !== -1) {
+          this.qsoStore.currentSession[sessionIndex].qslStatus = newStatus;
+        }
+
+        const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+        if (allIndex !== -1) {
+          this.qsoStore.allQsos[allIndex].qslStatus = newStatus;
+        }
+      } catch (error) {
+        console.error('Failed to update QSL status:', error);
+        alert('Hiba történt a QSL státusz frissítése során: ' + (error.message || error));
+      }
+    },
+    getQslStatusDescription(status) {
+      const descriptions = {
+        'N': 'Not sent/received',
+        'L': 'Label printed',
+        'S': 'Sent',
+        'R': 'Received',
+        'B': 'Both sent and received',
+        'Q': 'QSL requested'
+      };
+      return descriptions[status] || 'Unknown';
+    },
   },
 };
 </script>
@@ -597,7 +637,12 @@ export default {
               <td>{{ entry.remark }}</td>
               <td>{{ entry.notes }}</td>
               <td>
-                <span class="qsl-status" :class="'qsl-' + (entry.qslStatus || 'N').toLowerCase()">
+                <span 
+                  class="qsl-status clickable" 
+                  :class="'qsl-' + (entry.qslStatus || 'N').toLowerCase()"
+                  @click.stop="cycleQslStatus(entry)"
+                  :title="'Click to change QSL status. Current: ' + getQslStatusDescription(entry.qslStatus || 'N')"
+                >
                   {{ entry.qslStatus || 'N' }}
                 </span>
               </td>
@@ -1132,5 +1177,20 @@ export default {
 .qsl-q {
   background: #9b59b6;
   color: #fff;
+}
+
+.qsl-status.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.qsl-status.clickable:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.qsl-status.clickable:active {
+  transform: scale(0.95);
 }
 </style>
