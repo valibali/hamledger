@@ -522,12 +522,18 @@ export default {
           };
         }
         
+        const totalQsos = selectedQsoObjects.length;
+        let processedQsos = 0;
+        
         for (let i = 0; i < selectedQsoObjects.length; i++) {
           const qso = selectedQsoObjects[i];
           try {
             // If changing to P (Print label), collect label data for batch generation
             if (newStatus === 'P') {
-              this.qslGenerationStatus.progress = Math.round((i / selectedQsoObjects.length) * 50);
+              // Progress: 0-70% for data collection, 70-90% for PDF generation, 90-100% for completion
+              const dataCollectionProgress = Math.round((processedQsos / totalQsos) * 70);
+              this.qslGenerationStatus.progress = dataCollectionProgress;
+              
               const labelData = await this.generateQslLabel(qso, true);
               labelDataArray.push(labelData);
             }
@@ -550,21 +556,24 @@ export default {
             }
             
             successCount++;
+            processedQsos++;
           } catch (error) {
             console.error(`Failed to update QSO ${qso.callsign}:`, error);
+            processedQsos++;
             // Continue with other QSOs
           }
         }
 
         // Generate batch PDF if we collected label data
         if (newStatus === 'P' && labelDataArray.length > 0) {
-          this.qslGenerationStatus.progress = 75;
+          this.qslGenerationStatus.progress = 70;
           const result = await window.electronAPI.generateQslLabels(labelDataArray);
-          this.qslGenerationStatus.progress = 100;
+          this.qslGenerationStatus.progress = 90;
           
           if (result.success) {
             this.qslGenerationStatus.success = true;
             this.qslGenerationStatus.filePath = result.filePath;
+            this.qslGenerationStatus.progress = 100;
             this.showQslGenerationDialog = true;
           } else {
             throw new Error(result.error || 'Failed to generate QSL labels');
@@ -936,7 +945,18 @@ export default {
       <div class="loading-content">
         <div class="loading-spinner"></div>
         <span class="loading-text">Generating QSL Labels...</span>
-        <div class="loading-subtext">{{ qslGenerationStatus.progress }}% complete</div>
+        <div class="loading-subtext">
+          {{ qslGenerationStatus.progress }}% complete
+          <span v-if="qslGenerationStatus.progress <= 70">
+            - Processing QSO data
+          </span>
+          <span v-else-if="qslGenerationStatus.progress <= 90">
+            - Generating PDF
+          </span>
+          <span v-else>
+            - Finalizing
+          </span>
+        </div>
         <div class="progress-bar-container">
           <div
             class="progress-bar-fill"
