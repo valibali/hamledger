@@ -37,6 +37,7 @@ export default {
           ...this.qso,
           _id: this.qso._id,
           _rev: this.qso._rev,
+          qslStatus: this.qso.qslStatus || 'N',
         };
       }
     },
@@ -47,6 +48,7 @@ export default {
             ...newQso,
             _id: newQso._id,
             _rev: newQso._rev,
+            qslStatus: newQso.qslStatus || 'N',
           };
         }
       },
@@ -59,6 +61,7 @@ export default {
         ...this.qso,
         _id: this.qso._id,
         _rev: this.qso._rev,
+        qslStatus: this.qso.qslStatus || 'N',
       };
     }
   },
