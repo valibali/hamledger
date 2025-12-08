@@ -79,6 +79,9 @@ export const useDxClusterStore = defineStore('dxCluster', {
         // Ensure spam filtering is enabled
         params.append('spam', '0');
 
+        console.log('DX Cluster request URL params:', params.toString());
+        console.log('Full URL would be: https://dxheat.com/source/spots/?' + params.toString());
+
         const result = await window.electronAPI.fetchDxSpots(params.toString());
 
         if (!result.success || !result.data) {
