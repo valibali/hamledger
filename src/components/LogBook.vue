@@ -44,6 +44,7 @@ export default {
       batchMode: false,
       selectedQsos: new Set<string>(),
       showBatchActions: false,
+      showQslStatusMenu: false,
       qslGenerationStatus: {
         isGenerating: false,
         progress: 0,
@@ -531,6 +532,7 @@ export default {
         // Clear selection after batch update
         this.selectedQsos.clear();
         this.showBatchActions = false;
+        this.showQslStatusMenu = false;
         
         if (successCount === selectedQsoObjects.length) {
           alert(`${successCount} QSO QSL status updated to: ${newStatus} - ${this.getQslStatusDescription(newStatus)}`);
@@ -576,6 +578,9 @@ export default {
       if (this.qslGenerationStatus.filePath) {
         await window.electronAPI.openFolder(this.qslGenerationStatus.filePath);
       }
+    },
+    toggleQslStatusMenu() {
+      this.showQslStatusMenu = !this.showQslStatusMenu;
     },
   },
 };
@@ -778,14 +783,43 @@ export default {
       
       <div v-if="showBatchActions" class="batch-actions">
         <div class="batch-action-group">
-          <label>QSL Status:</label>
-          <button class="batch-qsl-btn qsl-n" @click="batchUpdateQslStatus('N')" title="Not sent/received">N</button>
-          <button class="batch-qsl-btn qsl-p" @click="batchUpdateQslStatus('P')" title="Print label (generates PDF)">P</button>
-          <button class="batch-qsl-btn qsl-l" @click="batchUpdateQslStatus('L')" title="Label printed (ready to send)">L</button>
-          <button class="batch-qsl-btn qsl-s" @click="batchUpdateQslStatus('S')" title="Sent">S</button>
-          <button class="batch-qsl-btn qsl-r" @click="batchUpdateQslStatus('R')" title="Received">R</button>
-          <button class="batch-qsl-btn qsl-b" @click="batchUpdateQslStatus('B')" title="Both sent and received">B</button>
-          <button class="batch-qsl-btn qsl-q" @click="batchUpdateQslStatus('Q')" title="QSL requested">Q</button>
+          <div class="qsl-status-dropdown">
+            <button class="qsl-status-toggle-btn" @click="toggleQslStatusMenu">
+              Change QSL Card Status
+              <span class="dropdown-arrow" :class="{ open: showQslStatusMenu }">▼</span>
+            </button>
+            
+            <div v-if="showQslStatusMenu" class="qsl-status-menu">
+              <button class="qsl-menu-item qsl-n" @click="batchUpdateQslStatus('N')" title="Not sent/received">
+                <span class="status-indicator">N</span>
+                <span class="status-description">Not sent/received</span>
+              </button>
+              <button class="qsl-menu-item qsl-p" @click="batchUpdateQslStatus('P')" title="Print label (generates PDF)">
+                <span class="status-indicator">P</span>
+                <span class="status-description">Print label</span>
+              </button>
+              <button class="qsl-menu-item qsl-l" @click="batchUpdateQslStatus('L')" title="Label printed (ready to send)">
+                <span class="status-indicator">L</span>
+                <span class="status-description">Label printed</span>
+              </button>
+              <button class="qsl-menu-item qsl-s" @click="batchUpdateQslStatus('S')" title="Sent">
+                <span class="status-indicator">S</span>
+                <span class="status-description">Sent</span>
+              </button>
+              <button class="qsl-menu-item qsl-r" @click="batchUpdateQslStatus('R')" title="Received">
+                <span class="status-indicator">R</span>
+                <span class="status-description">Received</span>
+              </button>
+              <button class="qsl-menu-item qsl-b" @click="batchUpdateQslStatus('B')" title="Both sent and received">
+                <span class="status-indicator">B</span>
+                <span class="status-description">Both sent and received</span>
+              </button>
+              <button class="qsl-menu-item qsl-q" @click="batchUpdateQslStatus('Q')" title="QSL requested">
+                <span class="status-indicator">Q</span>
+                <span class="status-description">QSL requested</span>
+              </button>
+            </div>
+          </div>
         </div>
         
         <div class="batch-action-group">
@@ -1611,9 +1645,120 @@ export default {
   color: #fff;
 }
 
-.batch-qsl-btn.qsl-q {
+.qsl-status-dropdown {
+  position: relative;
+}
+
+.qsl-status-toggle-btn {
+  background: #6c757d;
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qsl-status-toggle-btn:hover {
+  background: #5a6268;
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  font-size: 0.8rem;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.qsl-status-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #2b2b2b;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 200px;
+  margin-top: 0.25rem;
+}
+
+.qsl-menu-item {
+  width: 100%;
+  border: none;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: background-color 0.2s;
+}
+
+.qsl-menu-item:hover {
+  background: #3b3b3b;
+}
+
+.qsl-menu-item:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.qsl-menu-item:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
+.status-indicator {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  min-width: 20px;
+}
+
+.qsl-menu-item.qsl-n .status-indicator {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.qsl-menu-item.qsl-p .status-indicator {
+  background: #fd7e14;
+  color: #fff;
+}
+
+.qsl-menu-item.qsl-l .status-indicator {
+  background: #17a2b8;
+  color: #fff;
+}
+
+.qsl-menu-item.qsl-s .status-indicator {
+  background: #f39c12;
+  color: #fff;
+}
+
+.qsl-menu-item.qsl-r .status-indicator {
+  background: #27ae60;
+  color: #fff;
+}
+
+.qsl-menu-item.qsl-b .status-indicator {
+  background: #3498db;
+  color: #fff;
+}
+
+.qsl-menu-item.qsl-q .status-indicator {
   background: #9b59b6;
   color: #fff;
+}
+
+.status-description {
+  color: #fff;
+  font-size: 0.9rem;
 }
 
 .batch-export-btn {
