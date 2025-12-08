@@ -95,6 +95,7 @@
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6",
     "i18n-iso-countries": "^7.13.0",
+    "jspdf": "^3.0.4",
     "node-fetch": "^3.3.2",
     "pinia": "^2.1.7",
     "pouchdb": "^9.0.0",
