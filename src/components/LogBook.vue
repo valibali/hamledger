@@ -564,6 +564,56 @@ export default {
         alert('Error during export: ' + (error.message || error));
       }
     },
+    async batchDeleteSelected() {
+      if (this.selectedQsos.size === 0) return;
+
+      const selectedQsoObjects = this.allQsos.filter(qso => {
+        const qsoId = qso._id || qso.id || qso.datetime + qso.callsign;
+        return this.selectedQsos.has(qsoId);
+      });
+
+      const confirmMessage = `Are you sure you want to delete ${selectedQsoObjects.length} selected QSOs? This action cannot be undone!`;
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      try {
+        let successCount = 0;
+        
+        for (const qso of selectedQsoObjects) {
+          try {
+            const qsoId = qso._id || qso.id;
+            if (!qsoId) {
+              console.error('QSO ID missing for:', qso);
+              continue;
+            }
+
+            const result = await this.qsoStore.deleteQso(qsoId);
+            if (result.success) {
+              successCount++;
+            } else {
+              console.error(`Failed to delete QSO ${qso.callsign}:`, result.error);
+            }
+          } catch (error) {
+            console.error(`Failed to delete QSO ${qso.callsign}:`, error);
+          }
+        }
+
+        // Clear selection after batch delete
+        this.selectedQsos.clear();
+        this.showBatchActions = false;
+        this.showQslStatusMenu = false;
+        
+        if (successCount === selectedQsoObjects.length) {
+          alert(`${successCount} QSOs deleted successfully`);
+        } else {
+          alert(`${successCount} of ${selectedQsoObjects.length} QSOs deleted successfully. Some failed - check console for details.`);
+        }
+      } catch (error) {
+        console.error('Batch delete failed:', error);
+        alert('Error during batch delete: ' + (error.message || error));
+      }
+    },
     closeQslGenerationDialog() {
       this.showQslGenerationDialog = false;
       this.qslGenerationStatus = {
@@ -825,6 +875,9 @@ export default {
         <div class="batch-action-group">
           <button class="batch-export-btn" @click="batchExportSelected">
             Export selected
+          </button>
+          <button class="batch-delete-btn" @click="batchDeleteSelected">
+            Delete selected
           </button>
         </div>
       </div>
@@ -1773,6 +1826,20 @@ export default {
 
 .batch-export-btn:hover {
   background: #2980b9;
+}
+
+.batch-delete-btn {
+  background: #e74c3c;
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.batch-delete-btn:hover {
+  background: #c0392b;
 }
 
 .checkbox-column {
