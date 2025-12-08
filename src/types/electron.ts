@@ -25,7 +25,7 @@ interface PropagationData {
   lastUpdated?: string;
 }
 
-interface DxSpotData extends Array<{
+type DxSpotData = Array<{
   Nr: number;
   Spotter: string;
   Frequency: string;
@@ -47,7 +47,7 @@ interface DxSpotData extends Array<{
   Continent_dx: string;
   Continent_spotter: string;
   DXLocator?: string;
-}> {}
+}>;
 
 interface RigConnectionData {
   connected: boolean;

@@ -84,7 +84,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
 
         // Process and deduplicate spots
         const rawSpots: DxSpot[] = result.data.map(
-          (spot: DxSpot): DxSpot => ({
+          (spot: any): DxSpot => ({
             Nr: spot.Nr || 0,
             Spotter: spot.Spotter || '',
             Frequency: spot.Frequency || '0',

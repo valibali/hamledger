@@ -30,7 +30,7 @@ export interface DxSpot {
   Comment: string;
   Flag: string;
   Band: number;
-  Mode: string;
+  Mode?: string; // Optional because some spots don't have Mode field
   Continent_dx: string;
   Continent_spotter: string;
   DXLocator?: string;
