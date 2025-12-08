@@ -76,7 +76,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
           params.append('valid', '1');
         }
 
-        const result: DxSpotApiResponse = await window.electronAPI.fetchDxSpots(params.toString());
+        const result = await window.electronAPI.fetchDxSpots(params.toString());
 
         if (!result.success || !result.data) {
           throw new Error(result.error || 'API hívás sikertelen');
