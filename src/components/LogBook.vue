@@ -41,6 +41,9 @@ export default {
       },
       showExportDialog: false,
       isLoadingQsos: false,
+      batchMode: false,
+      selectedQsos: new Set<string>(),
+      showBatchActions: false,
       filters: {
         searchText: '',
         selectedBand: '',
@@ -386,6 +389,95 @@ export default {
       };
       return descriptions[status] || 'Unknown';
     },
+    toggleBatchMode() {
+      this.batchMode = !this.batchMode;
+      if (!this.batchMode) {
+        this.selectedQsos.clear();
+        this.showBatchActions = false;
+      }
+    },
+    toggleQsoSelection(qso) {
+      const qsoId = qso._id || qso.id || qso.datetime + qso.callsign;
+      if (this.selectedQsos.has(qsoId)) {
+        this.selectedQsos.delete(qsoId);
+      } else {
+        this.selectedQsos.add(qsoId);
+      }
+      this.showBatchActions = this.selectedQsos.size > 0;
+    },
+    selectAllVisible() {
+      this.visibleQsos.forEach(qso => {
+        const qsoId = qso._id || qso.id || qso.datetime + qso.callsign;
+        this.selectedQsos.add(qsoId);
+      });
+      this.showBatchActions = this.selectedQsos.size > 0;
+    },
+    deselectAll() {
+      this.selectedQsos.clear();
+      this.showBatchActions = false;
+    },
+    isQsoSelected(qso) {
+      const qsoId = qso._id || qso.id || qso.datetime + qso.callsign;
+      return this.selectedQsos.has(qsoId);
+    },
+    async batchUpdateQslStatus(newStatus) {
+      if (this.selectedQsos.size === 0) return;
+
+      const selectedQsoObjects = this.allQsos.filter(qso => {
+        const qsoId = qso._id || qso.id || qso.datetime + qso.callsign;
+        return this.selectedQsos.has(qsoId);
+      });
+
+      try {
+        for (const qso of selectedQsoObjects) {
+          const updatedQso = {
+            ...qso,
+            qslStatus: newStatus,
+          };
+          await this.qsoStore.updateQso(updatedQso);
+          
+          // Update local arrays
+          const sessionIndex = this.qsoStore.currentSession.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+          if (sessionIndex !== -1) {
+            this.qsoStore.currentSession[sessionIndex].qslStatus = newStatus;
+          }
+
+          const allIndex = this.qsoStore.allQsos.findIndex(q => (q._id || q.id) === (qso._id || qso.id));
+          if (allIndex !== -1) {
+            this.qsoStore.allQsos[allIndex].qslStatus = newStatus;
+          }
+        }
+
+        // Clear selection after batch update
+        this.selectedQsos.clear();
+        this.showBatchActions = false;
+        
+        alert(`${selectedQsoObjects.length} QSO QSL státusza frissítve: ${newStatus}`);
+      } catch (error) {
+        console.error('Batch QSL status update failed:', error);
+        alert('Hiba történt a batch QSL státusz frissítése során: ' + (error.message || error));
+      }
+    },
+    async batchExportSelected() {
+      if (this.selectedQsos.size === 0) return;
+
+      const selectedQsoObjects = this.allQsos.filter(qso => {
+        const qsoId = qso._id || qso.id || qso.datetime + qso.callsign;
+        return this.selectedQsos.has(qsoId);
+      });
+
+      try {
+        const result = await this.qsoStore.exportAdif(selectedQsoObjects);
+        if (result.success) {
+          alert(`${selectedQsoObjects.length} kiválasztott QSO sikeresen exportálva!`);
+        } else {
+          alert('Export hiba: ' + (result.error || 'Ismeretlen hiba'));
+        }
+      } catch (error) {
+        console.error('Batch export failed:', error);
+        alert('Hiba történt az export során: ' + (error.message || error));
+      }
+    },
   },
 };
 </script>
@@ -401,6 +493,13 @@ export default {
         </span>
       </div>
       <div class="log-actions">
+        <button 
+          class="action-btn batch-btn" 
+          @click="toggleBatchMode"
+          :class="{ active: batchMode }"
+        >
+          {{ batchMode ? 'Exit Batch' : 'Batch Select' }}
+        </button>
         <button class="action-btn" @click="handleImportAdif" :disabled="importStatus.isImporting">
           <span v-if="!importStatus.isImporting">Import ADIF</span>
           <span v-else class="loading-text">
@@ -568,6 +667,35 @@ export default {
       </div>
     </div>
 
+    <!-- Batch Actions Panel -->
+    <div v-if="batchMode" class="batch-panel">
+      <div class="batch-info">
+        <span class="batch-count">{{ selectedQsos.size }} QSO kiválasztva</span>
+        <div class="batch-selection-actions">
+          <button class="batch-select-btn" @click="selectAllVisible">Összes látható</button>
+          <button class="batch-select-btn" @click="deselectAll">Kijelölés törlése</button>
+        </div>
+      </div>
+      
+      <div v-if="showBatchActions" class="batch-actions">
+        <div class="batch-action-group">
+          <label>QSL Státusz:</label>
+          <button class="batch-qsl-btn qsl-n" @click="batchUpdateQslStatus('N')">N</button>
+          <button class="batch-qsl-btn qsl-l" @click="batchUpdateQslStatus('L')">L</button>
+          <button class="batch-qsl-btn qsl-s" @click="batchUpdateQslStatus('S')">S</button>
+          <button class="batch-qsl-btn qsl-r" @click="batchUpdateQslStatus('R')">R</button>
+          <button class="batch-qsl-btn qsl-b" @click="batchUpdateQslStatus('B')">B</button>
+          <button class="batch-qsl-btn qsl-q" @click="batchUpdateQslStatus('Q')">Q</button>
+        </div>
+        
+        <div class="batch-action-group">
+          <button class="batch-export-btn" @click="batchExportSelected">
+            Export kiválasztottak
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- QSO Loading Overlay -->
     <div v-if="showLoadingOverlay" class="qso-loading-overlay">
       <div class="loading-content">
@@ -588,6 +716,13 @@ export default {
         <table class="qso-table" :style="{ transform: `translateY(${offsetY}px)` }">
           <thead>
             <tr>
+              <th v-if="batchMode" class="checkbox-column">
+                <input 
+                  type="checkbox" 
+                  @change="$event.target.checked ? selectAllVisible() : deselectAll()"
+                  :checked="visibleQsos.length > 0 && visibleQsos.every(qso => isQsoSelected(qso))"
+                />
+              </th>
               <th @click="sortBy('datetime')" class="sortable">
                 Date
                 <span v-if="sortKey === 'datetime'" class="sort-indicator">
@@ -642,11 +777,21 @@ export default {
               v-for="(entry, index) in visibleQsos"
               :key="entry._id || entry.datetime + entry.callsign || index"
               :style="{ height: itemHeight + 'px' }"
+              :class="{ selected: batchMode && isQsoSelected(entry) }"
               @click="
-                selectedQso = entry;
-                showEditDialog = true;
+                if (!batchMode) {
+                  selectedQso = entry;
+                  showEditDialog = true;
+                }
               "
             >
+              <td v-if="batchMode" class="checkbox-column">
+                <input 
+                  type="checkbox" 
+                  :checked="isQsoSelected(entry)"
+                  @click.stop="toggleQsoSelection(entry)"
+                />
+              </td>
               <td>{{ DateHelper.formatUTCDate(new Date(entry.datetime)) }}</td>
               <td>{{ DateHelper.formatUTCTime(new Date(entry.datetime)) }}</td>
               <td>
@@ -1223,5 +1368,140 @@ export default {
 
 .qsl-status.clickable:active {
   transform: scale(0.95);
+}
+
+.batch-btn {
+  background: #9b59b6;
+  color: #fff;
+}
+
+.batch-btn.active {
+  background: #8e44ad;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.batch-panel {
+  background: #2b2b2b;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.batch-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.batch-count {
+  color: var(--main-color);
+  font-weight: bold;
+}
+
+.batch-selection-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.batch-select-btn {
+  background: #555;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.batch-select-btn:hover {
+  background: #666;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.batch-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.batch-action-group label {
+  color: var(--gray-color);
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.batch-qsl-btn {
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.8rem;
+  min-width: 30px;
+}
+
+.batch-qsl-btn.qsl-n {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.batch-qsl-btn.qsl-l {
+  background: #17a2b8;
+  color: #fff;
+}
+
+.batch-qsl-btn.qsl-s {
+  background: #f39c12;
+  color: #fff;
+}
+
+.batch-qsl-btn.qsl-r {
+  background: #27ae60;
+  color: #fff;
+}
+
+.batch-qsl-btn.qsl-b {
+  background: #3498db;
+  color: #fff;
+}
+
+.batch-qsl-btn.qsl-q {
+  background: #9b59b6;
+  color: #fff;
+}
+
+.batch-export-btn {
+  background: #3498db;
+  border: none;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.batch-export-btn:hover {
+  background: #2980b9;
+}
+
+.checkbox-column {
+  width: 40px;
+  text-align: center;
+}
+
+.qso-table tbody tr.selected {
+  background: rgba(155, 89, 182, 0.2);
+}
+
+.qso-table tbody tr.selected:hover {
+  background: rgba(155, 89, 182, 0.3);
 }
 </style>
