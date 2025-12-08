@@ -559,6 +559,12 @@ export default {
               <th>RSTt</th>
               <th>Remark</th>
               <th>Notes</th>
+              <th @click="sortBy('qslStatus')" class="sortable">
+                QSL Status
+                <span v-if="sortKey === 'qslStatus'" class="sort-indicator">
+                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -590,6 +596,7 @@ export default {
               <td>{{ entry.rstt }}</td>
               <td>{{ entry.remark }}</td>
               <td>{{ entry.notes }}</td>
+              <td>{{ entry.qslStatus || 'N' }}</td>
             </tr>
           </tbody>
         </table>

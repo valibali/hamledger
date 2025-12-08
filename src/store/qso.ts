@@ -47,6 +47,7 @@ export const useQsoStore = defineStore('qso', {
       utc: '',
       remark: '',
       notes: '',
+      qslStatus: 'N',
     },
   }),
   actions: {
@@ -85,6 +86,7 @@ export const useQsoStore = defineStore('qso', {
       newQso.rstt = this.qsoForm.rstt || '59';
       newQso.remark = this.qsoForm.remark?.trim() || '--';
       newQso.notes = this.qsoForm.notes?.trim() || '--';
+      newQso.qslStatus = this.qsoForm.qslStatus || 'N';
 
       // Send to main process to save
       try {
@@ -114,6 +116,7 @@ export const useQsoStore = defineStore('qso', {
         utc: '',
         remark: '',
         notes: '',
+        qslStatus: 'N',
       };
     },
     updateQsoForm(field: keyof typeof this.qsoForm, value: string) {

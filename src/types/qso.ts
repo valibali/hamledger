@@ -11,5 +11,6 @@ export interface QsoEntry {
   datetime: string;
   remark?: string;
   notes?: string;
+  qslStatus?: string;
   qrzLogId?: string;
 }
