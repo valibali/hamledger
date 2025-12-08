@@ -75,6 +75,9 @@ export const useDxClusterStore = defineStore('dxCluster', {
         if (this.filters.validatedOnly) {
           params.append('valid', '1');
         }
+        
+        // Ensure spam filtering is enabled
+        params.append('spam', '0');
 
         const result = await window.electronAPI.fetchDxSpots(params.toString());
 
