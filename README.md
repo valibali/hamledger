@@ -37,9 +37,15 @@ Hamledger is a feature-rich amateur radio logging application designed for ham r
 - **Desktop Runtime**: Electron
 - **Styling**: Custom CSS with modern design principles
 
+## Documentation
+
+For detailed usage instructions and complete functionality guide, see:
+- [Tutorial (Hungarian)](TUTORIAL.md) - Teljes funkcionalitás útmutató magyar nyelven
+- [Tutorial (English)](TUTORIAL_EN.md) - Complete functionality guide in English
+
 ## Installation
 
-See INSTALL.md
+See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 
 ## Getting Started with Development
 
