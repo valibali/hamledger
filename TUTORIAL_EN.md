@@ -182,17 +182,19 @@ In the QSO details dialog, use the "Edit QSO" button to switch to edit mode wher
 
 ## QSL Card Management
 
-![QSO Detail with QSL](./public/qso_detail.png)
+![QSL Handler Interface](./public/qsl-handler.png)
 
 ### QSL Status System
 
-QSL status uses simple letter codes and color coding to indicate QSL card status: N (red) = none, P (orange) = waiting for print, L (blue) = printed, S (yellow) = sent, R (green) = received, B (blue) = both directions OK. Left-click to advance, right-click to go backward through statuses.
+The QSL status system uses simple letter codes and color coding to indicate QSL card status for each QSO. Status codes are: **N** (red) = no QSL, **P** (orange) = waiting for print, **L** (blue) = label printed, **S** (yellow) = QSL sent, **R** (green) = QSL received, **B** (blue) = both directions OK, **Q** (purple) = QSL requested. Left-click to advance forward, right-click to go backward through statuses - each click shows a tooltip with the current status meaning.
 
-### Automatic Label Generation
-When setting status to "P", the system automatically offers QSL label PDF generation based on QRZ.com data. After successful generation, status automatically changes to "L" and the PDF file opens for printing.
+### Automatic Label Generation and PDF Printing
+When you set the QSL status to "P" (Print label), HamLedger automatically offers QSL label PDF generation. The system queries the QRZ.com database for remote station data (name, address, country) and creates a professional QSL label with QSO details (date, time, frequency, mode, RST reports). After successful generation, the status automatically changes to "L" (Label printed).
 
-### Batch Label Generation
-In LogBook view, select multiple QSOs in batch mode to generate labels simultaneously. The progress bar shows advancement, and the "Open Folder" button opens the folder containing generated PDF files.
+![QSL Label Printer](./public/qsl-etquette-printer.png)
+
+### Batch Label Generation and Printing
+In LogBook view, use "Batch Select" mode to select multiple QSOs for simultaneous label generation with efficient bulk processing. The system processes all selected QSOs, queries station data, and creates PDF labels. The progress bar shows real-time advancement (e.g., "Processing 15/50 QSOs"), and after completion, the "Open Folder" button opens the folder containing generated PDF files. Each PDF file is named based on callsign and date for easy identification.
 
 ## ADIF Import/Export
 

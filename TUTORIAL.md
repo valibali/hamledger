@@ -182,17 +182,19 @@ A QSO részletek dialógban az "Edit QSO" gombbal szerkesztési módba váltasz,
 
 ## QSL Kártya Kezelés
 
-![QSO Detail with QSL](./public/qso_detail.png)
+![QSL Handler Interface](./public/qsl-handler.png)
 
 ### QSL Státusz Rendszer
 
-A QSL státusz egyszerű betűkódokkal és színkódolással jelzi a QSL kártya állapotát: N (piros) = nincs, P (narancs) = nyomtatásra vár, L (kék) = kinyomtatva, S (sárga) = elküldve, R (zöld) = megérkezett, B (kék) = mindkét irányban rendben. Bal egérgombbal előre, jobb egérgombbal visszafelé léphetsz a státuszok között.
+A QSL státusz egyszerű betűkódokkal és színkódolással jelzi a QSL kártya állapotát minden QSO-nál. A státusz kódok: **N** (piros) = nincs QSL, **P** (narancs) = nyomtatásra vár, **L** (kék) = címke kinyomtatva, **S** (sárga) = QSL elküldve, **R** (zöld) = QSL megérkezett, **B** (kék) = mindkét irányban rendben, **Q** (lila) = QSL kérve. Bal egérgombbal előre, jobb egérgombbal visszafelé léphetsz a státuszok között - minden kattintáskor tooltip mutatja az aktuális státusz jelentését.
 
-### Automatikus Címke Generálás
-Amikor a státuszt "P"-re állítod, a rendszer automatikusan felajánlja a QSL címke PDF generálását QRZ.com adatok alapján. A sikeres generálás után a státusz automatikusan "L"-re vált, és megnyílik a PDF fájl nyomtatáshoz.
+### Automatikus Címke Generálás és PDF Nyomtatás
+Amikor a QSL státuszt "P" (Print label) értékre állítod, a HamLedger automatikusan felajánlja a QSL címke PDF generálását. A rendszer lekérdezi a QRZ.com adatbázisból a távoli állomás adatait (név, cím, ország) és létrehoz egy professzionális QSL címkét a QSO részleteivel (dátum, idő, frekvencia, mód, RST jelentések). A sikeres generálás után a státusz automatikusan "L" (Label printed) értékre vált.
 
-### Batch Címke Generálás
-A LogBook nézetben batch módban több QSO-t kiválasztva egyszerre generálhatsz címkéket. A progress bar mutatja az előrehaladást, és az "Open Folder" gombbal megnyithatod a generált PDF fájlokat tartalmazó mappát.
+![QSL Label Printer](./public/qsl-etquette-printer.png)
+
+### Batch Címke Generálás és Nyomtatás
+A LogBook nézetben a "Batch Select" móddal több QSO-t kiválasztva egyszerre generálhatsz címkéket hatékony tömeges feldolgozással. A rendszer végigmegy az összes kiválasztott QSO-n, lekérdezi az állomás adatokat és létrehozza a PDF címkéket. A progress bar valós időben mutatja az előrehaladást (pl. "Processing 15/50 QSOs"), és a befejezés után az "Open Folder" gombbal megnyithatod a generált PDF fájlokat tartalmazó mappát. Minden PDF fájl a hívójel és dátum alapján kap nevet a könnyű azonosításhoz.
 
 ## ADIF Import/Export
 
