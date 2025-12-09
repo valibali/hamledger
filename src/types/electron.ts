@@ -132,6 +132,7 @@ declare global {
       wsjtxStatus: () => Promise<{ success: boolean; data?: WSJTXStatusData; error?: string }>;
       onWSJTXDecode: (callback: (decode: WSJTXDecodeMessage) => void) => void;
       onWSJTXQSOLogged: (callback: (qso: QsoEntry) => void) => void;
+      onWSJTXAddQSO: (callback: (qso: QsoEntry) => void) => void;
     };
   }
 }
