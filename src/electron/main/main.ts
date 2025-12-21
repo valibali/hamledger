@@ -157,6 +157,109 @@ function stopRigctld(): void {
   }
 }
 
+// Start rigctld with elevated (admin) privileges - one-time use
+async function startRigctldElevated(): Promise<{
+  success: boolean;
+  error?: string;
+  userCancelled?: boolean;
+}> {
+  if (process.platform !== 'win32') {
+    return { success: false, error: 'Elevated start only supported on Windows' };
+  }
+
+  try {
+    // Load settings to get rig configuration
+    let settings;
+    try {
+      if (fs.existsSync(userSettingsPath)) {
+        settings = JSON.parse(fs.readFileSync(userSettingsPath, 'utf8'));
+      } else if (fs.existsSync(defaultSettingsPath)) {
+        settings = JSON.parse(fs.readFileSync(defaultSettingsPath, 'utf8'));
+      }
+    } catch (error) {
+      console.warn('Could not load settings for elevated rigctld startup:', error);
+    }
+
+    // Get rig configuration from settings
+    const rigConfig = settings?.rig || {};
+    const rigModel = rigConfig.rigModel || 1025; // Default to Yaesu FT-1000MP
+    const rigDevice = rigConfig.device || ''; // Default device
+    const rigPort = rigConfig.port || 4532; // Default port
+
+    // Get rigctld path
+    const rigctldPath = getRigctldPath() || 'rigctld.exe';
+
+    // Build arguments
+    const args = [`-m ${rigModel}`];
+
+    // Add device parameter only if model is not 1 (dummy) and device is specified
+    if (rigModel !== 1 && rigDevice) {
+      args.push(`-r ${rigDevice}`);
+    }
+
+    // Add port if different from default
+    if (rigPort !== 4532) {
+      args.push(`-t ${rigPort}`);
+    }
+
+    const argsString = args.join(' ');
+
+    console.log('Starting rigctld with elevated privileges:', rigctldPath, argsString);
+
+    // PowerShell command to start rigctld as admin
+    const psCommand = `
+      try {
+        $rigctldPath = '${rigctldPath.replace(/\\/g, '\\\\')}'
+        $arguments = '${argsString}'
+
+        # Start rigctld as admin
+        Start-Process -FilePath $rigctldPath -ArgumentList $arguments -Verb RunAs
+
+        Write-Output "Started rigctld with elevated privileges"
+      } catch {
+        Write-Error "Failed to start rigctld: $($_.Exception.Message)"
+        exit 1
+      }
+    `;
+
+    return new Promise(resolve => {
+      const command = `powershell -Command "& {${psCommand.replace(/"/g, '\\"')}}"`;
+
+      exec(command, { timeout: 10000 }, (error, stdout, stderr) => {
+        if (error) {
+          console.error('Error starting elevated rigctld:', error);
+
+          // Check if user cancelled UAC prompt
+          if (error.message.includes('cancelled') || error.message.includes('1223')) {
+            console.warn('User cancelled elevated rigctld start');
+            resolve({ success: false, userCancelled: true });
+            return;
+          }
+
+          resolve({ success: false, error: error.message });
+          return;
+        }
+
+        if (stderr) {
+          console.warn('Elevated rigctld stderr:', stderr);
+        }
+
+        console.log('Elevated rigctld started:', stdout);
+
+        // Note: The elevated rigctld process runs independently
+        // We can't track it in rigctldProcess since it's not a child process
+        resolve({ success: true });
+      });
+    });
+  } catch (error) {
+    console.error('Error starting elevated rigctld:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -505,6 +608,20 @@ ipcMain.handle('fetchDxSpots', async (event, params: string) => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(async () => {
+  // On Windows, silently check and add firewall exceptions if needed
+  if (process.platform === 'win32') {
+    try {
+      console.log('Checking Windows Firewall rules on startup...');
+      const firewallResult = await addFirewallExceptions(true); // checkOnly mode
+      if (!firewallResult.rulesExist) {
+        console.log('Firewall rules do not exist, will prompt when needed');
+      }
+    } catch (error) {
+      console.warn('Startup firewall check failed:', error);
+      // Continue anyway - will attempt configuration when needed
+    }
+  }
+
   // Try to start rigctld before creating the window
   await startRigctld();
 
@@ -544,7 +661,7 @@ app.on('before-quit', () => {
 let rigctldSocket: Socket | null = null;
 
 // Rigctld handlers
-ipcMain.handle('rigctld:connect', async (_, host: string, port: number) => {
+ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptFirewallFix: boolean = true) => {
   try {
     // Close existing connection if any
     if (rigctldSocket) {
@@ -552,7 +669,7 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number) => {
       rigctldSocket = null;
     }
 
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
       rigctldSocket = new Socket();
 
       rigctldSocket.setTimeout(5000);
@@ -562,10 +679,56 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number) => {
         resolve({ success: true, data: { connected: true } });
       });
 
-      rigctldSocket.on('error', error => {
+      rigctldSocket.on('error', async error => {
         console.error('Rigctld connection error:', error);
         rigctldSocket = null;
-        resolve({ success: false, error: error.message });
+
+        // On Windows, automatically attempt to add firewall exceptions on first connection failure
+        if (process.platform === 'win32' && attemptFirewallFix) {
+          console.log('Connection failed, attempting to configure Windows Firewall...');
+
+          try {
+            const firewallResult = await addFirewallExceptions();
+
+            if (firewallResult.success) {
+              // Firewall configured successfully, indicate to retry connection
+              resolve({
+                success: false,
+                error: error.message,
+                firewallConfigured: true,
+                shouldRetry: true,
+              });
+            } else if (firewallResult.userCancelled) {
+              // User cancelled UAC prompt
+              resolve({
+                success: false,
+                error: error.message,
+                firewallConfigured: false,
+                userCancelled: true,
+              });
+            } else {
+              // Firewall configuration failed for other reason
+              resolve({
+                success: false,
+                error: error.message,
+                firewallConfigured: false,
+                firewallError: firewallResult.error,
+              });
+            }
+          } catch (firewallError) {
+            // Error during firewall configuration attempt
+            console.error('Error during firewall configuration:', firewallError);
+            resolve({
+              success: false,
+              error: error.message,
+              firewallConfigured: false,
+              firewallError: firewallError instanceof Error ? firewallError.message : 'Unknown error',
+            });
+          }
+        } else {
+          // Not Windows or not attempting firewall fix
+          resolve({ success: false, error: error.message });
+        }
       });
 
       rigctldSocket.on('timeout', () => {
@@ -899,80 +1062,132 @@ ipcMain.handle('hamlib:downloadAndInstall', async event => {
   }
 });
 
+// Helper function to get rigctld path
+function getRigctldPath(): string | null {
+  if (process.platform !== 'win32') {
+    return null; // On non-Windows, rigctld should be in PATH
+  }
+
+  try {
+    const userDataPath = app.getPath('userData');
+    const hamlibBinPath = join(userDataPath, 'hamlib', 'bin', 'rigctld.exe');
+
+    if (fs.existsSync(hamlibBinPath)) {
+      return hamlibBinPath;
+    }
+
+    // Fallback: try to find rigctld in PATH
+    return 'rigctld.exe';
+  } catch (error) {
+    console.warn('Error getting rigctld path:', error);
+    return 'rigctld.exe';
+  }
+}
+
 // Add Windows Firewall exceptions for HamLedger and rigctld
-async function addFirewallExceptions(): Promise<{
+// checkOnly: if true, only checks if rules exist without creating them (silent mode)
+async function addFirewallExceptions(checkOnly: boolean = false): Promise<{
   success: boolean;
   userCancelled?: boolean;
   error?: string;
+  rulesExist?: boolean;
 }> {
   if (process.platform !== 'win32') {
-    return { success: true }; // Only for Windows
+    return { success: true, rulesExist: true }; // Only for Windows
   }
 
+  const appPath = process.execPath;
+  const appName = 'HamLedger';
+  const rigctldPath = getRigctldPath();
+
+  // First, check if rules already exist
   return new Promise(resolve => {
-    const appPath = process.execPath;
-    const appName = 'HamLedger';
+    const checkCommand = `powershell -Command "Get-NetFirewallRule -DisplayName '*HamLedger*' -ErrorAction SilentlyContinue | Select-Object -First 1"`;
 
-    // PowerShell command to add firewall exceptions
-    const psCommand = `
-      try {
-        # Add HamLedger to firewall exceptions
-        $appPath = '${appPath.replace(/\\/g, '\\\\')}'
-        $appName = '${appName}'
-        
-        # Check if rule already exists for HamLedger
-        $existingRule = Get-NetFirewallRule -DisplayName "$appName*" -ErrorAction SilentlyContinue
-        if (-not $existingRule) {
-          New-NetFirewallRule -DisplayName "$appName - Inbound" -Direction Inbound -Program $appPath -Action Allow -Profile Any
-          New-NetFirewallRule -DisplayName "$appName - Outbound" -Direction Outbound -Program $appPath -Action Allow -Profile Any
-          Write-Output "Added firewall rules for $appName"
-        } else {
-          Write-Output "Firewall rules for $appName already exist"
-        }
-        
-        # Add rigctld to firewall exceptions (generic rule for any rigctld.exe)
-        $rigctldRule = Get-NetFirewallRule -DisplayName "rigctld*" -ErrorAction SilentlyContinue
-        if (-not $rigctldRule) {
-          New-NetFirewallRule -DisplayName "rigctld - Inbound" -Direction Inbound -Program "*rigctld.exe" -Action Allow -Profile Any
-          New-NetFirewallRule -DisplayName "rigctld - Outbound" -Direction Outbound -Program "*rigctld.exe" -Action Allow -Profile Any
-          Write-Output "Added firewall rules for rigctld"
-        } else {
-          Write-Output "Firewall rules for rigctld already exist"
-        }
-        
-        Write-Output "Firewall configuration completed successfully"
-      } catch {
-        Write-Error "Failed to configure firewall: $($_.Exception.Message)"
-        exit 1
-      }
-    `;
+    exec(checkCommand, { timeout: 5000 }, (checkError, checkStdout) => {
+      const rulesExist = !checkError && checkStdout && checkStdout.trim().length > 0;
 
-    // Run PowerShell command with elevated privileges
-    const command = `powershell -Command "Start-Process powershell -ArgumentList '-Command', '${psCommand.replace(/'/g, "''").replace(/"/g, '\\"')}' -Verb RunAs -Wait"`;
-
-    exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
-      if (error) {
-        console.error('Error configuring firewall:', error);
-
-        // Check if user cancelled UAC prompt
-        if (error.message.includes('cancelled') || error.message.includes('1223')) {
-          console.warn('User cancelled firewall configuration');
-          resolve({ success: false, userCancelled: true });
-          return;
-        }
-
-        // Other errors (no admin rights, etc.)
-        console.warn('Firewall configuration failed, but continuing...');
-        resolve({ success: false, error: error.message });
+      if (rulesExist && checkOnly) {
+        console.log('Firewall rules already exist, skipping configuration');
+        resolve({ success: true, rulesExist: true });
         return;
       }
 
-      if (stderr) {
-        console.warn('Firewall configuration stderr:', stderr);
+      if (rulesExist) {
+        console.log('Firewall rules already exist');
       }
 
-      console.log('Firewall configuration result:', stdout);
-      resolve({ success: true });
+      // If checkOnly, we're done
+      if (checkOnly) {
+        resolve({ success: true, rulesExist: false });
+        return;
+      }
+
+      // Create or update firewall rules
+      const psCommand = `
+        try {
+          # Add HamLedger to firewall exceptions
+          $appPath = '${appPath.replace(/\\/g, '\\\\')}'
+          $appName = '${appName}'
+
+          # Check if rule already exists for HamLedger
+          $existingRule = Get-NetFirewallRule -DisplayName "$appName*" -ErrorAction SilentlyContinue
+          if (-not $existingRule) {
+            New-NetFirewallRule -DisplayName "$appName - Inbound" -Direction Inbound -Program $appPath -Action Allow -Profile Any
+            New-NetFirewallRule -DisplayName "$appName - Outbound" -Direction Outbound -Program $appPath -Action Allow -Profile Any
+            Write-Output "Added firewall rules for $appName"
+          } else {
+            Write-Output "Firewall rules for $appName already exist"
+          }
+
+          # Add rigctld to firewall exceptions with specific path
+          ${rigctldPath ? `$rigctldPath = '${rigctldPath.replace(/\\/g, '\\\\')}'` : ''}
+          $rigctldRule = Get-NetFirewallRule -DisplayName "rigctld*" -ErrorAction SilentlyContinue
+          if (-not $rigctldRule) {
+            ${rigctldPath ? `New-NetFirewallRule -DisplayName "rigctld - Inbound" -Direction Inbound -Program $rigctldPath -Action Allow -Profile Any` : ''}
+            ${rigctldPath ? `New-NetFirewallRule -DisplayName "rigctld - Outbound" -Direction Outbound -Program $rigctldPath -Action Allow -Profile Any` : ''}
+            # Also add generic rule for any rigctld.exe as fallback
+            New-NetFirewallRule -DisplayName "rigctld (any) - Inbound" -Direction Inbound -Program "*rigctld.exe" -Action Allow -Profile Any
+            New-NetFirewallRule -DisplayName "rigctld (any) - Outbound" -Direction Outbound -Program "*rigctld.exe" -Action Allow -Profile Any
+            Write-Output "Added firewall rules for rigctld"
+          } else {
+            Write-Output "Firewall rules for rigctld already exist"
+          }
+
+          Write-Output "Firewall configuration completed successfully"
+        } catch {
+          Write-Error "Failed to configure firewall: $($_.Exception.Message)"
+          exit 1
+        }
+      `;
+
+      // Run PowerShell command with elevated privileges
+      const command = `powershell -Command "Start-Process powershell -ArgumentList '-Command', '${psCommand.replace(/'/g, "''").replace(/"/g, '\\"')}' -Verb RunAs -Wait"`;
+
+      exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
+        if (error) {
+          console.error('Error configuring firewall:', error);
+
+          // Check if user cancelled UAC prompt
+          if (error.message.includes('cancelled') || error.message.includes('1223')) {
+            console.warn('User cancelled firewall configuration');
+            resolve({ success: false, userCancelled: true, rulesExist: false });
+            return;
+          }
+
+          // Other errors (no admin rights, etc.)
+          console.warn('Firewall configuration failed, but continuing...');
+          resolve({ success: false, error: error.message, rulesExist: false });
+          return;
+        }
+
+        if (stderr) {
+          console.warn('Firewall configuration stderr:', stderr);
+        }
+
+        console.log('Firewall configuration result:', stdout);
+        resolve({ success: true, rulesExist: false });
+      });
     });
   });
 }
@@ -1037,6 +1252,26 @@ ipcMain.handle('rigctld:restart', async () => {
     return { success: true };
   } catch (error) {
     console.error('Error restarting rigctld:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});
+
+// Rigctld elevated start handler (one-time admin execution)
+ipcMain.handle('rigctld:startElevated', async () => {
+  try {
+    // First, stop any existing normal rigctld process
+    stopRigctld();
+
+    // Wait a moment for the process to fully stop
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const result = await startRigctldElevated();
+    return result;
+  } catch (error) {
+    console.error('Error starting elevated rigctld:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

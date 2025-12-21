@@ -100,7 +100,15 @@ declare global {
         port: number,
         model?: number,
         device?: string
-      ) => Promise<{ success: boolean; data?: RigConnectionData; error?: string }>;
+      ) => Promise<{
+        success: boolean;
+        data?: RigConnectionData;
+        error?: string;
+        firewallConfigured?: boolean;
+        shouldRetry?: boolean;
+        userCancelled?: boolean;
+        firewallError?: string;
+      }>;
       rigctldDisconnect: () => Promise<{
         success: boolean;
         data?: RigConnectionData;
@@ -114,6 +122,11 @@ declare global {
         command: string
       ) => Promise<{ success: boolean; data?: string; error?: string }>;
       rigctldRestart: () => Promise<{ success: boolean; error?: string }>;
+      rigctldStartElevated: () => Promise<{
+        success: boolean;
+        error?: string;
+        userCancelled?: boolean;
+      }>;
       downloadAndInstallHamlib: () => Promise<{
         success: boolean;
         message?: string;

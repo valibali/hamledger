@@ -27,6 +27,7 @@ export default {
       showConnectionDialog: false,
       showWSJTXDialog: false,
       showTakeBackDialog: false,
+      showAdminRetryDialog: false,
       rigModels: [] as RigModel[],
       loadingModels: false,
       wsjtxEnabled: false,
@@ -170,7 +171,7 @@ export default {
 
     async handleConnect() {
       try {
-        await this.rigStore.connect(
+        const response = await this.rigStore.connect(
           this.connectionForm.host,
           this.connectionForm.port,
           this.connectionForm.model,
@@ -181,10 +182,62 @@ export default {
           this.showConnectionDialog = false;
           // Start polling for rig state updates
           this.rigStore.startPolling(2000); // Poll every 2 seconds
+        } else if (response.shouldRetry) {
+          // Firewall was configured, automatically retry connection
+          console.log('Firewall configured, retrying connection...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Retry connection without attempting firewall fix again
+          const retryResponse = await this.rigStore.connect(
+            this.connectionForm.host,
+            this.connectionForm.port,
+            this.connectionForm.model,
+            this.connectionForm.device
+          );
+
+          if (this.rigStore.isConnected) {
+            this.showConnectionDialog = false;
+            this.rigStore.startPolling(2000);
+          } else {
+            // Still failed after firewall fix, offer admin option
+            console.log('Connection still failed after firewall fix');
+            this.showAdminRetryDialog = true;
+          }
+        } else if (response.userCancelled) {
+          // User cancelled UAC prompt for firewall
+          console.log('User cancelled firewall configuration');
+          // Don't show admin dialog, user explicitly cancelled
+        } else if (response.firewallConfigured === false && response.firewallError) {
+          // Firewall configuration failed for some reason
+          console.error('Firewall configuration failed:', response.firewallError);
+          // Offer admin option
+          this.showAdminRetryDialog = true;
         }
       } catch (error) {
         console.error('Connection failed:', error);
       }
+    },
+
+    async handleRunAsAdmin() {
+      this.showAdminRetryDialog = false;
+      try {
+        const response = await this.rigStore.startRigctldElevated();
+
+        if (this.rigStore.isConnected) {
+          this.showConnectionDialog = false;
+          this.rigStore.startPolling(2000);
+        } else if (response.userCancelled) {
+          console.log('User cancelled elevated rigctld start');
+        } else {
+          console.error('Failed to start elevated rigctld:', response.error);
+        }
+      } catch (error) {
+        console.error('Error starting elevated rigctld:', error);
+      }
+    },
+
+    closeAdminRetryDialog() {
+      this.showAdminRetryDialog = false;
     },
 
     async handleReconnect() {
@@ -554,6 +607,31 @@ export default {
           <button type="button" @click="closeTakeBackDialog">Cancel</button>
           <button type="button" class="connect-btn" @click="confirmTakeBack">
             I understand, take back control
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run as Administrator Dialog -->
+    <div v-if="showAdminRetryDialog" class="connection-dialog-overlay" @click="closeAdminRetryDialog">
+      <div class="connection-dialog" @click.stop>
+        <h3>🔒 Connection Failed</h3>
+        <div class="warning-content">
+          <p>
+            Unable to connect to rigctld even after configuring the firewall.
+          </p>
+          <p>
+            Would you like to try running rigctld with administrator privileges?
+          </p>
+          <p class="admin-note">
+            <strong>Note:</strong> This is a one-time action. On the next app launch, rigctld will
+            start with normal privileges again.
+          </p>
+        </div>
+        <div class="dialog-buttons">
+          <button type="button" @click="closeAdminRetryDialog">Cancel</button>
+          <button type="button" class="connect-btn" @click="handleRunAsAdmin">
+            Run as Administrator
           </button>
         </div>
       </div>

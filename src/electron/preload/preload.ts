@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   rigctldCommand: (command: string) => ipcRenderer.invoke('rigctld:command', command),
   rigctldGetCapabilities: () => ipcRenderer.invoke('rigctld:capabilities'),
   rigctldRestart: () => ipcRenderer.invoke('rigctld:restart'),
+  rigctldStartElevated: () => ipcRenderer.invoke('rigctld:startElevated'),
   executeCommand: (command: string) => ipcRenderer.invoke('execute:command', command),
   downloadAndInstallHamlib: () => ipcRenderer.invoke('hamlib:downloadAndInstall'),
   checkRigctldInPath: () => ipcRenderer.invoke('hamlib:checkRigctldInPath'),

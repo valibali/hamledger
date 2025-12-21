@@ -188,6 +188,44 @@ export const useRigStore = defineStore('rig', {
       await this.disconnect();
     },
 
+    // Start rigctld with elevated (admin) privileges - one-time only
+    async startRigctldElevated() {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const response = await window.electronAPI.rigctldStartElevated();
+
+        if (response.success) {
+          console.log('Rigctld started with elevated privileges');
+          // Wait a moment for rigctld to start, then try to connect
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Try to connect to the elevated rigctld
+          return await this.connect(
+            this.connection.host,
+            this.connection.port,
+            this.connection.model,
+            this.connection.device
+          );
+        } else if (response.userCancelled) {
+          this.error = 'User cancelled elevated start';
+          console.log('User cancelled elevated rigctld start');
+          return { success: false, error: this.error, userCancelled: true };
+        } else {
+          this.error = response.error || 'Failed to start elevated rigctld';
+          console.error('Failed to start elevated rigctld:', this.error);
+          return { success: false, error: this.error };
+        }
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error starting elevated rigctld:', error);
+        return { success: false, error: this.error };
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     // Capabilities
     async loadCapabilities() {
       try {
