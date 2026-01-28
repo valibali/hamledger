@@ -244,8 +244,9 @@ export default {
       </div>
     </div>
 
-    <div class="table-wrapper">
-      <table class="qso-table">
+    <!-- Fixed Table Header -->
+    <div class="table-header-wrapper">
+      <table class="qso-table header-table">
         <thead>
           <tr>
             <th @click="sortBy('datetime')" class="sortable">
@@ -291,6 +292,11 @@ export default {
             <th>Notes</th>
           </tr>
         </thead>
+      </table>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="qso-table body-table">
         <tbody>
           <tr
             v-for="entry in getSortedQsos()"
@@ -349,6 +355,10 @@ export default {
   gap: 0.5rem;
 }
 
+.table-header-wrapper {
+  flex-shrink: 0;
+}
+
 .table-wrapper {
   flex: 1;
   overflow-y: auto;
@@ -363,14 +373,19 @@ export default {
   color: var(--gray-color);
 }
 
+.qso-table.header-table {
+  margin-bottom: 0;
+}
+
+.qso-table.body-table {
+  margin-top: 0;
+}
+
 .qso-table thead th {
   background: #444;
   padding: 0.7rem;
   text-align: left;
   font-weight: normal;
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .qso-table thead th.sortable {

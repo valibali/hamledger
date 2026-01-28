@@ -1093,6 +1093,70 @@ export default {
       </div>
     </div>
 
+    <!-- Fixed Table Header -->
+    <div class="table-header-wrapper">
+      <table class="qso-table header-table">
+        <thead>
+          <tr>
+            <th v-if="batchMode" class="checkbox-column">
+              <input 
+                type="checkbox" 
+                @change="$event.target.checked ? selectAllVisible() : deselectAll()"
+                :checked="visibleQsos.length > 0 && visibleQsos.every(qso => isQsoSelected(qso))"
+              />
+            </th>
+            <th @click="sortBy('datetime')" class="sortable">
+              Date
+              <span v-if="sortKey === 'datetime'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th>Time</th>
+            <th @click="sortBy('callsign')" class="sortable">
+              Callsign
+              <span v-if="sortKey === 'callsign'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th @click="sortBy('band')" class="sortable">
+              Band
+              <span v-if="sortKey === 'band'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th @click="sortBy('freqRx')" class="sortable">
+              Freq. RX
+              <span v-if="sortKey === 'freqRx'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th @click="sortBy('freqTx')" class="sortable">
+              Freq. TX
+              <span v-if="sortKey === 'freqTx'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th @click="sortBy('mode')" class="sortable">
+              Mode
+              <span v-if="sortKey === 'mode'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th>RSTr</th>
+            <th>RSTt</th>
+            <th>Remark</th>
+            <th>Notes</th>
+            <th @click="sortBy('qslStatus')" class="sortable">
+              QSL Status
+              <span v-if="sortKey === 'qslStatus'" class="sort-indicator">
+                {{ sortOrder === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+
     <div
       class="table-wrapper"
       ref="tableWrapper"
@@ -1100,65 +1164,7 @@ export default {
       :class="{ loading: showLoadingOverlay }"
     >
       <div class="virtual-scroll-container" :style="{ height: totalHeight + 'px' }">
-        <table class="qso-table" :style="{ transform: `translateY(${offsetY}px)` }">
-          <thead>
-            <tr>
-              <th v-if="batchMode" class="checkbox-column">
-                <input 
-                  type="checkbox" 
-                  @change="$event.target.checked ? selectAllVisible() : deselectAll()"
-                  :checked="visibleQsos.length > 0 && visibleQsos.every(qso => isQsoSelected(qso))"
-                />
-              </th>
-              <th @click="sortBy('datetime')" class="sortable">
-                Date
-                <span v-if="sortKey === 'datetime'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-              <th>Time</th>
-              <th @click="sortBy('callsign')" class="sortable">
-                Callsign
-                <span v-if="sortKey === 'callsign'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-              <th @click="sortBy('band')" class="sortable">
-                Band
-                <span v-if="sortKey === 'band'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-              <th @click="sortBy('freqRx')" class="sortable">
-                Freq. RX
-                <span v-if="sortKey === 'freqRx'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-              <th @click="sortBy('freqTx')" class="sortable">
-                Freq. TX
-                <span v-if="sortKey === 'freqTx'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-              <th @click="sortBy('mode')" class="sortable">
-                Mode
-                <span v-if="sortKey === 'mode'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-              <th>RSTr</th>
-              <th>RSTt</th>
-              <th>Remark</th>
-              <th>Notes</th>
-              <th @click="sortBy('qslStatus')" class="sortable">
-                QSL Status
-                <span v-if="sortKey === 'qslStatus'" class="sort-indicator">
-                  {{ sortOrder === 'asc' ? '▲' : '▼' }}
-                </span>
-              </th>
-            </tr>
-          </thead>
+        <table class="qso-table body-table" :style="{ transform: `translateY(${offsetY}px)` }">
           <tbody>
             <tr
               v-for="(entry, index) in visibleQsos"
@@ -1244,6 +1250,10 @@ export default {
   margin-bottom: 1rem;
 }
 
+.table-header-wrapper {
+  flex-shrink: 0;
+}
+
 .table-wrapper {
   flex: 1;
   overflow-y: auto;
@@ -1262,6 +1272,14 @@ export default {
   position: relative;
 }
 
+.qso-table.header-table {
+  margin-bottom: 0;
+}
+
+.qso-table.body-table {
+  margin-top: 0;
+}
+
 .qso-table tbody tr {
   height: 40px;
 }
@@ -1271,9 +1289,6 @@ export default {
   padding: 0.7rem;
   text-align: left;
   font-weight: normal;
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .qso-table thead th.sortable {
