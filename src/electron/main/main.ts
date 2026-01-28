@@ -29,6 +29,21 @@ interface FetchOptions {
 
 const isDev = process.env.npm_lifecycle_event === 'app:dev' ? true : false;
 
+// Get the HamLedger data directory path
+// On Windows: ~/.hamledger (in user's home folder)
+// On other platforms: also ~/.hamledger for consistency
+function getHamLedgerDataPath(): string {
+  const homedir = app.getPath('home');
+  const hamledgerDir = join(homedir, '.hamledger');
+  
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(hamledgerDir)) {
+    fs.mkdirSync(hamledgerDir, { recursive: true });
+  }
+  
+  return hamledgerDir;
+}
+
 // Rigctld process management
 let rigctldProcess: ChildProcess | null = null;
 
@@ -669,19 +684,49 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptF
       rigctldSocket = null;
     }
 
+    // First, check if rigctld is already running on the port
+    const portInUse = await isPortInUse(port, host);
+    const isOurProcess = rigctldProcess !== null && !rigctldProcess.killed;
+    const isExternalRigctld = portInUse && !isOurProcess;
+
+    if (isExternalRigctld) {
+      console.log(`Detected external rigctld running on ${host}:${port}, will connect to it`);
+    } else if (!portInUse) {
+      // rigctld is not running - we could try to start it, but for now just report this
+      console.log(`No rigctld detected on ${host}:${port}`);
+    }
+
     return new Promise(async resolve => {
       rigctldSocket = new Socket();
 
       rigctldSocket.setTimeout(5000);
 
       rigctldSocket.on('connect', () => {
-        console.log(`Connected to rigctld at ${host}:${port}`);
-        resolve({ success: true, data: { connected: true } });
+        console.log(`Connected to rigctld at ${host}:${port}${isExternalRigctld ? ' (external)' : ''}`);
+        resolve({ 
+          success: true, 
+          data: { 
+            connected: true,
+            isExternal: isExternalRigctld,
+          } 
+        });
       });
 
       rigctldSocket.on('error', async error => {
         console.error('Rigctld connection error:', error);
         rigctldSocket = null;
+
+        // Provide more detailed error information
+        let detailedError = error.message;
+        const suggestions: string[] = [];
+
+        // Check if the port is listening at all
+        const portCheck = await isPortInUse(port, host);
+        if (!portCheck) {
+          detailedError = 'rigctld is not running or not listening on the configured port';
+          suggestions.push('Make sure rigctld is started');
+          suggestions.push('Check that the port number is correct');
+        }
 
         // On Windows, automatically attempt to add firewall exceptions on first connection failure
         if (process.platform === 'win32' && attemptFirewallFix) {
@@ -694,40 +739,51 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptF
               // Firewall configured successfully, indicate to retry connection
               resolve({
                 success: false,
-                error: error.message,
+                error: detailedError,
                 firewallConfigured: true,
                 shouldRetry: true,
+                suggestions,
               });
             } else if (firewallResult.userCancelled) {
               // User cancelled UAC prompt
+              suggestions.push('Firewall configuration was cancelled');
               resolve({
                 success: false,
-                error: error.message,
+                error: detailedError,
                 firewallConfigured: false,
                 userCancelled: true,
+                suggestions,
               });
             } else {
               // Firewall configuration failed for other reason
+              suggestions.push('Try running HamLedger as Administrator');
               resolve({
                 success: false,
-                error: error.message,
+                error: detailedError,
                 firewallConfigured: false,
                 firewallError: firewallResult.error,
+                suggestions,
               });
             }
           } catch (firewallError) {
             // Error during firewall configuration attempt
             console.error('Error during firewall configuration:', firewallError);
+            suggestions.push('Firewall configuration failed');
             resolve({
               success: false,
-              error: error.message,
+              error: detailedError,
               firewallConfigured: false,
               firewallError: firewallError instanceof Error ? firewallError.message : 'Unknown error',
+              suggestions,
             });
           }
         } else {
           // Not Windows or not attempting firewall fix
-          resolve({ success: false, error: error.message });
+          resolve({ 
+            success: false, 
+            error: detailedError,
+            suggestions,
+          });
         }
       });
 
@@ -735,7 +791,15 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptF
         console.error('Rigctld connection timeout');
         rigctldSocket?.destroy();
         rigctldSocket = null;
-        resolve({ success: false, error: 'Connection timeout' });
+        resolve({ 
+          success: false, 
+          error: 'Connection timeout - rigctld may not be responding',
+          suggestions: [
+            'Check if rigctld is running',
+            'Verify the host and port are correct',
+            'Check firewall settings',
+          ],
+        });
       });
 
       rigctldSocket.connect(port, host);
@@ -881,6 +945,264 @@ ipcMain.handle('rigctld:capabilities', async () => {
   }
 });
 
+// Check if rigctld is running (quick check for startup detection)
+ipcMain.handle('rigctld:checkRunning', async () => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const settings = loadSettings() as any;
+    const rigConfig = settings?.rig || {};
+    const rigPort = rigConfig.port || 4532;
+
+    // Check if port is in use (something is listening)
+    const portInUse = await isPortInUse(rigPort);
+
+    if (!portInUse) {
+      return {
+        success: true,
+        data: {
+          running: false,
+          external: false,
+          port: rigPort,
+        },
+      };
+    }
+
+    // Port is in use - check if it's our process or an external one
+    const isOurProcess = rigctldProcess !== null && !rigctldProcess.killed;
+
+    return {
+      success: true,
+      data: {
+        running: true,
+        external: !isOurProcess,
+        pid: isOurProcess && rigctldProcess ? rigctldProcess.pid : undefined,
+        port: rigPort,
+      },
+    };
+  } catch (error) {
+    console.error('Error checking rigctld running status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});
+
+// Run full rigctld diagnostics
+ipcMain.handle('rigctld:diagnostics', async () => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const settings = loadSettings() as any;
+    const rigConfig = settings?.rig || {};
+    const rigPort = rigConfig.port || 4532;
+    const rigHost = rigConfig.host || 'localhost';
+
+    const diagnostics = {
+      processRunning: false,
+      processPath: undefined as string | undefined,
+      processPid: undefined as number | undefined,
+      portListening: false,
+      portInUseByOther: false,
+      tcpConnectable: false,
+      firewallOk: true,
+      firewallError: undefined as string | undefined,
+      isExternalRigctld: false,
+      error: undefined as string | undefined,
+      suggestions: [] as string[],
+      timestamp: new Date(),
+    };
+
+    // 1. Check if rigctld process is running
+    const processCheck = await checkRigctldProcess();
+    diagnostics.processRunning = processCheck.running;
+    diagnostics.processPath = processCheck.path;
+    diagnostics.processPid = processCheck.pid;
+
+    // 2. Check if port is listening
+    diagnostics.portListening = await isPortInUse(rigPort, rigHost);
+
+    // 3. Determine if it's our rigctld or external
+    const isOurProcess = rigctldProcess !== null && !rigctldProcess.killed;
+    if (diagnostics.portListening && !isOurProcess) {
+      diagnostics.isExternalRigctld = true;
+    }
+
+    // 4. Check if port is in use by something other than rigctld
+    if (diagnostics.portListening && !diagnostics.processRunning) {
+      diagnostics.portInUseByOther = true;
+    }
+
+    // 5. Test TCP connection
+    if (diagnostics.portListening) {
+      diagnostics.tcpConnectable = await testTcpConnection(rigHost, rigPort);
+    }
+
+    // 6. Check firewall (Windows only)
+    if (process.platform === 'win32') {
+      const firewallCheck = await checkFirewallRules();
+      diagnostics.firewallOk = firewallCheck.ok;
+      diagnostics.firewallError = firewallCheck.error;
+    }
+
+    // 7. Generate suggestions based on findings
+    if (!diagnostics.processRunning && !diagnostics.portListening) {
+      diagnostics.suggestions.push('rigctld is not running. Click "Connect" to start it, or start it manually.');
+      
+      // Check if rigctld exists at expected path
+      const rigctldPath = getRigctldPath();
+      if (rigctldPath && process.platform === 'win32') {
+        if (!fs.existsSync(rigctldPath)) {
+          diagnostics.suggestions.push('rigctld.exe not found. You may need to install Hamlib or configure the path.');
+        }
+      }
+    }
+
+    if (diagnostics.portInUseByOther) {
+      diagnostics.suggestions.push(`Port ${rigPort} is in use by another application. Check if another ham radio program is using rigctld.`);
+    }
+
+    if (diagnostics.isExternalRigctld) {
+      diagnostics.suggestions.push('An external rigctld instance is running. HamLedger will connect to it instead of starting its own.');
+    }
+
+    if (diagnostics.portListening && !diagnostics.tcpConnectable) {
+      diagnostics.suggestions.push('Port is listening but TCP connection failed. This may be a firewall issue.');
+      
+      if (process.platform === 'win32') {
+        diagnostics.suggestions.push('Try running HamLedger as Administrator or check Windows Firewall settings.');
+      }
+    }
+
+    if (!diagnostics.firewallOk && process.platform === 'win32') {
+      diagnostics.suggestions.push('Windows Firewall may be blocking the connection. Click "Add Firewall Exception" in settings.');
+      if (diagnostics.firewallError) {
+        diagnostics.suggestions.push(`Firewall error: ${diagnostics.firewallError}`);
+      }
+    }
+
+    if (diagnostics.processRunning && diagnostics.portListening && diagnostics.tcpConnectable) {
+      diagnostics.suggestions.push('Everything looks good! rigctld is running and accessible.');
+    }
+
+    return {
+      success: true,
+      data: diagnostics,
+    };
+  } catch (error) {
+    console.error('Error running rigctld diagnostics:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});
+
+// Helper function to check if rigctld process is running
+async function checkRigctldProcess(): Promise<{ running: boolean; path?: string; pid?: number }> {
+  return new Promise(resolve => {
+    if (process.platform === 'win32') {
+      // Windows: use tasklist
+      exec('tasklist /FI "IMAGENAME eq rigctld.exe" /FO CSV /NH', { timeout: 5000 }, (error, stdout) => {
+        if (error) {
+          resolve({ running: false });
+          return;
+        }
+        
+        // Parse CSV output
+        const lines = stdout.trim().split('\n');
+        for (const line of lines) {
+          if (line.includes('rigctld.exe')) {
+            const parts = line.split(',');
+            if (parts.length >= 2) {
+              const pid = parseInt(parts[1].replace(/"/g, ''));
+              resolve({ running: true, path: 'rigctld.exe', pid });
+              return;
+            }
+          }
+        }
+        resolve({ running: false });
+      });
+    } else {
+      // Linux/Mac: use pgrep
+      exec('pgrep -x rigctld', { timeout: 5000 }, (error, stdout) => {
+        if (error) {
+          resolve({ running: false });
+          return;
+        }
+        
+        const pid = parseInt(stdout.trim().split('\n')[0]);
+        if (!isNaN(pid)) {
+          resolve({ running: true, pid });
+        } else {
+          resolve({ running: false });
+        }
+      });
+    }
+  });
+}
+
+// Helper function to test TCP connection
+async function testTcpConnection(host: string, port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const socket = new Socket();
+    let resolved = false;
+
+    socket.setTimeout(3000);
+
+    socket.on('connect', () => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(true);
+      }
+    });
+
+    socket.on('timeout', () => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+
+    socket.on('error', () => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+
+    socket.connect(port, host);
+  });
+}
+
+// Helper function to check Windows firewall rules
+async function checkFirewallRules(): Promise<{ ok: boolean; error?: string }> {
+  if (process.platform !== 'win32') {
+    return { ok: true };
+  }
+
+  return new Promise(resolve => {
+    const checkCommand = `powershell -Command "Get-NetFirewallRule -DisplayName '*HamLedger*' -ErrorAction SilentlyContinue | Select-Object -First 1"`;
+
+    exec(checkCommand, { timeout: 5000 }, (error, stdout) => {
+      if (error) {
+        // Can't check firewall rules - might be permission issue
+        resolve({ ok: false, error: 'Unable to check firewall rules. May require administrator privileges.' });
+        return;
+      }
+
+      const rulesExist = stdout && stdout.trim().length > 0;
+      if (rulesExist) {
+        resolve({ ok: true });
+      } else {
+        resolve({ ok: false, error: 'No firewall rules found for HamLedger or rigctld.' });
+      }
+    });
+  });
+}
+
 // Execute command handler
 ipcMain.handle('execute:command', async (_, command: string) => {
   try {
@@ -932,7 +1254,7 @@ ipcMain.handle('hamlib:downloadAndInstall', async event => {
   try {
     const hamlibUrl =
       'https://github.com/Hamlib/Hamlib/releases/download/4.6.5/hamlib-w64-4.6.5.zip';
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getHamLedgerDataPath();
     const hamlibDir = join(userDataPath, 'hamlib');
     const zipPath = join(userDataPath, 'hamlib-w64-4.6.5.zip');
     const hamlibBinPath = join(hamlibDir, 'bin');
@@ -1069,7 +1391,7 @@ function getRigctldPath(): string | null {
   }
 
   try {
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getHamLedgerDataPath();
     const hamlibBinPath = join(userDataPath, 'hamlib', 'bin', 'rigctld.exe');
 
     if (fs.existsSync(hamlibBinPath)) {
@@ -1194,7 +1516,7 @@ async function addFirewallExceptions(checkOnly: boolean = false): Promise<{
 
 
 // Settings file path
-const userSettingsPath = join(app.getPath('userData'), 'settings.json');
+const userSettingsPath = join(getHamLedgerDataPath(), 'settings.json');
 const defaultSettingsPath = join(app.getAppPath(), 'src/settings.json');
 
 // Load settings helper function

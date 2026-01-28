@@ -60,14 +60,38 @@ export default {
     },
     connectionStatus() {
       if (this.rigStore.isLoading) return 'Connecting...';
-      if (this.rigStore.isConnected) return 'Connected';
+      if (this.rigStore.connectionStatus === 'checking') return 'Checking...';
+      if (this.rigStore.isConnected) {
+        if (this.rigStore.usingExternalRigctld) {
+          return 'Connected (External)';
+        }
+        return 'Connected';
+      }
+      if (this.rigStore.connectionStatus === 'error') return 'Error';
       return 'Disconnected';
     },
     connectionStatusClass() {
-      if (this.rigStore.isLoading) return 'status-connecting';
-      if (this.rigStore.isConnected) return 'status-connected';
+      if (this.rigStore.isLoading || this.rigStore.connectionStatus === 'checking') {
+        return 'status-connecting';
+      }
+      if (this.rigStore.isConnected) {
+        if (this.rigStore.usingExternalRigctld) {
+          return 'status-external';
+        }
+        return 'status-connected';
+      }
+      if (this.rigStore.connectionStatus === 'error') return 'status-error';
       if (this.wsjtxEnabled) return 'status-wsjtx';
       return 'status-disconnected';
+    },
+    hasSuggestions() {
+      return this.rigStore.connectionSuggestions && this.rigStore.connectionSuggestions.length > 0;
+    },
+    firstSuggestion() {
+      if (this.hasSuggestions) {
+        return this.rigStore.connectionSuggestions[0];
+      }
+      return null;
     },
     wsjtxStatus() {
       return this.qsoStore.wsjtxStatus;
@@ -397,6 +421,14 @@ export default {
         console.error('Error taking back from WSJT-X:', error);
       }
     },
+
+    async runDiagnostics() {
+      console.log('Running connection diagnostics...');
+      const diagnostics = await this.rigStore.runDiagnostics();
+      if (diagnostics) {
+        console.log('Diagnostics result:', diagnostics);
+      }
+    },
   },
 
   beforeUnmount() {
@@ -420,6 +452,20 @@ export default {
         </div>
         <div v-if="rigStore.error" class="error-message">
           {{ rigStore.error }}
+        </div>
+        <!-- Show first suggestion when there's an error -->
+        <div v-if="hasSuggestions && !rigStore.isConnected" class="suggestion-message">
+          {{ firstSuggestion }}
+        </div>
+        <!-- Diagnostics link when disconnected or error -->
+        <div v-if="!rigStore.isConnected && !wsjtxEnabled" class="diagnostics-link">
+          <button 
+            class="diagnostics-btn" 
+            @click="runDiagnostics"
+            :disabled="rigStore.connectionStatus === 'checking'"
+          >
+            {{ rigStore.connectionStatus === 'checking' ? 'Checking...' : 'Run Diagnostics' }}
+          </button>
         </div>
       </div>
 
@@ -706,6 +752,50 @@ export default {
   padding: 0.2rem 0.4rem;
   border-radius: 3px;
   border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.suggestion-message {
+  color: #ffc107;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.diagnostics-link {
+  margin-top: 0.3rem;
+}
+
+.diagnostics-btn {
+  background: transparent;
+  border: 1px solid #6c757d;
+  padding: 0.15rem 0.4rem;
+  color: #adb5bd;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.diagnostics-btn:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+}
+
+.diagnostics-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status-external {
+  background: #6f42c1;
+  color: white;
+}
+
+.status-error {
+  background: #dc3545;
+  color: white;
 }
 
 .rig-buttons {

@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia';
 import { rigctldService } from '../services/RigctldService';
-import { RigCapabilities, RigState, RigctldConnection } from '../types/rig';
+import {
+  RigCapabilities,
+  RigState,
+  RigctldConnection,
+  ConnectionStatus,
+  RigctldDiagnostics,
+  RigctldRunningCheck,
+} from '../types/rig';
 import { getBandFromFrequency } from '../utils/bands';
 
 export const useRigStore = defineStore('rig', {
@@ -50,6 +57,13 @@ export const useRigStore = defineStore('rig', {
 
     // Polling
     pollingInterval: null as NodeJS.Timeout | null,
+
+    // Connection diagnostics
+    connectionStatus: 'disconnected' as ConnectionStatus,
+    diagnostics: null as RigctldDiagnostics | null,
+    lastDiagnosticsRun: null as Date | null,
+    usingExternalRigctld: false,
+    connectionSuggestions: [] as string[],
   }),
 
   getters: {
@@ -110,6 +124,15 @@ export const useRigStore = defineStore('rig', {
     },
     rigModel: state => state.capabilities?.modelName || 'Unknown',
     selectedMode: state => state.rigState.mode,
+    
+    // Diagnostics getters
+    hasError: state => state.connectionStatus === 'error',
+    isExternal: state => state.usingExternalRigctld,
+    hasDiagnostics: state => state.diagnostics !== null,
+    diagnosticsAge: state => {
+      if (!state.lastDiagnosticsRun) return null;
+      return Date.now() - state.lastDiagnosticsRun.getTime();
+    },
   },
 
   actions: {
@@ -122,6 +145,8 @@ export const useRigStore = defineStore('rig', {
     ) {
       this.isLoading = true;
       this.error = null;
+      this.connectionStatus = 'connecting';
+      this.connectionSuggestions = [];
 
       try {
         rigctldService.setConnection(host, port, model, device);
@@ -129,17 +154,38 @@ export const useRigStore = defineStore('rig', {
 
         if (response.success) {
           this.connection = rigctldService.getConnection();
+          this.connectionStatus = 'connected';
+          
+          // Check if we're connected to an external rigctld
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const data = response.data as any;
+          this.usingExternalRigctld = data?.isExternal || false;
+          
+          if (this.usingExternalRigctld) {
+            console.log('Connected to external rigctld instance');
+          }
+          
           await this.loadCapabilities();
           await this.updateRigState();
           console.log('Successfully connected to rigctld');
         } else {
           this.error = response.error || 'Connection failed';
+          this.connectionStatus = 'error';
+          
+          // Store suggestions from the response
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const suggestions = (response as any).suggestions;
+          if (suggestions && Array.isArray(suggestions)) {
+            this.connectionSuggestions = suggestions;
+          }
+          
           console.error('Failed to connect to rigctld:', this.error);
         }
 
         return response;
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Unknown error';
+        this.connectionStatus = 'error';
         console.error('Connection error:', error);
         return { success: false, error: this.error };
       } finally {
@@ -157,6 +203,9 @@ export const useRigStore = defineStore('rig', {
         if (response.success) {
           this.connection.connected = false;
           this.capabilities = null;
+          this.connectionStatus = 'disconnected';
+          this.usingExternalRigctld = false;
+          this.connectionSuggestions = [];
           console.log('Disconnected from rigctld');
         } else {
           this.error = response.error || 'Disconnect failed';
@@ -560,6 +609,62 @@ export const useRigStore = defineStore('rig', {
         this.error = error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: this.error };
       }
+    },
+
+    // Diagnostics
+    async runDiagnostics(): Promise<RigctldDiagnostics | null> {
+      this.connectionStatus = 'checking';
+
+      try {
+        const response = await window.electronAPI.rigctldDiagnostics();
+
+        if (response.success && response.data) {
+          this.diagnostics = response.data;
+          this.lastDiagnosticsRun = new Date();
+          this.connectionSuggestions = response.data.suggestions || [];
+
+          // Update connectionStatus based on diagnostics
+          if (response.data.tcpConnectable && response.data.processRunning) {
+            this.connectionStatus = this.connection.connected ? 'connected' : 'disconnected';
+          } else {
+            this.connectionStatus = 'error';
+          }
+
+          return response.data;
+        } else {
+          console.error('Failed to run diagnostics:', response.error);
+          this.connectionStatus = this.connection.connected ? 'connected' : 'error';
+          return null;
+        }
+      } catch (error) {
+        console.error('Error running diagnostics:', error);
+        this.connectionStatus = this.connection.connected ? 'connected' : 'error';
+        return null;
+      }
+    },
+
+    async checkIfRunning(): Promise<RigctldRunningCheck | null> {
+      try {
+        const response = await window.electronAPI.rigctldCheckRunning();
+
+        if (response.success && response.data) {
+          this.usingExternalRigctld = response.data.external;
+          return response.data;
+        } else {
+          console.error('Failed to check rigctld running status:', response.error);
+          return null;
+        }
+      } catch (error) {
+        console.error('Error checking rigctld running status:', error);
+        return null;
+      }
+    },
+
+    // Clear diagnostics
+    clearDiagnostics() {
+      this.diagnostics = null;
+      this.lastDiagnosticsRun = null;
+      this.connectionSuggestions = [];
     },
 
     startPolling(intervalMs: number = 1000) {

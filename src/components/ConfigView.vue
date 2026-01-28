@@ -2,11 +2,14 @@
 import { ConfigField } from '../types/config';
 import { configHelper } from '../utils/configHelper';
 import { BAND_RANGES } from '../utils/bands';
+import { useRigStore } from '../store/rig';
+import type { RigctldDiagnostics } from '../types/rig';
 
 export default {
   name: 'ConfigView',
   data() {
     return {
+      rigStore: useRigStore(),
       selectedCategory: 'Station',
       searchQuery: '',
       configFields: [] as ConfigField[],
@@ -33,6 +36,10 @@ export default {
       validationErrors: {} as { [key: string]: string },
       isWindows: navigator.platform.toLowerCase().includes('win'),
       isLinux: navigator.platform.toLowerCase().includes('linux'),
+      // Diagnostics panel state
+      showDiagnostics: false,
+      diagnosticsLoading: false,
+      diagnosticsResult: null as RigctldDiagnostics | null,
     };
   },
   computed: {
@@ -84,6 +91,12 @@ export default {
         f => f.path[0] === 'rig' && f.key === 'rigModel'
       );
       return rigModelField ? rigModelField.value === 1 : false;
+    },
+    isCatControlCategory() {
+      return this.selectedCategory === 'CAT Control';
+    },
+    diagnosticsAvailable() {
+      return this.rigStore.diagnostics !== null;
     },
   },
   async mounted() {
@@ -452,6 +465,43 @@ export default {
     isRigctldPathField(field: ConfigField): boolean {
       return field.key === 'rigctldPath' && field.path.includes('rig');
     },
+    async runConnectionDiagnostics() {
+      this.diagnosticsLoading = true;
+      this.showDiagnostics = true;
+      try {
+        const result = await this.rigStore.runDiagnostics();
+        this.diagnosticsResult = result;
+      } catch (error) {
+        console.error('Error running diagnostics:', error);
+      } finally {
+        this.diagnosticsLoading = false;
+      }
+    },
+    closeDiagnostics() {
+      this.showDiagnostics = false;
+    },
+    async addFirewallException() {
+      try {
+        const result = await window.electronAPI.addFirewallExceptions();
+        if (result.success) {
+          console.log('Firewall exceptions added successfully');
+          // Re-run diagnostics to update status
+          await this.runConnectionDiagnostics();
+        } else if (result.userCancelled) {
+          console.warn('User cancelled firewall configuration');
+        } else {
+          console.error('Failed to add firewall exceptions:', result.error);
+        }
+      } catch (error) {
+        console.error('Error adding firewall exceptions:', error);
+      }
+    },
+    getDiagnosticsStatusIcon(status: boolean): string {
+      return status ? '✅' : '❌';
+    },
+    getDiagnosticsStatusClass(status: boolean): string {
+      return status ? 'status-ok' : 'status-error';
+    },
     async toggleCategoryEnabled(enabled: boolean) {
       const categoryKey = this.selectedCategory.toLowerCase().replace(' ', '');
       const categoryMap = {
@@ -553,6 +603,137 @@ export default {
                   currentCategoryEnabled ? 'Enabled' : 'Disabled'
                 }}</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Connection Diagnostics Panel (only for CAT Control) -->
+          <div v-if="isCatControlCategory" class="diagnostics-panel">
+            <div class="diagnostics-header">
+              <h4>Connection Diagnostics</h4>
+              <button 
+                class="btn btn-small" 
+                @click="runConnectionDiagnostics"
+                :disabled="diagnosticsLoading"
+              >
+                <span v-if="!diagnosticsLoading">Run Diagnostics</span>
+                <span v-else class="loading-text">
+                  <span class="spinner"></span>
+                  Checking...
+                </span>
+              </button>
+            </div>
+
+            <!-- Connection Status Summary -->
+            <div class="connection-summary">
+              <div class="summary-item">
+                <span class="summary-label">Connection Status:</span>
+                <span 
+                  class="summary-value" 
+                  :class="{
+                    'status-ok': rigStore.isConnected,
+                    'status-error': rigStore.connectionStatus === 'error',
+                    'status-warning': rigStore.connectionStatus === 'connecting' || rigStore.connectionStatus === 'checking'
+                  }"
+                >
+                  {{ rigStore.isConnected ? 'Connected' : rigStore.connectionStatus }}
+                  <span v-if="rigStore.usingExternalRigctld"> (External)</span>
+                </span>
+              </div>
+              <div v-if="rigStore.error" class="summary-item">
+                <span class="summary-label">Last Error:</span>
+                <span class="summary-value status-error">{{ rigStore.error }}</span>
+              </div>
+            </div>
+
+            <!-- Diagnostics Results -->
+            <div v-if="showDiagnostics && (diagnosticsResult || rigStore.diagnostics)" class="diagnostics-results">
+              <div class="diagnostics-grid">
+                <!-- Process Status -->
+                <div class="diagnostics-item">
+                  <span class="diagnostics-icon">{{ getDiagnosticsStatusIcon((diagnosticsResult || rigStore.diagnostics)?.processRunning) }}</span>
+                  <div class="diagnostics-info">
+                    <span class="diagnostics-label">rigctld Process</span>
+                    <span class="diagnostics-value" :class="getDiagnosticsStatusClass((diagnosticsResult || rigStore.diagnostics)?.processRunning)">
+                      {{ (diagnosticsResult || rigStore.diagnostics)?.processRunning ? 'Running' : 'Not Running' }}
+                      <span v-if="(diagnosticsResult || rigStore.diagnostics)?.processPid"> (PID: {{ (diagnosticsResult || rigStore.diagnostics)?.processPid }})</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Port Status -->
+                <div class="diagnostics-item">
+                  <span class="diagnostics-icon">{{ getDiagnosticsStatusIcon((diagnosticsResult || rigStore.diagnostics)?.portListening) }}</span>
+                  <div class="diagnostics-info">
+                    <span class="diagnostics-label">Port Listening</span>
+                    <span class="diagnostics-value" :class="getDiagnosticsStatusClass((diagnosticsResult || rigStore.diagnostics)?.portListening)">
+                      {{ (diagnosticsResult || rigStore.diagnostics)?.portListening ? 'Yes' : 'No' }}
+                      <span v-if="(diagnosticsResult || rigStore.diagnostics)?.portInUseByOther" class="status-warning"> (In use by another app)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- TCP Connection -->
+                <div class="diagnostics-item">
+                  <span class="diagnostics-icon">{{ getDiagnosticsStatusIcon((diagnosticsResult || rigStore.diagnostics)?.tcpConnectable) }}</span>
+                  <div class="diagnostics-info">
+                    <span class="diagnostics-label">TCP Connection</span>
+                    <span class="diagnostics-value" :class="getDiagnosticsStatusClass((diagnosticsResult || rigStore.diagnostics)?.tcpConnectable)">
+                      {{ (diagnosticsResult || rigStore.diagnostics)?.tcpConnectable ? 'OK' : 'Failed' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Firewall (Windows only) -->
+                <div v-if="isWindows" class="diagnostics-item">
+                  <span class="diagnostics-icon">{{ getDiagnosticsStatusIcon((diagnosticsResult || rigStore.diagnostics)?.firewallOk) }}</span>
+                  <div class="diagnostics-info">
+                    <span class="diagnostics-label">Windows Firewall</span>
+                    <span class="diagnostics-value" :class="getDiagnosticsStatusClass((diagnosticsResult || rigStore.diagnostics)?.firewallOk)">
+                      {{ (diagnosticsResult || rigStore.diagnostics)?.firewallOk ? 'Rules OK' : 'May be blocked' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- External rigctld -->
+                <div v-if="(diagnosticsResult || rigStore.diagnostics)?.isExternalRigctld" class="diagnostics-item">
+                  <span class="diagnostics-icon">&#128279;</span>
+                  <div class="diagnostics-info">
+                    <span class="diagnostics-label">External rigctld</span>
+                    <span class="diagnostics-value status-ok">
+                      Detected - will connect to existing instance
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Suggestions -->
+              <div v-if="(diagnosticsResult || rigStore.diagnostics)?.suggestions?.length > 0" class="diagnostics-suggestions">
+                <h5>Suggestions:</h5>
+                <ul>
+                  <li v-for="(suggestion, index) in (diagnosticsResult || rigStore.diagnostics)?.suggestions" :key="index">
+                    {{ suggestion }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="diagnostics-actions">
+                <button 
+                  v-if="isWindows && !(diagnosticsResult || rigStore.diagnostics)?.firewallOk" 
+                  class="btn btn-small btn-primary"
+                  @click="addFirewallException"
+                >
+                  Add Firewall Exception
+                </button>
+                <button class="btn btn-small" @click="restartRigctld">
+                  Restart rigctld
+                </button>
+              </div>
+            </div>
+
+            <!-- No Diagnostics Run Yet -->
+            <div v-else-if="!showDiagnostics && !diagnosticsResult && !rigStore.diagnostics" class="diagnostics-empty">
+              <p>Click "Run Diagnostics" to check connection status and troubleshoot issues.</p>
             </div>
           </div>
 
@@ -1461,5 +1642,156 @@ input:checked + .slider:before {
 
 .btn-primary:hover:not(:disabled) {
   background: #e6d700;
+}
+
+/* Diagnostics Panel Styles */
+.diagnostics-panel {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.diagnostics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.diagnostics-header h4 {
+  margin: 0;
+  color: var(--gray-color);
+  font-size: 1rem;
+}
+
+.connection-summary {
+  background: #2b2b2b;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.summary-item:not(:last-child) {
+  border-bottom: 1px solid #444;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-label {
+  color: var(--gray-color);
+  font-size: 0.9rem;
+}
+
+.summary-value {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.diagnostics-results {
+  background: #2b2b2b;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.diagnostics-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.diagnostics-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #333;
+  border-radius: 4px;
+}
+
+.diagnostics-icon {
+  font-size: 1.2rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.diagnostics-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.diagnostics-label {
+  color: var(--gray-color);
+  font-size: 0.8rem;
+}
+
+.diagnostics-value {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.status-ok {
+  color: #27ae60;
+}
+
+.status-error {
+  color: #e74c3c;
+}
+
+.status-warning {
+  color: #ffc107;
+}
+
+.diagnostics-suggestions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}
+
+.diagnostics-suggestions h5 {
+  color: #ffc107;
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.diagnostics-suggestions ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.diagnostics-suggestions li {
+  color: var(--gray-color);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.diagnostics-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}
+
+.diagnostics-empty {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem;
+  background: #2b2b2b;
+  border-radius: 4px;
+}
+
+.diagnostics-empty p {
+  margin: 0;
 }
 </style>

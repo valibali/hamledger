@@ -14,12 +14,26 @@ interface UpdateResponse extends DatabaseResponse {
   rev?: string;
 }
 
+// Get the HamLedger data directory path
+// Uses ~/.hamledger in user's home folder
+function getHamLedgerDataPath(): string {
+  const homedir = app.getPath('home');
+  const hamledgerDir = join(homedir, '.hamledger');
+  
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(hamledgerDir)) {
+    fs.mkdirSync(hamledgerDir, { recursive: true });
+  }
+  
+  return hamledgerDir;
+}
+
 export class DatabaseService {
   private db!: PouchDB.Database;
   private dbPath: string;
 
   constructor() {
-    this.dbPath = join(app.getPath('userData'), 'HamLedger.db');
+    this.dbPath = join(getHamLedgerDataPath(), 'HamLedger.db');
     this.initializeDatabase();
   }
 
@@ -93,7 +107,7 @@ export class DatabaseService {
 
   private async backupToJson(): Promise<void> {
     try {
-      const jsonPath = join(app.getPath('userData'), 'HamLedger.json');
+      const jsonPath = join(getHamLedgerDataPath(), 'HamLedger.json');
       const allDocs = await this.db.allDocs({ include_docs: true });
       const jsonData = allDocs.rows.map(row => row.doc);
       fs.writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2));

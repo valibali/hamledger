@@ -1,5 +1,6 @@
 import { QsoEntry } from './qso';
 import { WSJTXDecodeMessage } from './wsjtx';
+import { RigctldDiagnostics, RigctldRunningCheck } from './rig';
 
 interface DatabaseResponse {
   ok: boolean;
@@ -53,6 +54,7 @@ type DxSpotData = RawDxSpot[];
 
 interface RigConnectionData {
   connected: boolean;
+  isExternal?: boolean;
 }
 
 interface WSJTXStatusData {
@@ -108,6 +110,7 @@ declare global {
         shouldRetry?: boolean;
         userCancelled?: boolean;
         firewallError?: string;
+        suggestions?: string[];
       }>;
       rigctldDisconnect: () => Promise<{
         success: boolean;
@@ -126,6 +129,16 @@ declare global {
         success: boolean;
         error?: string;
         userCancelled?: boolean;
+      }>;
+      rigctldDiagnostics: () => Promise<{
+        success: boolean;
+        data?: RigctldDiagnostics;
+        error?: string;
+      }>;
+      rigctldCheckRunning: () => Promise<{
+        success: boolean;
+        data?: RigctldRunningCheck;
+        error?: string;
       }>;
       downloadAndInstallHamlib: () => Promise<{
         success: boolean;

@@ -76,3 +76,44 @@ export interface RigModel {
   model: string;
   status: string;
 }
+
+// Connection status for more granular state tracking
+export type ConnectionStatus =
+  | 'connected'
+  | 'disconnected'
+  | 'connecting'
+  | 'error'
+  | 'checking';
+
+// Diagnostics result from running connection checks
+export interface RigctldDiagnostics {
+  // Process checks
+  processRunning: boolean;
+  processPath?: string;
+  processPid?: number;
+
+  // Network checks
+  portListening: boolean;
+  portInUseByOther: boolean; // Port is in use but not by rigctld
+  tcpConnectable: boolean;
+
+  // Windows-specific
+  firewallOk: boolean;
+  firewallError?: string;
+
+  // External rigctld detection
+  isExternalRigctld: boolean; // Running rigctld was not started by HamLedger
+
+  // General
+  error?: string;
+  suggestions: string[];
+  timestamp: Date;
+}
+
+// Result of checking if rigctld is running
+export interface RigctldRunningCheck {
+  running: boolean;
+  external: boolean; // true if not started by HamLedger
+  pid?: number;
+  port?: number;
+}
