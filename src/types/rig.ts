@@ -56,6 +56,14 @@ export interface RigState {
   signalStrength?: number; // Hamlib STRENGTH value (0-255)
 }
 
+// S-meter status tracking
+export interface SmeterStatus {
+  supported: boolean | null; // null = unknown, true/false after capability check
+  lastError: string | null;
+  lastSuccessfulRead: Date | null;
+  consecutiveErrors: number;
+}
+
 export interface RigctldConnection {
   host: string;
   port: number;

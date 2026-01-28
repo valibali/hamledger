@@ -60,6 +60,24 @@ export default {
     showSMeter() {
       return this.rigStore.isConnected;
     },
+    smeterStatusText() {
+      return this.rigStore.smeterStatusText;
+    },
+    smeterSupported() {
+      return this.rigStore.smeterStatus.supported;
+    },
+    smeterHasError() {
+      return this.rigStore.smeterStatus.consecutiveErrors > 3;
+    },
+    smeterStatusClass() {
+      if (this.smeterSupported === false) return 'smeter-unsupported';
+      if (this.smeterHasError) return 'smeter-error';
+      if (this.smeterSupported === null) return 'smeter-checking';
+      return 'smeter-ok';
+    },
+    smeterHelpText() {
+      return 'S-meter unavailable: Your radio does not support STRENGTH level via CAT control.';
+    },
     currentVfo() {
       return this.rigStore.currentVfo;
     },
@@ -147,8 +165,9 @@ export default {
         </div>
       </div>
 
-      <div v-if="showSMeter" class="s-meter">
-        <div class="s-meter-inner">
+      <div v-if="showSMeter" class="s-meter-container">
+        <div class="s-meter" :class="smeterStatusClass">
+          <div class="s-meter-inner">
           <template v-for="(majorTick, index) in majorTicks" :key="'major-' + index">
             <div class="tick major-tick" :class="{ active: index * 5 < activeTicks }">
               <div class="tick-label">{{ majorTick.label }}</div>
@@ -181,6 +200,17 @@ export default {
               </div>
             </template>
           </template>
+        </div>
+        </div>
+        <!-- Question mark help icon when S-meter is not supported -->
+        <div v-if="smeterSupported === false" class="smeter-help-icon" :title="smeterHelpText">
+          <span class="help-icon">?</span>
+          <div class="smeter-help-tooltip">
+            <strong>S-meter unavailable</strong>
+            <p>Your radio's Hamlib backend does not report the STRENGTH level capability.</p>
+            <p>This means HamLedger cannot read signal strength from your rig via CAT control.</p>
+            <p><em>This is a limitation of the radio model or its Hamlib driver, not a HamLedger issue.</em></p>
+          </div>
         </div>
       </div>
 
@@ -411,5 +441,100 @@ export default {
 .tick-box-active {
   opacity: 1;
   border-color: transparent;
+}
+
+/* S-meter status classes */
+.s-meter.smeter-unsupported .s-meter-inner {
+  opacity: 0.5;
+  filter: grayscale(80%);
+}
+
+.s-meter.smeter-error .s-meter-inner {
+  opacity: 0.6;
+}
+
+.s-meter.smeter-checking .s-meter-inner {
+  opacity: 0.8;
+}
+
+/* S-meter container for icon positioning */
+.s-meter-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  position: relative;
+}
+
+/* Help icon */
+.smeter-help-icon {
+  position: relative;
+  cursor: help;
+  margin-bottom: 2px; /* Align with tick boxes */
+}
+
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 165, 0, 0.3);
+  color: #ffa500;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid #ffa500;
+}
+
+.smeter-help-tooltip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  padding: 0.75rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  width: 280px;
+  z-index: 100;
+  text-align: left;
+}
+
+.smeter-help-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 12px;
+  border: 8px solid transparent;
+  border-bottom-color: #2a2a2a;
+}
+
+.smeter-help-icon:hover .smeter-help-tooltip {
+  display: block;
+}
+
+.smeter-help-tooltip strong {
+  display: block;
+  color: #ffa500;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.smeter-help-tooltip p {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8rem;
+  color: #ccc;
+  line-height: 1.4;
+}
+
+.smeter-help-tooltip p:last-child {
+  margin-bottom: 0;
+}
+
+.smeter-help-tooltip em {
+  color: #888;
+  font-style: italic;
 }
 </style>

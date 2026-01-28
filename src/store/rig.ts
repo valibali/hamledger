@@ -7,6 +7,7 @@ import {
   ConnectionStatus,
   RigctldDiagnostics,
   RigctldRunningCheck,
+  SmeterStatus,
 } from '../types/rig';
 import { getBandFromFrequency } from '../utils/bands';
 
@@ -64,6 +65,17 @@ export const useRigStore = defineStore('rig', {
     lastDiagnosticsRun: null as Date | null,
     usingExternalRigctld: false,
     connectionSuggestions: [] as string[],
+
+    // S-meter status tracking
+    smeterStatus: {
+      supported: null,
+      lastError: null,
+      lastSuccessfulRead: null,
+      consecutiveErrors: 0,
+    } as SmeterStatus,
+
+    // S-meter polling interval (separate from main polling for faster updates)
+    smeterPollingInterval: null as NodeJS.Timeout | null,
   }),
 
   getters: {
@@ -132,6 +144,17 @@ export const useRigStore = defineStore('rig', {
     diagnosticsAge: state => {
       if (!state.lastDiagnosticsRun) return null;
       return Date.now() - state.lastDiagnosticsRun.getTime();
+    },
+    
+    // S-meter getters
+    isSmeterSupported: state => state.smeterStatus.supported === true,
+    isSmeterUnsupported: state => state.smeterStatus.supported === false,
+    smeterHasError: state => state.smeterStatus.consecutiveErrors > 0,
+    smeterStatusText: state => {
+      if (state.smeterStatus.supported === null) return 'Checking...';
+      if (state.smeterStatus.supported === false) return 'Not supported';
+      if (state.smeterStatus.consecutiveErrors > 3) return 'Error';
+      return 'OK';
     },
   },
 
@@ -401,12 +424,8 @@ export const useRigStore = defineStore('rig', {
           this.rigState.xit = parseInt(xitResponse.data[0]) || 0;
         }
 
-        // Get Signal Strength (S-meter)
-        const strengthResponse = await rigctldService.getStrength();
-        if (strengthResponse.success && strengthResponse.data) {
-          // Store the raw Hamlib STRENGTH value (0-255)
-          this.rigState.signalStrength = parseInt(strengthResponse.data[0]) || 0;
-        }
+        // Get Signal Strength (S-meter) - only if supported
+        await this.updateSmeter();
 
         this.lastUpdate = new Date();
       } catch (error) {
@@ -599,6 +618,66 @@ export const useRigStore = defineStore('rig', {
       }
     },
 
+    // S-meter update with capability check and debug logging
+    async updateSmeter() {
+      if (!this.connection.connected) return;
+
+      // Check if we've already determined S-meter is not supported
+      if (this.smeterStatus.supported === false) {
+        console.log('[S-meter] Skipping - not supported by this rig');
+        return;
+      }
+
+      // Check capability if not yet determined
+      if (this.smeterStatus.supported === null) {
+        const hasStrength = this.capabilities?.levels?.includes('STRENGTH');
+        console.log('[S-meter] Capability check - STRENGTH in levels:', hasStrength);
+        console.log('[S-meter] Available levels:', this.capabilities?.levels);
+        
+        if (!hasStrength) {
+          this.smeterStatus.supported = false;
+          this.smeterStatus.lastError = 'STRENGTH level not supported by this rig';
+          console.warn('[S-meter] Not supported - STRENGTH not in capability list');
+          return;
+        }
+        
+        this.smeterStatus.supported = true;
+        console.log('[S-meter] Capability confirmed - STRENGTH is supported');
+      }
+
+      try {
+        console.log('[S-meter] Polling signal strength...');
+        const strengthResponse = await rigctldService.getStrength();
+        console.log('[S-meter] Response:', strengthResponse);
+
+        if (strengthResponse.success && strengthResponse.data) {
+          const rawValue = strengthResponse.data[0];
+          const parsedValue = parseInt(rawValue) || 0;
+          console.log('[S-meter] Raw value:', rawValue, '-> Parsed:', parsedValue);
+          
+          this.rigState.signalStrength = parsedValue;
+          this.smeterStatus.lastSuccessfulRead = new Date();
+          this.smeterStatus.consecutiveErrors = 0;
+          this.smeterStatus.lastError = null;
+        } else {
+          const errorMsg = strengthResponse.error || 'Unknown error';
+          console.warn('[S-meter] Failed to read:', errorMsg);
+          this.smeterStatus.consecutiveErrors++;
+          this.smeterStatus.lastError = errorMsg;
+          
+          // After multiple consecutive errors, mark as potentially unsupported
+          if (this.smeterStatus.consecutiveErrors >= 5) {
+            console.warn('[S-meter] Too many errors, may not be properly supported');
+          }
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[S-meter] Exception:', errorMsg);
+        this.smeterStatus.consecutiveErrors++;
+        this.smeterStatus.lastError = errorMsg;
+      }
+    },
+
     // Custom command
     async sendCommand(command: string) {
       if (!this.connection.connected) return { success: false, error: 'Not connected' };
@@ -684,6 +763,53 @@ export const useRigStore = defineStore('rig', {
         clearInterval(this.pollingInterval);
         this.pollingInterval = null;
       }
+    },
+
+    // Separate S-meter polling with faster interval from settings
+    startSmeterPolling(intervalMs: number = 250) {
+      if (this.smeterPollingInterval) {
+        clearInterval(this.smeterPollingInterval);
+      }
+
+      console.log(`[S-meter] Starting dedicated polling at ${intervalMs}ms interval`);
+
+      this.smeterPollingInterval = setInterval(() => {
+        if (this.connection.connected && !this.isLoading && this.smeterStatus.supported !== false) {
+          this.updateSmeter();
+        }
+      }, intervalMs);
+    },
+
+    stopSmeterPolling() {
+      if (this.smeterPollingInterval) {
+        clearInterval(this.smeterPollingInterval);
+        this.smeterPollingInterval = null;
+        console.log('[S-meter] Stopped dedicated polling');
+      }
+    },
+
+    // Start all polling (main + S-meter)
+    startAllPolling(mainIntervalMs: number = 1000, smeterIntervalMs: number = 250) {
+      this.startPolling(mainIntervalMs);
+      this.startSmeterPolling(smeterIntervalMs);
+    },
+
+    // Stop all polling
+    stopAllPolling() {
+      this.stopPolling();
+      this.stopSmeterPolling();
+    },
+
+    // Reset S-meter status (for reconnection)
+    resetSmeterStatus() {
+      this.smeterStatus = {
+        supported: null,
+        lastError: null,
+        lastSuccessfulRead: null,
+        consecutiveErrors: 0,
+      };
+      this.rigState.signalStrength = undefined;
+      console.log('[S-meter] Status reset');
     },
 
     // Legacy methods for backward compatibility

@@ -205,7 +205,7 @@ export default {
         if (this.rigStore.isConnected) {
           this.showConnectionDialog = false;
           // Start polling for rig state updates
-          this.rigStore.startPolling(2000); // Poll every 2 seconds
+          this.startRigPolling();
         } else if (response.shouldRetry) {
           // Firewall was configured, automatically retry connection
           console.log('Firewall configured, retrying connection...');
@@ -221,7 +221,7 @@ export default {
 
           if (this.rigStore.isConnected) {
             this.showConnectionDialog = false;
-            this.rigStore.startPolling(2000);
+            this.startRigPolling();
           } else {
             // Still failed after firewall fix, offer admin option
             console.log('Connection still failed after firewall fix');
@@ -249,7 +249,7 @@ export default {
 
         if (this.rigStore.isConnected) {
           this.showConnectionDialog = false;
-          this.rigStore.startPolling(2000);
+          this.startRigPolling();
         } else if (response.userCancelled) {
           console.log('User cancelled elevated rigctld start');
         } else {
@@ -264,15 +264,29 @@ export default {
       this.showAdminRetryDialog = false;
     },
 
+    // Start rig polling with S-meter interval from settings
+    startRigPolling() {
+      // Get S-meter refresh rate from settings (default 250ms)
+      const smeterInterval = configHelper.getSetting(['ui', 'refreshRates'], 'smeter') as number || 250;
+      console.log(`[RigControl] Starting polling with S-meter interval: ${smeterInterval}ms`);
+      
+      // Reset S-meter status for fresh capability check
+      this.rigStore.resetSmeterStatus();
+      
+      // Start all polling (main at 2000ms, S-meter at configured interval)
+      this.rigStore.startAllPolling(2000, smeterInterval);
+    },
+
     async handleReconnect() {
+      this.rigStore.resetSmeterStatus(); // Reset S-meter status on reconnect
       await this.rigStore.handleReconnect();
       if (this.rigStore.isConnected) {
-        this.rigStore.startPolling(2000);
+        this.startRigPolling();
       }
     },
 
     async handleDisconnect() {
-      this.rigStore.stopPolling();
+      this.rigStore.stopAllPolling();
       await this.rigStore.handleDisconnect();
     },
 
@@ -383,7 +397,7 @@ export default {
       try {
         // First disconnect from rigctld
         if (this.rigStore.isConnected) {
-          this.rigStore.stopPolling();
+          this.rigStore.stopAllPolling();
           await this.rigStore.handleDisconnect();
         }
 
@@ -415,7 +429,7 @@ export default {
         // Reconnect to rigctld
         await this.handleConnect();
         if (this.rigStore.isConnected) {
-          this.rigStore.startPolling(2000);
+          this.startRigPolling();
         }
       } catch (error) {
         console.error('Error taking back from WSJT-X:', error);
@@ -433,7 +447,7 @@ export default {
 
   beforeUnmount() {
     // Stop polling when component is destroyed
-    this.rigStore.stopPolling();
+    this.rigStore.stopAllPolling();
   },
 };
 </script>
