@@ -6,7 +6,7 @@ import type {
   FilterArrayKey,
   DxSpotApiResponse,
 } from '../types/dxCluster';
-import { getBandFrequencyRange, getAllBandNames } from '../utils/bands';
+import { getBandFrequencyRange, getSelectableBandNames } from '../utils/bands';
 
 interface DxClusterState {
   spots: DxSpot[];
@@ -54,7 +54,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
     },
 
     availableBands(): string[] {
-      return getAllBandNames();
+      return getSelectableBandNames();
     },
   },
 

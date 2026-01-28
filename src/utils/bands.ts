@@ -273,6 +273,66 @@ export const BAND_RANGES: BandRange[] = [
 
 export type IARURegion = 'IARU1' | 'IARU2' | 'IARU3';
 
+// Single source of truth for bands that appear in user selection UIs
+// Includes HF, VHF, UHF, SHF, and EHF bands up to 2mm
+export const SELECTABLE_BAND_SHORT_NAMES = [
+  // HF bands
+  '160', '80', '60', '40', '30', '20', '17', '15', '12', '10',
+  // VHF bands
+  '6', '4', '2',
+  // UHF bands
+  '70', '33', '23',
+  // SHF bands (microwave)
+  '13', '9', '6cm', '3', '1.2',
+  // EHF bands (millimeter wave)
+  '6mm', '4mm', '2.5mm', '2mm'
+] as const;
+
+export type SelectableBandShortName = typeof SELECTABLE_BAND_SHORT_NAMES[number];
+
+// Get bands that should appear in selection UIs (wizard, config, etc.)
+export function getSelectableBands(): BandRange[] {
+  return BAND_RANGES.filter(band => 
+    SELECTABLE_BAND_SHORT_NAMES.includes(band.shortName as SelectableBandShortName)
+  );
+}
+
+// Get selectable band names (full names like "80m")
+export function getSelectableBandNames(): string[] {
+  return getSelectableBands().map(band => band.name);
+}
+
+// Get selectable band short names (like "80")
+export function getSelectableBandShortNames(): string[] {
+  return [...SELECTABLE_BAND_SHORT_NAMES];
+}
+
+// Convert short name to full name (e.g., "80" -> "80m")
+export function shortNameToFullName(shortName: string): string | null {
+  const band = BAND_RANGES.find(b => b.shortName === shortName);
+  return band ? band.name : null;
+}
+
+// Convert full name to short name (e.g., "80m" -> "80")
+export function fullNameToShortName(fullName: string): string | null {
+  const band = BAND_RANGES.find(b => b.name === fullName);
+  return band ? band.shortName : null;
+}
+
+// Get band by short name
+export function getBandByShortName(shortName: string): BandRange | null {
+  return BAND_RANGES.find(band => band.shortName === shortName) || null;
+}
+
+// Default HF bands for quick selection
+export const DEFAULT_HF_BAND_SHORT_NAMES = ['160', '80', '60', '40', '30', '20', '17', '15', '12', '10'];
+
+// VHF/UHF bands for quick selection  
+export const VHF_UHF_BAND_SHORT_NAMES = ['6', '4', '2', '70', '33', '23'];
+
+// Microwave bands (SHF/EHF) for quick selection
+export const MICROWAVE_BAND_SHORT_NAMES = ['13', '9', '6cm', '3', '1.2', '6mm', '4mm', '2.5mm', '2mm'];
+
 export function getBandFromFrequency(freq: number): BandRange | null {
   // Convert Hz to kHz for comparison with band ranges
   const freqKHz = freq / 1000;

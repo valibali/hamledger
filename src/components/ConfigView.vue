@@ -1,7 +1,7 @@
 <script lang="ts">
 import { ConfigField } from '../types/config';
 import { configHelper } from '../utils/configHelper';
-import { BAND_RANGES } from '../utils/bands';
+import { getSelectableBands, DEFAULT_HF_BAND_SHORT_NAMES, VHF_UHF_BAND_SHORT_NAMES, MICROWAVE_BAND_SHORT_NAMES } from '../utils/bands';
 import { useRigStore } from '../store/rig';
 import type { RigctldDiagnostics } from '../types/rig';
 
@@ -186,11 +186,7 @@ export default {
       }
     },
     getAvailableBands() {
-      return BAND_RANGES.filter(band =>
-        ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m', '70cm'].includes(
-          band.name
-        )
-      );
+      return getSelectableBands();
     },
     async toggleBandInConfig(field: ConfigField, bandName: string, event: Event) {
       const target = event.target as HTMLInputElement;
@@ -222,7 +218,7 @@ export default {
       }
     },
     async selectAllHFBands(field: ConfigField) {
-      const hfBands = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m'];
+      const hfBands = [...DEFAULT_HF_BAND_SHORT_NAMES];
       await configHelper.updateSetting(field.path, field.key, hfBands);
 
       const fieldIndex = this.configFields.findIndex(
@@ -237,11 +233,31 @@ export default {
       }
     },
     async selectAllVHFUHFBands(field: ConfigField) {
-      const vhfUhfBands = ['6m', '2m', '70cm'];
+      const vhfUhfBands = [...VHF_UHF_BAND_SHORT_NAMES];
       const currentBands = [...field.value];
       const newBands = [
         ...currentBands,
         ...vhfUhfBands.filter(band => !currentBands.includes(band)),
+      ];
+      await configHelper.updateSetting(field.path, field.key, newBands);
+
+      const fieldIndex = this.configFields.findIndex(
+        f => f.key === field.key && f.path.join('.') === field.path.join('.')
+      );
+
+      if (fieldIndex !== -1) {
+        this.configFields[fieldIndex] = {
+          ...this.configFields[fieldIndex],
+          value: newBands,
+        };
+      }
+    },
+    async selectAllMicrowaveBands(field: ConfigField) {
+      const microwaveBands = [...MICROWAVE_BAND_SHORT_NAMES];
+      const currentBands = [...field.value];
+      const newBands = [
+        ...currentBands,
+        ...microwaveBands.filter(band => !currentBands.includes(band)),
       ];
       await configHelper.updateSetting(field.path, field.key, newBands);
 
@@ -787,6 +803,9 @@ export default {
                   <button type="button" @click="selectAllVHFUHFBands(field)" class="btn btn-small">
                     VHF/UHF
                   </button>
+                  <button type="button" @click="selectAllMicrowaveBands(field)" class="btn btn-small">
+                    Microwave
+                  </button>
                   <button type="button" @click="clearAllBands(field)" class="btn btn-small">
                     Clear All
                   </button>
@@ -794,14 +813,14 @@ export default {
                 <div class="band-grid">
                   <label
                     v-for="band in getAvailableBands()"
-                    :key="band.name"
+                    :key="band.shortName"
                     class="band-checkbox"
                   >
                     <input
                       type="checkbox"
-                      :value="band.name"
-                      :checked="field.value.includes(band.name)"
-                      @change="toggleBandInConfig(field, band.name, $event)"
+                      :value="band.shortName"
+                      :checked="field.value.includes(band.shortName)"
+                      @change="toggleBandInConfig(field, band.shortName, $event)"
                     />
                     <span class="band-label">{{ band.name }}</span>
                   </label>

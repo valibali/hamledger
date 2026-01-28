@@ -1,6 +1,6 @@
 <script lang="ts">
 import { CallsignHelper } from '../utils/callsign';
-import { BAND_RANGES } from '../utils/bands';
+import { getSelectableBands, DEFAULT_HF_BAND_SHORT_NAMES, VHF_UHF_BAND_SHORT_NAMES, MICROWAVE_BAND_SHORT_NAMES } from '../utils/bands';
 import { MaidenheadLocator } from '../utils/maidenhead';
 import defaultSettings from '../settings.json';
 
@@ -72,11 +72,7 @@ export default {
         error: null as string | null,
         userCancelled: false,
       },
-      availableBands: BAND_RANGES.filter(band =>
-        ['160', '80', '60', '40', '30', '20', '17', '15', '12', '10', '6', '2', '70'].includes(
-          band.shortName
-        )
-      ),
+      availableBands: getSelectableBands(),
       isWindows: navigator.platform.toLowerCase().includes('win'),
       isLinux: navigator.platform.toLowerCase().includes('linux'),
     };
@@ -380,14 +376,18 @@ export default {
       }
     },
     selectAllHFBands() {
-      const hfBands = ['160', '80', '60', '40', '30', '20', '17', '15', '12', '10'];
-      this.wizardData.selectedBands = [...hfBands];
+      this.wizardData.selectedBands = [...DEFAULT_HF_BAND_SHORT_NAMES];
     },
     selectAllVHFUHFBands() {
-      const vhfUhfBands = ['6', '2', '70'];
       this.wizardData.selectedBands = [
         ...this.wizardData.selectedBands,
-        ...vhfUhfBands.filter(band => !this.wizardData.selectedBands.includes(band)),
+        ...VHF_UHF_BAND_SHORT_NAMES.filter(band => !this.wizardData.selectedBands.includes(band)),
+      ];
+    },
+    selectAllMicrowaveBands() {
+      this.wizardData.selectedBands = [
+        ...this.wizardData.selectedBands,
+        ...MICROWAVE_BAND_SHORT_NAMES.filter(band => !this.wizardData.selectedBands.includes(band)),
       ];
     },
     clearAllBands() {
@@ -716,6 +716,9 @@ export default {
             <button type="button" @click="selectAllVHFUHFBands" class="btn btn-small">
               VHF/UHF
             </button>
+            <button type="button" @click="selectAllMicrowaveBands" class="btn btn-small">
+              Microwave
+            </button>
             <button type="button" @click="clearAllBands" class="btn btn-small">Clear All</button>
           </div>
 
@@ -727,7 +730,7 @@ export default {
                 :checked="wizardData.selectedBands.includes(band.shortName)"
                 @change="toggleBand(band.shortName)"
               />
-              <span class="band-label">{{ band.name }} ({{ band.shortName }}m)</span>
+              <span class="band-label">{{ band.name }}</span>
             </label>
           </div>
 
