@@ -31,6 +31,12 @@ export default {
       rigModels: [] as RigModel[],
       loadingModels: false,
       wsjtxEnabled: false,
+      firewallStatus: {
+        isConfiguring: false,
+        success: false,
+        error: null as string | null,
+        userCancelled: false,
+      },
       connectionForm: {
         host: 'localhost',
         port: 4532,
@@ -86,6 +92,18 @@ export default {
     },
     hasSuggestions() {
       return this.rigStore.connectionSuggestions && this.rigStore.connectionSuggestions.length > 0;
+    },
+    hasFirewallSuggestion() {
+      if (!this.hasSuggestions) return false;
+      return this.rigStore.connectionSuggestions.some(suggestion =>
+        suggestion.toLowerCase().includes('firewall')
+      );
+    },
+    showFirewallAction() {
+      return (
+        !this.rigStore.isConnected &&
+        (this.hasFirewallSuggestion || this.rigStore.diagnostics?.firewallOk === false)
+      );
     },
     firstSuggestion() {
       if (this.hasSuggestions) {
@@ -443,6 +461,28 @@ export default {
         console.log('Diagnostics result:', diagnostics);
       }
     },
+    async addFirewallExceptions() {
+      if (this.firewallStatus.isConfiguring) return;
+      this.firewallStatus.isConfiguring = true;
+      this.firewallStatus.success = false;
+      this.firewallStatus.error = null;
+      this.firewallStatus.userCancelled = false;
+
+      try {
+        const result = await window.electronAPI.addFirewallExceptions();
+        if (result.success) {
+          this.firewallStatus.success = true;
+        } else if (result.userCancelled) {
+          this.firewallStatus.userCancelled = true;
+        } else {
+          this.firewallStatus.error = result.error || 'Unknown error occurred';
+        }
+      } catch (error) {
+        this.firewallStatus.error = error instanceof Error ? error.message : 'Unknown error occurred';
+      } finally {
+        this.firewallStatus.isConfiguring = false;
+      }
+    },
   },
 
   beforeUnmount() {
@@ -470,6 +510,24 @@ export default {
         <!-- Show first suggestion when there's an error -->
         <div v-if="hasSuggestions && !rigStore.isConnected" class="suggestion-message">
           {{ firstSuggestion }}
+        </div>
+        <div v-if="showFirewallAction" class="firewall-action">
+          <button
+            class="firewall-btn"
+            @click="addFirewallExceptions"
+            :disabled="firewallStatus.isConfiguring"
+          >
+            {{ firewallStatus.isConfiguring ? 'Adding...' : 'Add Firewall Exception' }}
+          </button>
+          <div v-if="firewallStatus.success" class="success-message">
+            Firewall exceptions added successfully.
+          </div>
+          <div v-else-if="firewallStatus.userCancelled" class="warning-message">
+            Firewall configuration was cancelled.
+          </div>
+          <div v-else-if="firewallStatus.error" class="error-message">
+            Firewall configuration failed: {{ firewallStatus.error }}
+          </div>
         </div>
         <!-- Diagnostics link when disconnected or error -->
         <div v-if="!rigStore.isConnected && !wsjtxEnabled" class="diagnostics-link">
@@ -775,6 +833,43 @@ export default {
   border-radius: 3px;
   background: rgba(255, 193, 7, 0.1);
   border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.firewall-action {
+  margin-top: 0.35rem;
+}
+
+.firewall-btn {
+  background: #ff9800;
+  color: #1a1a1a;
+  border: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.firewall-btn:hover:not(:disabled) {
+  background: #ffb347;
+}
+
+.firewall-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.success-message {
+  color: #4caf50;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+}
+
+.warning-message {
+  color: #ffc107;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
 }
 
 .diagnostics-link {

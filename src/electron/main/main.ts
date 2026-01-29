@@ -1502,7 +1502,7 @@ async function addFirewallExceptions(checkOnly: boolean = false): Promise<{
       `;
 
       // Run PowerShell command with elevated privileges
-      const command = `powershell -Command "Start-Process powershell -ArgumentList '-Command', '${psCommand.replace(/'/g, "''").replace(/"/g, '\\"')}' -Verb RunAs -Wait"`;
+      const command = `powershell -Command "Start-Process powershell -ArgumentList '-Command', '${psCommand.replace(/'/g, "''")}' -Verb RunAs -Wait"`;
 
       exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
         if (error) {
