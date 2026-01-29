@@ -55,6 +55,7 @@ export default {
         isChecking: false,
         inPath: false,
         installedPath: null as string | null,
+        pathUpdated: false,
       },
       dialoutStatus: {
         isChecking: false,
@@ -337,6 +338,7 @@ export default {
         if (result.success) {
           this.hamlibStatus.success = true;
           this.hamlibStatus.installedPath = result.path;
+          this.hamlibStatus.pathUpdated = Boolean(result.pathUpdated);
           // Set rigctld path to the installed location
           this.wizardData.rigctldPath = `${result.path}/rigctld.exe`;
           delete this.validationErrors.rigctldPath;
@@ -522,6 +524,7 @@ export default {
         delete this.validationErrors.rigctldPath;
         this.hamlibStatus.inPath = false;
         this.hamlibStatus.success = false;
+        this.hamlibStatus.pathUpdated = false;
         this.dialoutStatus.inGroup = false;
         this.dialoutStatus.error = null;
         this.rigctldStatus.found = false;
@@ -949,6 +952,9 @@ export default {
               ✅ Hamlib is available and ready to use!
               <div v-if="hamlibStatus.success && hamlibStatus.installedPath" class="info-text">
                 Installed at: {{ hamlibStatus.installedPath }}
+              </div>
+              <div v-if="hamlibStatus.pathUpdated" class="info-text">
+                PATH updated. Restart HamLedger to refresh environment.
               </div>
             </div>
 

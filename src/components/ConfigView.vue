@@ -21,6 +21,7 @@ export default {
         success: false,
         isChecking: false,
         inPath: false,
+        pathUpdated: false,
       },
       dialoutStatus: {
         isChecking: false,
@@ -369,6 +370,7 @@ export default {
         if (result.success) {
           this.hamlibStatus.success = true;
           this.hamlibStatus.inPath = true;
+          this.hamlibStatus.pathUpdated = Boolean(result.pathUpdated);
           delete this.validationErrors.rigctldPath;
           console.log('Hamlib installed successfully:', result.message);
 
@@ -1075,6 +1077,9 @@ export default {
                 <!-- Installation Success -->
                 <div v-if="hamlibStatus.success || hamlibStatus.inPath" class="success-message">
                   ✅ Hamlib is available and ready to use!
+                  <div v-if="hamlibStatus.pathUpdated" class="info-text">
+                    PATH updated. Restart HamLedger to refresh environment.
+                  </div>
                 </div>
 
                 <!-- Installation Error -->
@@ -1626,6 +1631,11 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.success-message .info-text {
+  font-size: 0.8rem;
+  color: #bfe8cd;
 }
 
 .error-message {

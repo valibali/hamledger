@@ -144,6 +144,7 @@ declare global {
         success: boolean;
         message?: string;
         path?: string;
+        pathUpdated?: boolean;
         error?: string;
       }>;
       checkRigctldInPath: () => Promise<{ success: boolean; inPath: boolean; path?: string }>;

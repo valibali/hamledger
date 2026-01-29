@@ -1254,11 +1254,21 @@ ipcMain.handle('hamlib:checkRigctldInPath', async () => {
     return new Promise(resolve => {
       const command = process.platform === 'win32' ? 'where rigctld' : 'which rigctld';
       exec(command, { timeout: 5000 }, (error: Error | null, stdout: string) => {
-        if (error) {
-          resolve({ success: false, inPath: false });
+        if (!error && stdout && stdout.trim().length > 0) {
+          resolve({ success: true, inPath: true, path: stdout.trim() });
           return;
         }
-        resolve({ success: true, inPath: true, path: stdout.trim() });
+
+        if (process.platform === 'win32') {
+          const userDataPath = getHamLedgerDataPath();
+          const hamlibRigctld = join(userDataPath, 'hamlib', 'bin', 'rigctld.exe');
+          if (fs.existsSync(hamlibRigctld)) {
+            resolve({ success: true, inPath: true, path: hamlibRigctld });
+            return;
+          }
+        }
+
+        resolve({ success: true, inPath: false, path: '' });
       });
     });
   } catch (error) {
@@ -1284,7 +1294,22 @@ ipcMain.handle('hamlib:downloadAndInstall', async event => {
 
     // Check if already installed
     if (fs.existsSync(join(hamlibBinPath, 'rigctld.exe'))) {
-      return { success: true, message: 'Hamlib already installed', path: hamlibBinPath };
+      let pathUpdated = false;
+      if (process.platform === 'win32') {
+        const pathResult = await addToUserPathWindows(hamlibBinPath);
+        if (!pathResult.success) {
+          console.warn('Failed to add Hamlib to PATH:', pathResult.error);
+        } else {
+          pathUpdated = pathResult.added;
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Hamlib already installed',
+        path: hamlibBinPath,
+        pathUpdated,
+      };
     }
 
     // Download progress callback
@@ -1388,11 +1413,26 @@ ipcMain.handle('hamlib:downloadAndInstall', async event => {
     if (!firewallResult.success && firewallResult.userCancelled) {
       console.warn('User cancelled firewall configuration during Hamlib installation');
     }
+
+    let pathUpdated = false;
+    if (process.platform === 'win32') {
+      const pathResult = await addToUserPathWindows(hamlibBinPath);
+      if (!pathResult.success) {
+        console.warn('Failed to add Hamlib to PATH:', pathResult.error);
+      } else {
+        pathUpdated = pathResult.added;
+      }
+    }
     sendProgress(100);
 
     console.log('Hamlib installation completed');
     console.log('Hamlib installed at:', hamlibBinPath);
-    return { success: true, message: 'Hamlib installed successfully', path: hamlibBinPath };
+    return {
+      success: true,
+      message: 'Hamlib installed successfully',
+      path: hamlibBinPath,
+      pathUpdated,
+    };
   } catch (error) {
     console.error('Hamlib installation error:', error);
     return {
@@ -1501,8 +1541,9 @@ async function addFirewallExceptions(checkOnly: boolean = false): Promise<{
         }
       `;
 
-      // Run PowerShell command with elevated privileges
-      const command = `powershell -Command "Start-Process powershell -ArgumentList '-Command', '${psCommand.replace(/'/g, "''")}' -Verb RunAs -Wait"`;
+      // Run PowerShell command with elevated privileges (use EncodedCommand to avoid quoting issues)
+      const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64');
+      const command = `powershell -Command "Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-EncodedCommand','${encodedCommand}' -Verb RunAs -Wait"`;
 
       exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
         if (error) {
@@ -1528,6 +1569,44 @@ async function addFirewallExceptions(checkOnly: boolean = false): Promise<{
         console.log('Firewall configuration result:', stdout);
         resolve({ success: true, rulesExist: false });
       });
+    });
+  });
+}
+
+async function addToUserPathWindows(targetDir: string): Promise<{ success: boolean; added: boolean; error?: string }> {
+  if (process.platform !== 'win32') {
+    return { success: true, added: false };
+  }
+
+  const sanitized = targetDir.replace(/\\/g, '\\\\');
+  const psCommand = `
+    $target = '${sanitized}'
+    $path = [Environment]::GetEnvironmentVariable('Path','User')
+    if ([string]::IsNullOrEmpty($path)) { $path = '' }
+    $parts = $path -split ';' | Where-Object { $_ -ne '' }
+    if ($parts -contains $target) { Write-Output 'ALREADY'; exit 0 }
+    $newPath = ($parts + $target) -join ';'
+    [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+    Write-Output 'ADDED'
+  `;
+  const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64');
+  const command = `powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encodedCommand}`;
+
+  return new Promise(resolve => {
+    exec(command, { timeout: 15000 }, (error, stdout, stderr) => {
+      if (error) {
+        resolve({ success: false, added: false, error: error.message || stderr });
+        return;
+      }
+
+      const output = stdout.trim();
+      const added = output.includes('ADDED');
+      if (added) {
+        const current = process.env.PATH || '';
+        const sep = current.endsWith(';') || current === '' ? '' : ';';
+        process.env.PATH = `${current}${sep}${targetDir}`;
+      }
+      resolve({ success: true, added });
     });
   });
 }
