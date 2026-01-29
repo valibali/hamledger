@@ -4,7 +4,6 @@ import type {
   DxSpot,
   FrequencyRange,
   FilterArrayKey,
-  DxSpotApiResponse,
 } from '../types/dxCluster';
 import { getBandFrequencyRange, getSelectableBandNames } from '../utils/bands';
 

@@ -212,7 +212,7 @@ export default {
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           // Retry connection without attempting firewall fix again
-          const retryResponse = await this.rigStore.connect(
+          await this.rigStore.connect(
             this.connectionForm.host,
             this.connectionForm.port,
             this.connectionForm.model,

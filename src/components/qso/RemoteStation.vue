@@ -7,7 +7,7 @@ export default {
   name: 'RemoteStation',
   data() {
     return {
-      debounceTimer: null as NodeJS.Timeout | null,
+      debounceTimer: null as ReturnType<typeof setTimeout> | null,
     };
   },
   setup() {

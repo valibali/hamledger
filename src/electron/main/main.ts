@@ -712,7 +712,7 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptF
       console.log(`No rigctld detected on ${host}:${port}`);
     }
 
-    return new Promise(async resolve => {
+    return new Promise(resolve => {
       rigctldSocket = new Socket();
 
       rigctldSocket.setTimeout(5000);
@@ -728,79 +728,81 @@ ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptF
         });
       });
 
-      rigctldSocket.on('error', async error => {
+      rigctldSocket.on('error', error => {
         console.error('Rigctld connection error:', error);
         rigctldSocket = null;
 
-        // Provide more detailed error information
-        let detailedError = error.message;
-        const suggestions: string[] = [];
+        void (async () => {
+          // Provide more detailed error information
+          let detailedError = error.message;
+          const suggestions: string[] = [];
 
-        // Check if the port is listening at all
-        const portCheck = await isPortInUse(port, host);
-        if (!portCheck) {
-          detailedError = 'rigctld is not running or not listening on the configured port';
-          suggestions.push('Make sure rigctld is started');
-          suggestions.push('Check that the port number is correct');
-        }
+          // Check if the port is listening at all
+          const portCheck = await isPortInUse(port, host);
+          if (!portCheck) {
+            detailedError = 'rigctld is not running or not listening on the configured port';
+            suggestions.push('Make sure rigctld is started');
+            suggestions.push('Check that the port number is correct');
+          }
 
-        // On Windows, automatically attempt to add firewall exceptions on first connection failure
-        if (process.platform === 'win32' && attemptFirewallFix) {
-          console.log('Connection failed, attempting to configure Windows Firewall...');
+          // On Windows, automatically attempt to add firewall exceptions on first connection failure
+          if (process.platform === 'win32' && attemptFirewallFix) {
+            console.log('Connection failed, attempting to configure Windows Firewall...');
 
-          try {
-            const firewallResult = await addFirewallExceptions();
+            try {
+              const firewallResult = await addFirewallExceptions();
 
-            if (firewallResult.success) {
-              // Firewall configured successfully, indicate to retry connection
-              resolve({
-                success: false,
-                error: detailedError,
-                firewallConfigured: true,
-                shouldRetry: true,
-                suggestions,
-              });
-            } else if (firewallResult.userCancelled) {
-              // User cancelled UAC prompt
-              suggestions.push('Firewall configuration was cancelled');
+              if (firewallResult.success) {
+                // Firewall configured successfully, indicate to retry connection
+                resolve({
+                  success: false,
+                  error: detailedError,
+                  firewallConfigured: true,
+                  shouldRetry: true,
+                  suggestions,
+                });
+              } else if (firewallResult.userCancelled) {
+                // User cancelled UAC prompt
+                suggestions.push('Firewall configuration was cancelled');
+                resolve({
+                  success: false,
+                  error: detailedError,
+                  firewallConfigured: false,
+                  userCancelled: true,
+                  suggestions,
+                });
+              } else {
+                // Firewall configuration failed for other reason
+                suggestions.push('Try running HamLedger as Administrator');
+                resolve({
+                  success: false,
+                  error: detailedError,
+                  firewallConfigured: false,
+                  firewallError: firewallResult.error,
+                  suggestions,
+                });
+              }
+            } catch (firewallError) {
+              // Error during firewall configuration attempt
+              console.error('Error during firewall configuration:', firewallError);
+              suggestions.push('Firewall configuration failed');
               resolve({
                 success: false,
                 error: detailedError,
                 firewallConfigured: false,
-                userCancelled: true,
-                suggestions,
-              });
-            } else {
-              // Firewall configuration failed for other reason
-              suggestions.push('Try running HamLedger as Administrator');
-              resolve({
-                success: false,
-                error: detailedError,
-                firewallConfigured: false,
-                firewallError: firewallResult.error,
+                firewallError: firewallError instanceof Error ? firewallError.message : 'Unknown error',
                 suggestions,
               });
             }
-          } catch (firewallError) {
-            // Error during firewall configuration attempt
-            console.error('Error during firewall configuration:', firewallError);
-            suggestions.push('Firewall configuration failed');
+          } else {
+            // Not Windows or not attempting firewall fix
             resolve({
               success: false,
               error: detailedError,
-              firewallConfigured: false,
-              firewallError: firewallError instanceof Error ? firewallError.message : 'Unknown error',
               suggestions,
             });
           }
-        } else {
-          // Not Windows or not attempting firewall fix
-          resolve({ 
-            success: false, 
-            error: detailedError,
-            suggestions,
-          });
-        }
+        })();
       });
 
       rigctldSocket.on('timeout', () => {
@@ -1730,8 +1732,17 @@ async function handleWSJTXQSO(wsjtxQSO: WSJTXLoggedQSO): Promise<void> {
   }
 }
 
+interface QslLabelData {
+  callsign: string;
+  name?: string;
+  addr1?: string;
+  addr2?: string;
+  country?: string;
+  date: string;
+}
+
 // QSL Labels generation handler (supports batch)
-ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
+ipcMain.handle('qsl:generateLabels', async (_, labelDataArray: QslLabelData[]) => {
   try {
     const { jsPDF } = await import('jspdf');
 
@@ -1753,7 +1764,7 @@ ipcMain.handle('qsl:generateLabels', async (_, labelDataArray) => {
     const labelHeight = pageHeight / rows;
 
     // Function to draw a single label
-    const drawLabel = (labelData: any, x: number, y: number) => {
+    const drawLabel = (labelData: QslLabelData, x: number, y: number) => {
       // Draw border around each label
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.1);

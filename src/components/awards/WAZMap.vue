@@ -8,11 +8,45 @@ import { CQ_ZONES_GEOJSON, CQ_ZONE_LABELS_GEOJSON } from '../../data/cqZones';
 import type { ModeCategory } from '../../types/awards';
 import 'leaflet/dist/leaflet.css';
 
-// GeoJSON types (simplified)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GeoJsonFeature = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GeoJsonFeatureCollection = any;
+type GeoJsonProperties = Record<string, unknown>;
+type LineStringGeometry = { type: 'LineString'; coordinates: number[][] };
+type PointGeometry = { type: 'Point'; coordinates: number[] };
+type GeoJsonGeometry = LineStringGeometry | PointGeometry;
+type RawGeoJsonFeature = {
+  type?: string;
+  properties?: GeoJsonProperties;
+  geometry?: {
+    type?: string;
+    coordinates?: unknown;
+  };
+};
+type GeoJsonFeature = {
+  type: 'Feature';
+  properties?: GeoJsonProperties;
+  geometry: GeoJsonGeometry;
+};
+type GeoJsonFeatureCollection = {
+  type: 'FeatureCollection';
+  features: RawGeoJsonFeature[];
+};
+
+type VectorGridLayer = L.Layer & {
+  setFeatureStyle?: (id: number, style: L.PathOptions) => void;
+  resetFeatureStyle?: (id: number) => void;
+  redraw?: () => void;
+};
+type VectorGridFactory = {
+  slicer: (
+    data: { type: 'FeatureCollection'; features: GeoJsonFeature[] },
+    options: {
+      interactive: boolean;
+      getFeatureId: (feature: GeoJsonFeature) => number;
+      vectorTileLayerStyles: {
+        sliced: (properties: GeoJsonProperties) => L.PathOptions;
+      };
+    }
+  ) => VectorGridLayer;
+};
 
 // Props
 const props = defineProps<{
@@ -30,8 +64,8 @@ const awardsStore = useAwardsStore();
 
 // State
 const hoveredZone = ref<number | null>(null);
-const geoJsonData = shallowRef<GeoJsonFeatureCollection | null>(null);
-const labelGeoJsonData = shallowRef<GeoJsonFeatureCollection | null>(null);
+const geoJsonData = shallowRef<{ type: 'FeatureCollection'; features: GeoJsonFeature[] } | null>(null);
+const labelGeoJsonData = shallowRef<{ type: 'FeatureCollection'; features: GeoJsonFeature[] } | null>(null);
 const mapRef = ref<InstanceType<typeof LMap> | null>(null);
 const geoJsonLayer = shallowRef<L.Layer | null>(null);
 const labelLayer = shallowRef<L.LayerGroup | null>(null);
@@ -53,7 +87,7 @@ function isZoneWorked(zone: number): boolean {
 }
 
 // Get zone number from GeoJSON feature
-function getZoneNumber(feature: GeoJsonFeature): number {
+function getZoneNumber(feature: { properties?: GeoJsonProperties }): number {
   const raw = feature.properties?.zone ||
     feature.properties?.ZONE ||
     feature.properties?.cq_zone ||
@@ -104,7 +138,10 @@ function sanitizePoint(coordinates: number[]): number[] | null {
   return [lng, clampLat(lat)];
 }
 
-function sanitizeGeoJson(data: GeoJsonFeatureCollection, type: 'LineString' | 'Point'): GeoJsonFeatureCollection {
+function sanitizeGeoJson(
+  data: GeoJsonFeatureCollection,
+  type: 'LineString' | 'Point'
+): { type: 'FeatureCollection'; features: GeoJsonFeature[] } {
   const features: GeoJsonFeature[] = [];
   for (const feature of data.features || []) {
     if (feature.geometry?.type !== type) continue;
@@ -129,39 +166,11 @@ function sanitizeGeoJson(data: GeoJsonFeatureCollection, type: 'LineString' | 'P
   return { type: 'FeatureCollection', features };
 }
 
-// GeoJSON style function
-function getStyle(feature: GeoJsonFeature): L.PathOptions {
-  const zone = getZoneNumber(feature);
-  const worked = isZoneWorked(zone);
-
-  // Apply filters
-  if (worked && !showWorked.value) {
-    return { fillOpacity: 0, opacity: 0, weight: 0 };
-  }
-  if (!worked && !showNeeded.value) {
-    return { fillOpacity: 0, opacity: 0, weight: 0 };
-  }
-
-  if (worked) {
-    return {
-      color: '#66bb6a',
-      weight: 1,
-      opacity: 0.9,
-    };
-  } else {
-    return {
-      color: '#ffa726',
-      weight: 1,
-      opacity: 0.7,
-    };
-  }
-}
-
 function createLabelIcon(zone: number, zoom: number): L.DivIcon {
   const size = Math.max(10, Math.round(zoom * 6));
   return L.divIcon({
     className: 'cqzone-label-icon',
-    html: `<span style=\"font-size:${size}px\">${zone}</span>`,
+    html: `<span style="font-size:${size}px">${zone}</span>`,
     iconSize: [0, 0],
   });
 }
@@ -192,7 +201,8 @@ function createLabelLayer() {
   const group = L.layerGroup();
   for (const feature of labelGeoJsonData.value.features || []) {
     const zone = getZoneNumber(feature);
-    const coords = feature.geometry?.coordinates as number[] | undefined;
+    if (feature.geometry.type !== 'Point') continue;
+    const coords = feature.geometry.coordinates;
     if (!coords || coords.length < 2 || !zone) continue;
     const [lng, lat] = coords;
     const marker = L.marker([lat, lng], {
@@ -220,12 +230,13 @@ function createGeoJsonLayer() {
     geoJsonLayer.value = null;
   }
 
-  const vectorGrid = (L as any).vectorGrid.slicer(geoJsonData.value, {
+  const vectorGridFactory = (L as unknown as { vectorGrid: VectorGridFactory }).vectorGrid;
+  const vectorGrid = vectorGridFactory.slicer(geoJsonData.value, {
     interactive: true,
     getFeatureId: (feature: GeoJsonFeature) => getZoneNumber(feature),
     vectorTileLayerStyles: {
-      sliced: (properties: Record<string, unknown>) => {
-        const zone = getZoneNumber({ properties } as GeoJsonFeature);
+      sliced: (properties: GeoJsonProperties) => {
+        const zone = getZoneNumber({ properties });
         const worked = isZoneWorked(zone);
         if (worked && !showWorked.value) return { opacity: 0, weight: 0 };
         if (!worked && !showNeeded.value) return { opacity: 0, weight: 0 };
@@ -240,23 +251,23 @@ function createGeoJsonLayer() {
     },
   });
 
-  vectorGrid.on('mouseover', (e: { layer?: { properties?: Record<string, unknown> } }) => {
+  vectorGrid.on('mouseover', (e: { layer?: { properties?: GeoJsonProperties } }) => {
     if (isUnmounting.value) return;
-    const zone = getZoneNumber({ properties: e.layer?.properties } as GeoJsonFeature);
+    const zone = getZoneNumber({ properties: e.layer?.properties });
     const worked = isZoneWorked(zone);
     const isVisible = (worked && showWorked.value) || (!worked && showNeeded.value);
-    if (isVisible && zone > 0 && typeof (vectorGrid as any).setFeatureStyle === 'function') {
+    if (isVisible && zone > 0 && typeof vectorGrid.setFeatureStyle === 'function') {
       hoveredZone.value = zone;
-      (vectorGrid as any).setFeatureStyle(zone, { weight: 2, color: '#ffd700' });
+      vectorGrid.setFeatureStyle(zone, { weight: 2, color: '#ffd700' });
     }
   });
 
-  vectorGrid.on('mouseout', (e: { layer?: { properties?: Record<string, unknown> } }) => {
+  vectorGrid.on('mouseout', (e: { layer?: { properties?: GeoJsonProperties } }) => {
     if (isUnmounting.value) return;
-    const zone = getZoneNumber({ properties: e.layer?.properties } as GeoJsonFeature);
+    const zone = getZoneNumber({ properties: e.layer?.properties });
     hoveredZone.value = null;
-    if (typeof (vectorGrid as any).resetFeatureStyle === 'function') {
-      (vectorGrid as any).resetFeatureStyle(zone);
+    if (typeof vectorGrid.resetFeatureStyle === 'function') {
+      vectorGrid.resetFeatureStyle(zone);
     }
   });
 
@@ -267,8 +278,8 @@ function createGeoJsonLayer() {
 // Update layer styles without recreating
 function updateLayerStyles() {
   if (isUnmounting.value || !geoJsonLayer.value) return;
-  const layer = geoJsonLayer.value as unknown as { redraw?: () => void };
-  if (layer.redraw) {
+  const layer = geoJsonLayer.value as VectorGridLayer | null;
+  if (layer?.redraw) {
     layer.redraw();
   }
 }
@@ -349,9 +360,9 @@ onBeforeUnmount(() => {
   isUnmounting.value = true;
   const map = getLeafletMap();
   if (map) map.off('zoomend', updateLabelIcons);
-  if (geoJsonLayer.value && typeof (geoJsonLayer.value as any).off === 'function') {
+  if (geoJsonLayer.value) {
     try {
-      (geoJsonLayer.value as any).off();
+      geoJsonLayer.value.off();
     } catch {
       // Ignore errors during cleanup
     }

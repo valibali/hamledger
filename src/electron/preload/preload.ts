@@ -2,6 +2,15 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { QsoEntry } from '../../types/qso';
 import type { WSJTXDecodeMessage } from '../../types/wsjtx';
 
+interface QslLabelData {
+  callsign: string;
+  name?: string;
+  addr1?: string;
+  addr2?: string;
+  country?: string;
+  date: string;
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   addQso: (qso: QsoEntry) => ipcRenderer.invoke('qso:add', qso),
   getAllDocs: () => ipcRenderer.invoke('qso:getAllDocs'),
@@ -55,6 +64,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     });
     console.log('✅ wsjtx:add-qso IPC listener set up in preload');
   },
-  generateQslLabels: (labelDataArray: any[]) => ipcRenderer.invoke('qsl:generateLabels', labelDataArray),
+  generateQslLabels: (labelDataArray: QslLabelData[]) => ipcRenderer.invoke('qsl:generateLabels', labelDataArray),
   openFolder: (filePath: string) => ipcRenderer.invoke('system:openFolder', filePath),
 });

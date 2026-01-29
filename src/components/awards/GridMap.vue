@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { LMap, LTileLayer, LRectangle, LControl, LTooltip } from '@vue-leaflet/vue-leaflet';
 import { useAwardsStore } from '../../store/awards';
 import { useQsoStore } from '../../store/qso';
@@ -27,18 +27,6 @@ const SQUARE_DIGITS = '0123456789';
 // Computed
 const workedGrids = computed(() => awardsStore.grids.fourChar);
 const workedCount = computed(() => workedGrids.value.size);
-
-// Calculate field statistics
-const fieldStats = computed(() => {
-  const stats = new Map<string, number>();
-
-  for (const grid of workedGrids.value) {
-    const field = grid.substring(0, 2).toUpperCase();
-    stats.set(field, (stats.get(field) || 0) + 1);
-  }
-
-  return stats;
-});
 
 // Get worked fields
 const workedFields = computed(() => {
