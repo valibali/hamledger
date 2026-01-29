@@ -2,7 +2,9 @@
 import SideBar from './components/SideBar.vue';
 import MainContent from './components/MainContent.vue';
 import SetupWizard from './components/SetupWizard.vue';
+import ToastNotifications from './components/ToastNotifications.vue';
 import { useQsoStore } from './store/qso';
+import { useAwardsStore } from './store/awards';
 import { configHelper } from './utils/configHelper';
 
 export default {
@@ -11,6 +13,7 @@ export default {
     SideBar,
     MainContent,
     SetupWizard,
+    ToastNotifications,
   },
   data() {
     return {
@@ -24,6 +27,9 @@ export default {
     if (!this.showSetupWizard) {
       const qsoStore = useQsoStore();
       await qsoStore.init();
+      
+      // Initialize awards from existing QSOs
+      await this.initializeAwards();
     }
 
     this.isInitialized = true;
@@ -40,6 +46,18 @@ export default {
         this.showSetupWizard = true;
       }
     },
+    async initializeAwards() {
+      const qsoStore = useQsoStore();
+      const awardsStore = useAwardsStore();
+      
+      // Calculate awards from existing log
+      if (qsoStore.allQsos.length > 0) {
+        console.log('[Awards] Initializing from existing log...');
+        await awardsStore.calculateFromLog(qsoStore.allQsos);
+        // Clear any achievements from initial calculation (they're historical)
+        awardsStore.markAchievementsViewed();
+      }
+    },
     async onSetupComplete() {
       this.showSetupWizard = false;
 
@@ -49,6 +67,9 @@ export default {
       // Initialize QSO store
       const qsoStore = useQsoStore();
       await qsoStore.init();
+      
+      // Initialize awards
+      await this.initializeAwards();
     },
   },
 };
@@ -63,6 +84,8 @@ export default {
       />
       <MainContent v-if="!showSetupWizard" ref="mainContent" />
       <SetupWizard v-if="showSetupWizard" @complete="onSetupComplete" />
+      <!-- Toast notifications for achievements -->
+      <ToastNotifications v-if="!showSetupWizard" />
     </template>
     <div v-else class="loading-container">
       <div class="loading-content">

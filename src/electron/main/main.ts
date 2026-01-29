@@ -376,6 +376,14 @@ ipcMain.handle('adif:import', async () => {
         rstt: record.rst_sent || '59',
         remark: record.comment || '--',
         notes: record.notes || '--',
+        // Award-related fields from ADIF
+        state: record.state || undefined,
+        grid: record.gridsquare || undefined,
+        country: record.country || undefined,
+        cqZone: record.cqz ? parseInt(record.cqz) : undefined,
+        ituZone: record.ituz ? parseInt(record.ituz) : undefined,
+        iota: record.iota || undefined,
+        dxccEntity: record.dxcc ? parseInt(record.dxcc) : undefined,
       };
 
       await databaseService.saveQso(qso);
@@ -444,6 +452,14 @@ ipcMain.handle('adif:importWithProgress', async (event, filePath: string) => {
         rstt: record.rst_sent || '59',
         remark: record.comment || '--',
         notes: record.notes || '--',
+        // Award-related fields from ADIF
+        state: record.state || undefined,
+        grid: record.gridsquare || undefined,
+        country: record.country || undefined,
+        cqZone: record.cqz ? parseInt(record.cqz) : undefined,
+        ituZone: record.ituz ? parseInt(record.ituz) : undefined,
+        iota: record.iota || undefined,
+        dxccEntity: record.dxcc ? parseInt(record.dxcc) : undefined,
       };
 
       await databaseService.saveQso(qso);

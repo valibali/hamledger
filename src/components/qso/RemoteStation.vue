@@ -44,6 +44,10 @@ export default {
     },
     qrzError(): boolean {
       return this.qsoStore.stationInfo.qrzError || false
+    },
+    qrzUrl(): string {
+      const callsign = this.callsign?.toUpperCase() || '';
+      return `https://www.qrz.com/db/${encodeURIComponent(callsign)}`;
     }
   },
   watch: {
@@ -98,7 +102,19 @@ export default {
           <div v-if="qrzError" class="qrz-error-message">
             ⚠️ QRZ lookup failed. Please check your QRZ.com credentials in settings.
           </div>
-          <p class="station-name">Remote: {{ stationInfo?.baseData?.name }}</p>
+          <p class="station-name">
+            Remote: {{ stationInfo?.baseData?.name }}
+            <a
+              v-if="!qrzError && stationInfo?.baseData?.name"
+              :href="qrzUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="qrz-link"
+              title="View on QRZ.com"
+            >
+              [QRZ]
+            </a>
+          </p>
           <p class="station-qth">QTH: {{ stationInfo?.baseData?.qth || 'N/A' }}</p>
           <p class="station-country">
             Country: {{ stationInfo?.baseData?.country || 'N/A' }}
@@ -195,6 +211,19 @@ export default {
 .station-name {
   font-weight: bold;
   color: var(--main-color);
+}
+
+.qrz-link {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: #4fc3f7;
+  text-decoration: none;
+  margin-left: 0.5rem;
+}
+
+.qrz-link:hover {
+  color: #81d4fa;
+  text-decoration: underline;
 }
 
 .station-weather,

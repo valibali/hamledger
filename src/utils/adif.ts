@@ -82,9 +82,18 @@ export function formatAdif(qsos: QsoEntry[]): string {
       { name: 'COMMENT', value: qso.remark || '' },
       { name: 'NOTES', value: qso.notes || '' },
       { name: 'APP_QRZLOG_LOGID', value: qso.qrzLogId || '' },
+      // Award-related fields
+      { name: 'STATE', value: qso.state || '' },
+      { name: 'GRIDSQUARE', value: qso.grid || '' },
+      { name: 'COUNTRY', value: qso.country || '' },
+      { name: 'CQZ', value: qso.cqZone ? qso.cqZone.toString() : '' },
+      { name: 'ITUZ', value: qso.ituZone ? qso.ituZone.toString() : '' },
+      { name: 'IOTA', value: qso.iota || '' },
+      { name: 'DXCC', value: qso.dxccEntity ? qso.dxccEntity.toString() : '' },
     ];
 
     const record = fields
+      .filter(f => f.value) // Only include fields with values
       .map(f => {
         const value = f.value || '';
         return `<${f.name}:${value.length}>${value}`;

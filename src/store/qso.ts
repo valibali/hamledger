@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { useRigStore } from './rig';
+import { useAwardsStore } from './awards';
 import { formatAdif } from '../utils/adif';
 import { StationData, BaseStationData, GeoData } from '../types/station';
 import { qrzService } from '../services/QRZService';
@@ -11,6 +12,7 @@ import { configHelper } from '../utils/configHelper';
 import { calculateDistance } from '../utils/distance';
 import { getBandFromFrequency } from '../utils/bands';
 import { WSJTXDecodeMessage } from '../types/wsjtx';
+import { awardService } from '../services/AwardService';
 import * as countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
 import '../types/electron';
@@ -88,16 +90,38 @@ export const useQsoStore = defineStore('qso', {
       newQso.notes = this.qsoForm.notes?.trim() || '--';
       newQso.qslStatus = this.qsoForm.qslStatus || 'N';
 
+      // Enrich QSO with DXCC data
+      const enrichedQso = awardService.enrichQsoWithDxcc(newQso);
+
+      // Add grid square from station info if available
+      if (this.stationInfo.baseData.grid && !enrichedQso.grid) {
+        enrichedQso.grid = this.stationInfo.baseData.grid;
+      }
+
+      // Add state from station info if available (for WAS tracking)
+      if (this.stationInfo.baseData.state && !enrichedQso.state) {
+        enrichedQso.state = this.stationInfo.baseData.state;
+      }
+
       // Send to main process to save
       try {
         const response = await window.electronAPI.addQso({
-          ...newQso,
+          ...enrichedQso,
           _id: new Date().toISOString(),
         });
 
         if (response.ok) {
-          this.currentSession.push(newQso);
-          this.allQsos.push(newQso);
+          this.currentSession.push(enrichedQso);
+          this.allQsos.push(enrichedQso);
+          
+          // Process for awards and get any new achievements
+          const awardsStore = useAwardsStore();
+          const achievements = awardsStore.processNewQso(enrichedQso);
+          
+          // Log achievements (toast notifications handled separately)
+          if (achievements.length > 0) {
+            console.log('[Awards] New achievements:', achievements);
+          }
         }
       } catch (error) {
         console.error('Failed to save QSO:', error);
@@ -301,6 +325,7 @@ export const useQsoStore = defineStore('qso', {
             lon: undefined,
             grid: '',
             qth: '',
+            state: '',
           },
           geodata: {},
           flag: '',
@@ -349,6 +374,7 @@ export const useQsoStore = defineStore('qso', {
             this.stationInfo.baseData.name = qrzData.name;
             this.stationInfo.baseData.grid = qrzData.grid;
             this.stationInfo.baseData.qth = qrzData.qth;
+            this.stationInfo.baseData.state = qrzData.state;
           }
         }
 
@@ -568,11 +594,14 @@ export const useQsoStore = defineStore('qso', {
         );
 
         // Create QSO entry with proper ID and current timestamp
-        const wsjtxQso: QsoEntry = {
+        let wsjtxQso: QsoEntry = {
           ...qso,
           _id: `wsjtx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           datetime: qso.datetime || new Date().toISOString(),
         };
+
+        // Enrich QSO with DXCC data
+        wsjtxQso = awardService.enrichQsoWithDxcc(wsjtxQso);
 
         console.log('💾 Saving WSJT-X QSO to database:', wsjtxQso);
 
@@ -588,6 +617,15 @@ export const useQsoStore = defineStore('qso', {
           console.log('✅ WSJT-X QSO successfully added to store and database:', wsjtxQso.callsign);
           console.log('📊 Current session count after adding:', this.currentSession.length);
           console.log('📊 All QSOs count after adding:', this.allQsos.length);
+
+          // Process for awards and get any new achievements
+          const awardsStore = useAwardsStore();
+          const achievements = awardsStore.processNewQso(wsjtxQso);
+          
+          // Log achievements (toast notifications handled separately)
+          if (achievements.length > 0) {
+            console.log('[Awards] New achievements from WSJT-X QSO:', achievements);
+          }
 
           // Force reactivity update
           this.$patch({

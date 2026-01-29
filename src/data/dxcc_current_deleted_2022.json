@@ -1,0 +1,5008 @@
+{
+  "metadata": {
+    "title": "ARRL DXCC List",
+    "edition": "February 2022",
+    "totalEntities": 402,
+    "honorRollThreshold": 331,
+    "description": "Current and Deleted DXCC Entities",
+    "filterType": "all",
+    "notes": {
+      "qsl_service": "*  Indicates current list of entities for which QSLs may be forwarded by the ARRL membership Outgoing QSL Service.",
+      "third_party_traffic": "#  Indicates entities with which U.S. Amateurs may legally handle third-party message traffic.",
+      "antarctica_special": "Also 3Y, 8J1, AT0, DP0, FT8Y, LU, OR4, VK0, R1AW, VP8, ZL5, ZS1, ZX0, etc.  QSL via country under whose auspices the particular station is operating.  The availability of a third-party traffic agreement and a QSL Bureau applies to the country under whose auspices the particular station is operating.",
+      "current_note_1": "Unofficial prefix.",
+      "current_note_2": "(5T) Only contacts made June 20, 1960, and after, count for this entity.",
+      "current_note_3": "(5U) Only contacts made August 3, 1960, and after, count for this entity.",
+      "current_note_4": "(6V,6W) Only contacts made June 20, 1960, and after, count for this entity.",
+      "current_note_5": "(7O) Only contacts made May 22, 1990, and after, count for this entity.",
+      "current_note_6": "(9A; S5) Only contacts made June 26, 1991, and after, count for this entity.",
+      "current_note_7": "(9G) Only contacts made March 5, 1957, and after, count for this entity.",
+      "current_note_8": "(9M2,4; 9M6,8) Only contacts made September 16, 1963, and after, count for this entity.",
+      "current_note_9": "(9U; 9X) Only contacts made July 1, 1962, and after, count for this entity.",
+      "current_note_10": "(9V) Contacts made from September 16, 1963 to August 8, 1965, count for West Malaysia.",
+      "current_note_11": "(BS7) Only contacts made January 1, 1995, and after, count for this entity.",
+      "current_note_12": "(BV9P) Only contacts made January 1, 1994, and after, count for this entity.",
+      "current_note_13": "(D6; FH,TO) Only contacts made July 6, 1975, and after, count for this entity.",
+      "current_note_14": "(DA-DR) Only contacts made with DA-DL stations September 17, 1973, and after, and contacts made with Y2-Y9 stations October 3, 1990, and after, count for this entity.",
+      "current_note_15": "(E3) Only contacts made November 14, 1962, and before, or May 24, 1991, and after, count for this entity.",
+      "current_note_16": "(FO,TO; FO,TX (Marquesas Is./Austral Is.)) Only contacts made April 1, 1998, and after, count for this entity.",
+      "current_note_17": "(FT/G,TO; FT/J,E,TO) Only contacts made June 25, 1960, and after, count for this entity.",
+      "current_note_18": "(H40) Only contacts made April 1, 1998, and after, count for this entity.",
+      "current_note_19": "(JD1 (Minami Torishima)) Formerly Marcus Island.",
+      "current_note_20": "(JD1 (Ogasawara)) Formerly Bonin and Volcano Islands.",
+      "current_note_21": "(T8) Valid prefix January 1, 1994, or after (KC6 prior to this date).",
+      "current_note_22": "(KP5) Only contacts made March 1, 1979, and after, count for this entity.",
+      "current_note_23": "(OK,OL; OM) Only contacts made January 1, 1993, and after, count for this entity.",
+      "current_note_24": "(P2) Only contacts made September 16, 1975, and after, count for this entity.",
+      "current_note_25": "(P4) Only contacts made January 1, 1986, and after, count for this entity.",
+      "current_note_26": "(P5) Only contacts made May 14, 1995, and after, count for this entity.",
+      "current_note_27": "(S0) Contacts with Rio de Oro (Spanish Sahara), EA9, also count for this entity.",
+      "current_note_28": "(T2) Only contacts made January 1, 1976, and after, count for this entity.",
+      "current_note_29": "(E7) New prefix for Bosnia-Herzegovina effective November 17, 2007.  Contacts are valid for this entity effective October 15, 1991.",
+      "current_note_30": "(TL) Only contacts made August 13, 1960, and after, count for this entity.",
+      "current_note_31": "(TN) Only contacts made August 15, 1960, and after, count for this entity.",
+      "current_note_32": "(TR) Only contacts made August 17, 1960, and after, count for this entity.",
+      "current_note_33": "(TT) Only contacts made August 11, 1960, and after, count for this entity.",
+      "current_note_34": "(TU) Only contacts made August 7, 1960, and after, count for this entity.",
+      "current_note_35": "(TY) Only contacts made August 1, 1960, and after, count for this entity.",
+      "current_note_36": "(TZ) Only contacts made June 20, 1960, and after, count for this entity.",
+      "current_note_37": "(V4; VP2E; VP2M; VP2V) For DXCC credit for contacts made May 31, 1958, and before, see page 97, June 1958 QST.",
+      "current_note_38": "(V6) Includes Yap Islands January 1, 1981, and after.",
+      "current_note_39": "(XT) Only contacts made August 16, 1960, and after, count for this entity.",
+      "current_note_40": "(YB-YH) Only contacts made May 1, 1963, and after, count for this entity.",
+      "current_note_41": "(Z3) Only contacts made September 8, 1991, and after, count for this entity.",
+      "current_note_42": "(ZC4) Only contacts made August 16, 1960, and after, count for this entity.",
+      "current_note_43": "(E4) Only contacts made February 1, 1999, and after, count for this entity.",
+      "current_note_44": "(4W) Only contacts made March 1, 2000, and after, count for this entity.",
+      "current_note_45": "(FK,TX (Chesterfield Is.)) Only contacts made March 23, 2000, and after, count for this entity.",
+      "current_note_46": "(VP6) Only contacts made November 16, 2001, and after, count for this entity.",
+      "current_note_47": "(4O) Only contacts made June 28, 2006, and after, count for this entity.",
+      "current_note_48": "(KH8) Only contacts made July 22, 2006, and after, count for this entity.",
+      "current_note_49": "(FJ,TO) Only contacts made December 14, 2007, and after, count for this entity.",
+      "current_note_50": "(PJ2) Only contacts made starting 0400 UTC October 10, 2010, and after, count for this entity.",
+      "current_note_51": "(PJ4) Only contacts made starting 0400 UTC October 10, 2010, and after, count for this entity.",
+      "current_note_52": "(PJ5,6) Only contacts made starting 0400 UTC October 10, 2010, and after, count for this entity.",
+      "current_note_53": "(PJ7) Only contacts made starting 0400 UTC October 10, 2010, and after, count for this entity.",
+      "current_note_54": "(Z8) Only contacts made July 14, 2011, and after, count for this entity.",
+      "current_note_55": "(Z6) Only contacts made January 21, 2018, and after, count for this entity.",
+      "deleted_note_1": "Unofficial prefix.",
+      "deleted_note_2": "(Blenheim Reef) Only contacts made May 4, 1967, to June 30, 1975, count for this entity.  Contacts made July 1, 1975, and after, count as Chagos Is. (VQ9).",
+      "deleted_note_3": "(Geyser Reef) Only contacts made May 4, 1967, to February 28, 1978, count for this entity.",
+      "deleted_note_4": "(Abu Ail Is.) Only contacts made  March 30, 1991, and before, count for this entity.",
+      "deleted_note_5": "(1M) Only contacts made July 15, 1972, and before, count for this entity.  Contacts made July 16, 1972, and after, count as Tonga (A3).",
+      "deleted_note_6": "(4W) Only contacts made May 21, 1990, and before, count for this entity.",
+      "deleted_note_7": "(7J1) Only contacts made May 30, 1976, to November 30, 1980, count for this entity.  Contacts made December 1, 1980, and after, count as Ogasawara (JD1).",
+      "deleted_note_8": "(8Z4) Only contacts made December 25, 1981, and before, count for this entity.",
+      "deleted_note_9": "(8Z5,9K3) Only contacts made December 14, 1969, and before, count for this entity.",
+      "deleted_note_10": "(9S4) Only contacts made March 31, 1957, and before, count for this entity.",
+      "deleted_note_11": "(9U5) Only contacts made July 1, 1960, to June 30, 1962, count for this entity.  Contacts made July 1, 1962, and after, count as Burundi (9U) or Rwanda (9X).",
+      "deleted_note_12": "(AC3) Only contacts made April 30, 1975, and before, count for this entity.  Contacts made May 1, 1975, and after, count as India (VU).",
+      "deleted_note_13": "(AC4) Only contacts made May 30, 1974, and before, count for this entity.  Contacts made May 31, 1974, and after, count as China (B).",
+      "deleted_note_14": "(C9) Only contacts made September 15, 1963, and before, count for this entity.  Contacts made September 16, 1963, and after, count as China (B).",
+      "deleted_note_15": "(CN2) Only contacts made June 30, 1960, and before, count for this entity.  Contacts made July 1, 1960, and after, count as Morocco (CN).",
+      "deleted_note_16": "(CR8 (Damao, Diu); CR8 (Goa)) Only contacts made December 31, 1961, and before, count for this entity.",
+      "deleted_note_17": "(CR8,CR10) Only contacts made September 14, 1976, and before, count for this entity.",
+      "deleted_note_18": "(DA-DM) Only contacts made September 16, 1973, and before, count for this entity.  Contacts made September 17, 1973, and after, count as Federal Republic of Germany (DA-DL) or German Democratic Republic (Y2-Y9).",
+      "deleted_note_19": "(DM,Y2-9) Only contacts made September 17, 1973, to October 2, 1990, count for this entity.  On October 3, 1990, German Democratic Republic became part of Federal Republic of Germany.",
+      "deleted_note_20": "(EA9) Only contacts made May 13, 1969, and before, count for this entity.",
+      "deleted_note_21": "(FF) Only contacts made August 6, 1960, and before, count for this entity.",
+      "deleted_note_22": "(FH,FB8) Only contacts made July 5, 1975, and before, count for this entity.  Contacts made July 6, 1975, and after, count as Comoros (D6) or Mayotte (FH,TO).",
+      "deleted_note_23": "(FI8) Only contacts made December 20, 1950, and before, count for this entity.",
+      "deleted_note_24": "(FN8) Only contacts made October 31, 1954, and before, count for this entity.",
+      "deleted_note_25": "(FQ8) Only contacts made August 16, 1960, and before, count for this entity.",
+      "deleted_note_26": "(HK0; HK0,KP3,KS4) Only contacts made September 16, 1981, and before, count for this entity.  Contacts made September 17, 1981, and after, count as San Andres (HK0).",
+      "deleted_note_27": "(I1) Only contacts made March 31, 1957, and before, count for this entity.",
+      "deleted_note_28": "(I5) Only contacts made June 30, 1960, and before, count for this entity.",
+      "deleted_note_29": "(JZ0) Only contacts made April 30, 1963, and before, count for this entity.",
+      "deleted_note_30": "(KH5K) Only contacts made March 29, 2016, and before, count for this entity.",
+      "deleted_note_31": "(KR6,8,JR6,KA6) Only contacts made May 14, 1972, and before, count for this entity.  Contacts made May 15, 1972, and after, count as Japan (JA-JS,7J-7N).",
+      "deleted_note_32": "(KS4) Only contacts made August 31, 1972, and before, count for this entity.  Contacts made September 1, 1972, and after, count as Honduras (HQ,HR).",
+      "deleted_note_33": "(KZ5) Only contacts made September 30, 1979, and before, count for this entity.",
+      "deleted_note_34": "(OK-OM) Only contacts made December 31, 1992, and before, count for this entity.",
+      "deleted_note_35": "(P2,VK9 (Papua Territory); P2,VK9 (Territory of New Guinea)) Only contacts made September 15, 1975, and before, count for this entity. Contacts made September 16, 1975, and after, count as Papua New Guinea (P2).",
+      "deleted_note_36": "(PJ (Bonaire, Curacao); PJ (St. Maarten, Saba, St. Eustatius)) Only contacts made October 9, 2010, and before, count for this entity.",
+      "deleted_note_37": "(PK1-3; PK4; PK5; PK6) Only contacts made April 30, 1963, and before, count for this entity.  Contacts made May 1, 1963, and after, count as Indonesia (YB-YH).",
+      "deleted_note_38": "(ST0) Only contacts made May 7, 1972, to December 31, 1994, count for this entity.",
+      "deleted_note_39": "(UN1) Only contacts made June 30, 1960, and before, count for this entity.  Contacts made July 1, 1960, and after, count as European Russia (UA-UI1-7,RA-RZ).",
+      "deleted_note_40": "(VO) Only contacts made March 31, 1949, and before, count for this entity.  Contacts made April 1, 1949, and after, count as Canada (VA-VG,VO,VY).",
+      "deleted_note_41": "(VQ1,5H1) Only contacts made May 31, 1974, and before, count for this entity.  Contacts made June 1, 1974, and after, count as Tanzania (5H,5I).",
+      "deleted_note_42": "(VQ6) Only contacts made June 30, 1960, and before, count for this entity.",
+      "deleted_note_43": "(VQ9 (Aldabra); VQ9 (Desroches); VQ9 (Farquhar)) Only contacts made June 28, 1976, and before, count for this entity.  Contacts made June 29, 1976, and after, count as Seychelles (S7).",
+      "deleted_note_44": "(VS2,9M2; VS4; ZC5) Only contacts made September 15, 1963, and before, count for this entity.  Contacts made September 16, 1963, and after, count as West Malaysia (9M2,4) or East Malaysia (9M6,8).",
+      "deleted_note_45": "(VS9A,P,S) Only contacts made May 21, 1990, and before, count for this entity.",
+      "deleted_note_46": "(VS9H) Only contacts made November 29, 1967, and before, count for this entity.",
+      "deleted_note_47": "(VS9K) Only contacts made March 10, 1982, and before, count for this entity.",
+      "deleted_note_48": "(ZC6,4X1) Only contacts made June 30, 1968, and before, count for this entity.  Contacts made July 1, 1968, and after, count as Israel (4X,4Z).",
+      "deleted_note_49": "(ZD4) Only contacts made March 5, 1957, and before, count for this entity.",
+      "deleted_note_50": "(ZS0,1) Only contacts made February 29, 1994, and before, count for this entity.",
+      "deleted_note_51": "(ZS9) Only contacts made September 1, 1977, to February 28, 1994, count for this entity.",
+      "deleted_note_52": "(R1/M) Only contacts made February 16, 2012, and before, count for this entity."
+    },
+    "continents": {
+      "AF": "Africa",
+      "AN": "Antarctica",
+      "AS": "Asia",
+      "EU": "Europe",
+      "NA": "North America",
+      "OC": "Oceania",
+      "SA": "South America"
+    },
+    "zoneNotes": {
+      "A": "33, 42, 43, 44",
+      "B": "67, 69-74",
+      "C": "12, 13, 29, 30, 32, 38, 39",
+      "D": "12, 13, 15",
+      "E": "19, 20, 29, 30",
+      "F": "20-26, 30-35, 75",
+      "G": "16, 17, 18, 19, 23",
+      "H": "2, 3, 4, 9, 75",
+      "I": "55, 58, 59"
+    },
+    "generatedAt": "2025-07-24T03:13:28.871Z",
+    "sourceFile": "2022_Current_Deleted.txt",
+    "version": "1.1.0",
+    "author": "BG6LH",
+    "statistics": {
+      "totalParsed": 402,
+      "currentEntities": 340,
+      "deletedEntities": 62,
+      "continents": {
+        "AS": 53,
+        "EU": 68,
+        "AF": 76,
+        "OC": 59,
+        "AN": 2,
+        "NA": 50,
+        "AS,AF": 1,
+        "SA": 30,
+        "EU,AS": 1
+      },
+      "notesStatistics": {
+        "currentNotesCount": 55,
+        "deletedNotesCount": 52,
+        "zoneNotesCount": 9
+      }
+    }
+  },
+  "entities": [
+    {
+      "prefix": "",
+      "entity": "Spratly Is.",
+      "continent": "AS",
+      "zoneITU": "50",
+      "zoneCQ": "26",
+      "entityCode": 247,
+      "notes": [
+        "current_note_1"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "1A",
+      "entity": "Sovereign Military Order of Malta",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 246,
+      "notes": [
+        "current_note_1"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3A",
+      "entity": "Monaco",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 260,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3B6,7",
+      "entity": "Agalega & St. Brandon Is.",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 4,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3B8",
+      "entity": "Mauritius",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 165,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3B9",
+      "entity": "Rodrigues I.",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 207,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3C",
+      "entity": "Equatorial Guinea",
+      "continent": "AF",
+      "zoneITU": "47",
+      "zoneCQ": "36",
+      "entityCode": 49,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3C0",
+      "entity": "Annobon I.",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 195,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3D2",
+      "entity": "Fiji",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "32",
+      "entityCode": 176,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3D2",
+      "entity": "Conway Reef",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "32",
+      "entityCode": 489,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3D2",
+      "entity": "Rotuma I.",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "32",
+      "entityCode": 460,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3DA",
+      "entity": "Kingdom of Eswatini",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 468,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3V",
+      "entity": "Tunisia",
+      "continent": "AF",
+      "zoneITU": "37",
+      "zoneCQ": "33",
+      "entityCode": 474,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3W,XV",
+      "entity": "Viet Nam",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 293,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3X",
+      "entity": "Guinea",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 107,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3Y",
+      "entity": "Bouvet",
+      "continent": "AF",
+      "zoneITU": "67",
+      "zoneCQ": "38",
+      "entityCode": 24,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "3Y",
+      "entity": "Peter 1 I.",
+      "continent": "AN",
+      "zoneITU": "72",
+      "zoneCQ": "12",
+      "entityCode": 199,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4J,4K",
+      "entity": "Azerbaijan",
+      "continent": "AS",
+      "zoneITU": "29",
+      "zoneCQ": "21",
+      "entityCode": 18,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4L",
+      "entity": "Georgia",
+      "continent": "AS",
+      "zoneITU": "29",
+      "zoneCQ": "21",
+      "entityCode": 75,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4O",
+      "entity": "Montenegro",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 514,
+      "notes": [
+        "current_note_47",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4S",
+      "entity": "Sri Lanka",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 315,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4U_ITU",
+      "entity": "ITU HQ",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 117,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4U_UN",
+      "entity": "United Nations HQ",
+      "continent": "NA",
+      "zoneITU": "08",
+      "zoneCQ": "05",
+      "entityCode": 289,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4W",
+      "entity": "Timor-Leste",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 511,
+      "notes": [
+        "current_note_44"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "4X,4Z",
+      "entity": "Israel",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 336,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5A",
+      "entity": "Libya",
+      "continent": "AF",
+      "zoneITU": "38",
+      "zoneCQ": "34",
+      "entityCode": 436,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5B,C4,P3",
+      "entity": "Cyprus",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 215,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5H,5I",
+      "entity": "Tanzania",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "37",
+      "entityCode": 470,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5N",
+      "entity": "Nigeria",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 450,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5R",
+      "entity": "Madagascar",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 438,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5T",
+      "entity": "Mauritania",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 444,
+      "notes": [
+        "current_note_2"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5U",
+      "entity": "Niger",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 187,
+      "notes": [
+        "current_note_3"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5V",
+      "entity": "Togo",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 483,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5W",
+      "entity": "Samoa",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 190,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5X",
+      "entity": "Uganda",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 286,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "5Y,5Z",
+      "entity": "Kenya",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 430,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "6V,6W",
+      "entity": "Senegal",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 456,
+      "notes": [
+        "current_note_4",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "6Y",
+      "entity": "Jamaica",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 82,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "7O",
+      "entity": "Yemen",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 492,
+      "notes": [
+        "current_note_5"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "7P",
+      "entity": "Lesotho",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 432,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "7Q",
+      "entity": "Malawi",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "37",
+      "entityCode": 440,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "7T-7Y",
+      "entity": "Algeria",
+      "continent": "AF",
+      "zoneITU": "37",
+      "zoneCQ": "33",
+      "entityCode": 400,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "8P",
+      "entity": "Barbados",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 62,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "8Q",
+      "entity": "Maldives",
+      "continent": "AS,AF",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 159,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "8R",
+      "entity": "Guyana",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "09",
+      "entityCode": 129,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9A",
+      "entity": "Croatia",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 497,
+      "notes": [
+        "current_note_6",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9G",
+      "entity": "Ghana",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 424,
+      "notes": [
+        "current_note_7",
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9H",
+      "entity": "Malta",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 257,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9I,9J",
+      "entity": "Zambia",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "36",
+      "entityCode": 482,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9K",
+      "entity": "Kuwait",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 348,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9L",
+      "entity": "Sierra Leone",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 458,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9M2,4",
+      "entity": "West Malaysia",
+      "continent": "AS",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 299,
+      "notes": [
+        "current_note_8",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9M6,8",
+      "entity": "East Malaysia",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 46,
+      "notes": [
+        "current_note_8",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9N",
+      "entity": "Nepal",
+      "continent": "AS",
+      "zoneITU": "42",
+      "zoneCQ": "22",
+      "entityCode": 369,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9Q-9T",
+      "entity": "Democratic Republic of the Congo",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 414,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9U",
+      "entity": "Burundi",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 404,
+      "notes": [
+        "current_note_9"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9V",
+      "entity": "Singapore",
+      "continent": "AS",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 381,
+      "notes": [
+        "current_note_10",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9X",
+      "entity": "Rwanda",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 454,
+      "notes": [
+        "current_note_9"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "9Y,9Z",
+      "entity": "Trinidad & Tobago",
+      "continent": "SA",
+      "zoneITU": "11",
+      "zoneCQ": "09",
+      "entityCode": 90,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A2",
+      "entity": "Botswana",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 402,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A3",
+      "entity": "Tonga",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 160,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A4",
+      "entity": "Oman",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 370,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A5",
+      "entity": "Bhutan",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 306,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A6",
+      "entity": "United Arab Emirates",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 391,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A7",
+      "entity": "Qatar",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 376,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "A9",
+      "entity": "Bahrain",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 304,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "AP",
+      "entity": "Pakistan",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "21",
+      "entityCode": 372,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "B",
+      "entity": "China",
+      "continent": "AS",
+      "zoneITU": "(A)",
+      "zoneCQ": "23,24",
+      "entityCode": 318,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "BS7",
+      "entity": "Scarborough Reef",
+      "continent": "AS",
+      "zoneITU": "50",
+      "zoneCQ": "27",
+      "entityCode": 506,
+      "notes": [
+        "current_note_11"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "BU-BX",
+      "entity": "Taiwan",
+      "continent": "AS",
+      "zoneITU": "44",
+      "zoneCQ": "24",
+      "entityCode": 386,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "BV9P",
+      "entity": "Pratas I.",
+      "continent": "AS",
+      "zoneITU": "44",
+      "zoneCQ": "24",
+      "entityCode": 505,
+      "notes": [
+        "current_note_12"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "C2",
+      "entity": "Nauru",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "31",
+      "entityCode": 157,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "C3",
+      "entity": "Andorra",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 203,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "C5",
+      "entity": "The Gambia",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 422,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "C6",
+      "entity": "Bahamas",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 60,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "C8,C9",
+      "entity": "Mozambique",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "37",
+      "entityCode": 181,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CA-CE",
+      "entity": "Chile",
+      "continent": "SA",
+      "zoneITU": "14,16",
+      "zoneCQ": "12",
+      "entityCode": 112,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CE0",
+      "entity": "Easter I.",
+      "continent": "SA",
+      "zoneITU": "63",
+      "zoneCQ": "12",
+      "entityCode": 47,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CE0",
+      "entity": "Juan Fernandez Is.",
+      "continent": "SA",
+      "zoneITU": "14",
+      "zoneCQ": "12",
+      "entityCode": 125,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CE0",
+      "entity": "San Felix & San Ambrosio",
+      "continent": "SA",
+      "zoneITU": "14",
+      "zoneCQ": "12",
+      "entityCode": 217,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CE9/KC4",
+      "entity": "Antarctica",
+      "continent": "AN",
+      "zoneITU": "(B)",
+      "zoneCQ": "(C)",
+      "entityCode": 13,
+      "notes": [
+        "qsl_service",
+        "antarctica_special"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CM,CO",
+      "entity": "Cuba",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 70,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CN",
+      "entity": "Morocco",
+      "continent": "AF",
+      "zoneITU": "37",
+      "zoneCQ": "33",
+      "entityCode": 446,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CP",
+      "entity": "Bolivia",
+      "continent": "SA",
+      "zoneITU": "12,14",
+      "zoneCQ": "10",
+      "entityCode": 104,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CT",
+      "entity": "Portugal",
+      "continent": "EU",
+      "zoneITU": "37",
+      "zoneCQ": "14",
+      "entityCode": 272,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CT3",
+      "entity": "Madeira Is.",
+      "continent": "AF",
+      "zoneITU": "36",
+      "zoneCQ": "33",
+      "entityCode": 256,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CU",
+      "entity": "Azores",
+      "continent": "EU",
+      "zoneITU": "36",
+      "zoneCQ": "14",
+      "entityCode": 149,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CV-CX",
+      "entity": "Uruguay",
+      "continent": "SA",
+      "zoneITU": "14",
+      "zoneCQ": "13",
+      "entityCode": 144,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CY0",
+      "entity": "Sable I.",
+      "continent": "NA",
+      "zoneITU": "09",
+      "zoneCQ": "05",
+      "entityCode": 211,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "CY9",
+      "entity": "St. Paul I.",
+      "continent": "NA",
+      "zoneITU": "09",
+      "zoneCQ": "05",
+      "entityCode": 252,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "D2,D3",
+      "entity": "Angola",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 401,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "D4",
+      "entity": "Cape Verde",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 409,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "D6",
+      "entity": "Comoros",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 411,
+      "notes": [
+        "current_note_13",
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "DA-DR",
+      "entity": "Federal Republic of Germany",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 230,
+      "notes": [
+        "current_note_14",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "DU-DZ,4D-4I",
+      "entity": "Philippines",
+      "continent": "OC",
+      "zoneITU": "50",
+      "zoneCQ": "27",
+      "entityCode": 375,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "E3",
+      "entity": "Eritrea",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 51,
+      "notes": [
+        "current_note_15"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "E4",
+      "entity": "Palestine",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 510,
+      "notes": [
+        "current_note_43"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "E5",
+      "entity": "North Cook Is.",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 191,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "E5",
+      "entity": "South Cook Is.",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 234,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "E6",
+      "entity": "Niue",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 188,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "E7",
+      "entity": "Bosnia-Herzegovina",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 501,
+      "notes": [
+        "current_note_29",
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EA-EH",
+      "entity": "Spain",
+      "continent": "EU",
+      "zoneITU": "37",
+      "zoneCQ": "14",
+      "entityCode": 281,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EA6-EH6",
+      "entity": "Balearic Is.",
+      "continent": "EU",
+      "zoneITU": "37",
+      "zoneCQ": "14",
+      "entityCode": 21,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EA8-EH8",
+      "entity": "Canary Is.",
+      "continent": "AF",
+      "zoneITU": "36",
+      "zoneCQ": "33",
+      "entityCode": 29,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EA9-EH9",
+      "entity": "Ceuta & Melilla",
+      "continent": "AF",
+      "zoneITU": "37",
+      "zoneCQ": "33",
+      "entityCode": 32,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EI,EJ",
+      "entity": "Ireland",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 245,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EK",
+      "entity": "Armenia",
+      "continent": "AS",
+      "zoneITU": "29",
+      "zoneCQ": "21",
+      "entityCode": 14,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EL",
+      "entity": "Liberia",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 434,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EP,EQ",
+      "entity": "Iran",
+      "continent": "AS",
+      "zoneITU": "40",
+      "zoneCQ": "21",
+      "entityCode": 330,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ER",
+      "entity": "Moldova",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "16",
+      "entityCode": 179,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ES",
+      "entity": "Estonia",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "15",
+      "entityCode": 52,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ET",
+      "entity": "Ethiopia",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 53,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EU-EW",
+      "entity": "Belarus",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "16",
+      "entityCode": 27,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EX",
+      "entity": "Kyrgyzstan",
+      "continent": "AS",
+      "zoneITU": "30,31",
+      "zoneCQ": "17",
+      "entityCode": 135,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EY",
+      "entity": "Tajikistan",
+      "continent": "AS",
+      "zoneITU": "30",
+      "zoneCQ": "17",
+      "entityCode": 262,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "EZ",
+      "entity": "Turkmenistan",
+      "continent": "AS",
+      "zoneITU": "30",
+      "zoneCQ": "17",
+      "entityCode": 280,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "F",
+      "entity": "France",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 227,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FG,TO",
+      "entity": "Guadeloupe",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 79,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FH,TO",
+      "entity": "Mayotte",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 169,
+      "notes": [
+        "current_note_13",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FJ,TO",
+      "entity": "Saint Barthelemy",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 516,
+      "notes": [
+        "current_note_49",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FK,TX",
+      "entity": "New Caledonia",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "32",
+      "entityCode": 162,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FK,TX",
+      "entity": "Chesterfield Is.",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "30",
+      "entityCode": 512,
+      "notes": [
+        "current_note_45"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FM,TO",
+      "entity": "Martinique",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 84,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FO,TO",
+      "entity": "Austral I.",
+      "continent": "OC",
+      "zoneITU": "63",
+      "zoneCQ": "32",
+      "entityCode": 508,
+      "notes": [
+        "current_note_16",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FO,TX",
+      "entity": "Clipperton I.",
+      "continent": "NA",
+      "zoneITU": "10",
+      "zoneCQ": "07",
+      "entityCode": 36,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FO,TX",
+      "entity": "French Polynesia",
+      "continent": "OC",
+      "zoneITU": "63",
+      "zoneCQ": "32",
+      "entityCode": 175,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FO,TX",
+      "entity": "Marquesas Is.",
+      "continent": "OC",
+      "zoneITU": "63",
+      "zoneCQ": "31",
+      "entityCode": 509,
+      "notes": [
+        "current_note_16",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FP",
+      "entity": "St. Pierre & Miquelon",
+      "continent": "NA",
+      "zoneITU": "09",
+      "zoneCQ": "05",
+      "entityCode": 277,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FR,TO",
+      "entity": "Reunion I.",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 453,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FT/G,TO",
+      "entity": "Glorioso Is.",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 99,
+      "notes": [
+        "current_note_17",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FT/J,E,TO",
+      "entity": "Juan de Nova, Europa",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 124,
+      "notes": [
+        "current_note_17",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FT/T,TO",
+      "entity": "Tromelin I.",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 276,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FS,TO",
+      "entity": "Saint Martin",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 213,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FT/W",
+      "entity": "Crozet I.",
+      "continent": "AF",
+      "zoneITU": "68",
+      "zoneCQ": "39",
+      "entityCode": 41,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FT/X",
+      "entity": "Kerguelen Is.",
+      "continent": "AF",
+      "zoneITU": "68",
+      "zoneCQ": "39",
+      "entityCode": 131,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FT/Z",
+      "entity": "Amsterdam & St. Paul Is.",
+      "continent": "AF",
+      "zoneITU": "68",
+      "zoneCQ": "39",
+      "entityCode": 10,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FW",
+      "entity": "Wallis & Futuna Is.",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 298,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "FY",
+      "entity": "French Guiana",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "09",
+      "entityCode": 63,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "G,GX,M",
+      "entity": "England",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 223,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "GD,GT",
+      "entity": "Isle of Man",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 114,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "GI,GN",
+      "entity": "Northern Ireland",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 265,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "GJ,GH",
+      "entity": "Jersey",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 122,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "GM,GS",
+      "entity": "Scotland",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 279,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "GU,GP",
+      "entity": "Guernsey",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 106,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "GW,GC",
+      "entity": "Wales",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 294,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "H4",
+      "entity": "Solomon Is.",
+      "continent": "OC",
+      "zoneITU": "51",
+      "zoneCQ": "28",
+      "entityCode": 185,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "H40",
+      "entity": "Temotu Province",
+      "continent": "OC",
+      "zoneITU": "51",
+      "zoneCQ": "32",
+      "entityCode": 507,
+      "notes": [
+        "current_note_18",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HA,HG",
+      "entity": "Hungary",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 239,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HB",
+      "entity": "Switzerland",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 287,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HB0",
+      "entity": "Liechtenstein",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 251,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HC,HD",
+      "entity": "Ecuador",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "10",
+      "entityCode": 120,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HC8,HD8",
+      "entity": "Galapagos Is.",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "10",
+      "entityCode": 71,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HH",
+      "entity": "Haiti",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 78,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HI",
+      "entity": "Dominican Republic",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 72,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HJ,HK,5J,5K",
+      "entity": "Colombia",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "09",
+      "entityCode": 116,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HK0",
+      "entity": "Malpelo I.",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "09",
+      "entityCode": 161,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HK0",
+      "entity": "San Andres & Providencia",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 216,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HL,6K-6N",
+      "entity": "Republic of Korea",
+      "continent": "AS",
+      "zoneITU": "44",
+      "zoneCQ": "25",
+      "entityCode": 137,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HO,HP",
+      "entity": "Panama",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 88,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HQ,HR",
+      "entity": "Honduras",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 80,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HS,E2",
+      "entity": "Thailand",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 387,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HV",
+      "entity": "Vatican",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 295,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "HZ",
+      "entity": "Saudi Arabia",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 378,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "I",
+      "entity": "Italy",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15,33",
+      "entityCode": 248,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "IS0,IM0",
+      "entity": "Sardinia",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 225,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "J2",
+      "entity": "Djibouti",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 382,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "J3",
+      "entity": "Grenada",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 77,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "J5",
+      "entity": "Guinea-Bissau",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 109,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "J6",
+      "entity": "St. Lucia",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 97,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "J7",
+      "entity": "Dominica",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 95,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "J8",
+      "entity": "St. Vincent",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 98,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JA-JS,7J-7N",
+      "entity": "Japan",
+      "continent": "AS",
+      "zoneITU": "45",
+      "zoneCQ": "25",
+      "entityCode": 339,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JD1",
+      "entity": "Minami Torishima",
+      "continent": "OC",
+      "zoneITU": "90",
+      "zoneCQ": "27",
+      "entityCode": 177,
+      "notes": [
+        "current_note_19",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JD1",
+      "entity": "Ogasawara",
+      "continent": "AS",
+      "zoneITU": "45",
+      "zoneCQ": "27",
+      "entityCode": 192,
+      "notes": [
+        "current_note_20",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JT-JV",
+      "entity": "Mongolia",
+      "continent": "AS",
+      "zoneITU": "32,33",
+      "zoneCQ": "23",
+      "entityCode": 363,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JW",
+      "entity": "Svalbard",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "40",
+      "entityCode": 259,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JX",
+      "entity": "Jan Mayen",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "40",
+      "entityCode": 118,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "JY",
+      "entity": "Jordan",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 342,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "K,W,N,AA-AK",
+      "entity": "United States of America",
+      "continent": "NA",
+      "zoneITU": "06-08",
+      "zoneCQ": "03-05",
+      "entityCode": 291,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KG4",
+      "entity": "Guantanamo Bay",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 105,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH0",
+      "entity": "Mariana Is.",
+      "continent": "OC",
+      "zoneITU": "64",
+      "zoneCQ": "27",
+      "entityCode": 166,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH1",
+      "entity": "Baker & Howland Is.",
+      "continent": "OC",
+      "zoneITU": "61",
+      "zoneCQ": "31",
+      "entityCode": 20,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH2",
+      "entity": "Guam",
+      "continent": "OC",
+      "zoneITU": "64",
+      "zoneCQ": "27",
+      "entityCode": 103,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH3",
+      "entity": "Johnston I.",
+      "continent": "OC",
+      "zoneITU": "61",
+      "zoneCQ": "31",
+      "entityCode": 123,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH4",
+      "entity": "Midway I.",
+      "continent": "OC",
+      "zoneITU": "61",
+      "zoneCQ": "31",
+      "entityCode": 174,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH5",
+      "entity": "Palmyra & Jarvis Is.",
+      "continent": "OC",
+      "zoneITU": "61,62",
+      "zoneCQ": "31",
+      "entityCode": 197,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH6,7",
+      "entity": "Hawaii",
+      "continent": "OC",
+      "zoneITU": "61",
+      "zoneCQ": "31",
+      "entityCode": 110,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH7K",
+      "entity": "Kure I.",
+      "continent": "OC",
+      "zoneITU": "61",
+      "zoneCQ": "31",
+      "entityCode": 138,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH8",
+      "entity": "American Samoa",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 9,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH8",
+      "entity": "Swains I.",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 515,
+      "notes": [
+        "current_note_48",
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KH9",
+      "entity": "Wake I.",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "31",
+      "entityCode": 297,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KL,AL,NL,WL",
+      "entity": "Alaska",
+      "continent": "NA",
+      "zoneITU": "01,02",
+      "zoneCQ": "01",
+      "entityCode": 6,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KP1",
+      "entity": "Navassa I.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 182,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KP2",
+      "entity": "Virgin Is.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 285,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KP3,4",
+      "entity": "Puerto Rico",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 202,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "KP5",
+      "entity": "Desecheo I.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 43,
+      "notes": [
+        "current_note_22",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "LA-LN",
+      "entity": "Norway",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "14",
+      "entityCode": 266,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "LO-LW",
+      "entity": "Argentina",
+      "continent": "SA",
+      "zoneITU": "14,16",
+      "zoneCQ": "13",
+      "entityCode": 100,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "LX",
+      "entity": "Luxembourg",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 254,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "LY",
+      "entity": "Lithuania",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "15",
+      "entityCode": 146,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "LZ",
+      "entity": "Bulgaria",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "20",
+      "entityCode": 212,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OA-OC",
+      "entity": "Peru",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "10",
+      "entityCode": 136,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OD",
+      "entity": "Lebanon",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 354,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OE",
+      "entity": "Austria",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 206,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OF-OI",
+      "entity": "Finland",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "15",
+      "entityCode": 224,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OH0",
+      "entity": "Aland Is.",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "15",
+      "entityCode": 5,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OJ0",
+      "entity": "Market Reef",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "15",
+      "entityCode": 167,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OK-OL",
+      "entity": "Czech Republic",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 503,
+      "notes": [
+        "current_note_23",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OM",
+      "entity": "Slovak Republic",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 504,
+      "notes": [
+        "current_note_23",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ON-OT",
+      "entity": "Belgium",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 209,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OU-OW,OZ",
+      "entity": "Denmark",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "14",
+      "entityCode": 221,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OX",
+      "entity": "Greenland",
+      "continent": "NA",
+      "zoneITU": "05,75",
+      "zoneCQ": "40",
+      "entityCode": 237,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "OY",
+      "entity": "Faroe Is.",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "14",
+      "entityCode": 222,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "P2",
+      "entity": "Papua New Guinea",
+      "continent": "OC",
+      "zoneITU": "51",
+      "zoneCQ": "28",
+      "entityCode": 163,
+      "notes": [
+        "current_note_24"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "P4",
+      "entity": "Aruba",
+      "continent": "SA",
+      "zoneITU": "11",
+      "zoneCQ": "09",
+      "entityCode": 91,
+      "notes": [
+        "current_note_25",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "P5",
+      "entity": "Democratic People's Rep. of Korea",
+      "continent": "AS",
+      "zoneITU": "44",
+      "zoneCQ": "25",
+      "entityCode": 344,
+      "notes": [
+        "current_note_26"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PA-PI",
+      "entity": "Netherlands",
+      "continent": "EU",
+      "zoneITU": "27",
+      "zoneCQ": "14",
+      "entityCode": 263,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PJ2",
+      "entity": "Curacao",
+      "continent": "SA",
+      "zoneITU": "11",
+      "zoneCQ": "09",
+      "entityCode": 517,
+      "notes": [
+        "current_note_50"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PJ4",
+      "entity": "Bonaire",
+      "continent": "SA",
+      "zoneITU": "11",
+      "zoneCQ": "09",
+      "entityCode": 520,
+      "notes": [
+        "current_note_51"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PJ5,6",
+      "entity": "Saba & St. Eustatius",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 519,
+      "notes": [
+        "current_note_52"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PJ7",
+      "entity": "Sint Maarten",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 518,
+      "notes": [
+        "current_note_53"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PP-PY,ZV-ZZ",
+      "entity": "Brazil",
+      "continent": "SA",
+      "zoneITU": "(D)",
+      "zoneCQ": "11",
+      "entityCode": 108,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PP0-PY0F",
+      "entity": "Fernando de Noronha",
+      "continent": "SA",
+      "zoneITU": "13",
+      "zoneCQ": "11",
+      "entityCode": 56,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PP0-PY0S",
+      "entity": "St. Peter & St. Paul Rocks",
+      "continent": "SA",
+      "zoneITU": "13",
+      "zoneCQ": "11",
+      "entityCode": 253,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PP0-PY0T",
+      "entity": "Trindade & Martim Vaz Is.",
+      "continent": "SA",
+      "zoneITU": "15",
+      "zoneCQ": "11",
+      "entityCode": 273,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "PZ",
+      "entity": "Suriname",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "09",
+      "entityCode": 140,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "R1/F",
+      "entity": "Franz Josef Land",
+      "continent": "EU",
+      "zoneITU": "75",
+      "zoneCQ": "40",
+      "entityCode": 61,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "S0,",
+      "entity": "Western Sahara",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "33",
+      "entityCode": 302,
+      "notes": [
+        "current_note_1",
+        "current_note_27"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "S2",
+      "entity": "Bangladesh",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 305,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "S5",
+      "entity": "Slovenia",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 499,
+      "notes": [
+        "current_note_6",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "S7",
+      "entity": "Seychelles",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 379,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "S9",
+      "entity": "Sao Tome & Principe",
+      "continent": "AF",
+      "zoneITU": "47",
+      "zoneCQ": "36",
+      "entityCode": 219,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SA-SM,7S,8S",
+      "entity": "Sweden",
+      "continent": "EU",
+      "zoneITU": "18",
+      "zoneCQ": "14",
+      "entityCode": 284,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SN-SR",
+      "entity": "Poland",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 269,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ST",
+      "entity": "Sudan",
+      "continent": "AF",
+      "zoneITU": "47,48",
+      "zoneCQ": "34",
+      "entityCode": 466,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SU",
+      "entity": "Egypt",
+      "continent": "AF",
+      "zoneITU": "38",
+      "zoneCQ": "34",
+      "entityCode": 478,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SV-SZ,J4",
+      "entity": "Greece",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "20",
+      "entityCode": 236,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SV/A",
+      "entity": "Mount Athos",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "20",
+      "entityCode": 180,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SV5,J45",
+      "entity": "Dodecanese",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "20",
+      "entityCode": 45,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "SV9,J49",
+      "entity": "Crete",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "20",
+      "entityCode": 40,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T2",
+      "entity": "Tuvalu",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "31",
+      "entityCode": 282,
+      "notes": [
+        "current_note_28"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T30",
+      "entity": "W. Kiribati (Gilbert Is. )",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "31",
+      "entityCode": 301,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T31",
+      "entity": "C. Kiribati (British Phoenix Is.)",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "31",
+      "entityCode": 31,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T32",
+      "entity": "E. Kiribati (Line Is.)",
+      "continent": "OC",
+      "zoneITU": "61,63",
+      "zoneCQ": "31",
+      "entityCode": 48,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T33",
+      "entity": "Banaba I. (Ocean I.)",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "31",
+      "entityCode": 490,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T5,6O",
+      "entity": "Somalia",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 232,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T7",
+      "entity": "San Marino",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 278,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "T8,",
+      "entity": "Palau",
+      "continent": "OC",
+      "zoneITU": "64",
+      "zoneCQ": "27",
+      "entityCode": 22,
+      "notes": [
+        "current_note_21"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TA-TC",
+      "entity": "Turkey",
+      "continent": "EU,AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 390,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TF",
+      "entity": "Iceland",
+      "continent": "EU",
+      "zoneITU": "17",
+      "zoneCQ": "40",
+      "entityCode": 242,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TG,TD",
+      "entity": "Guatemala",
+      "continent": "NA",
+      "zoneITU": "12",
+      "zoneCQ": "07",
+      "entityCode": 76,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TI,TE",
+      "entity": "Costa Rica",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 308,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TI9",
+      "entity": "Cocos I.",
+      "continent": "NA",
+      "zoneITU": "12",
+      "zoneCQ": "07",
+      "entityCode": 37,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TJ",
+      "entity": "Cameroon",
+      "continent": "AF",
+      "zoneITU": "47",
+      "zoneCQ": "36",
+      "entityCode": 406,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TK",
+      "entity": "Corsica",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 214,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TL",
+      "entity": "Central Africa",
+      "continent": "AF",
+      "zoneITU": "47",
+      "zoneCQ": "36",
+      "entityCode": 408,
+      "notes": [
+        "current_note_30"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TN",
+      "entity": "Republic of the Congo",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 412,
+      "notes": [
+        "current_note_31"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TR",
+      "entity": "Gabon",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 420,
+      "notes": [
+        "current_note_32",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TT",
+      "entity": "Chad",
+      "continent": "AF",
+      "zoneITU": "47",
+      "zoneCQ": "36",
+      "entityCode": 410,
+      "notes": [
+        "current_note_33"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TU",
+      "entity": "Cote d'Ivoire",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 428,
+      "notes": [
+        "current_note_34"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TY",
+      "entity": "Benin",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 416,
+      "notes": [
+        "current_note_35"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "TZ",
+      "entity": "Mali",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 442,
+      "notes": [
+        "current_note_36",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "UA-UI1-7,RA-RZ",
+      "entity": "European Russia",
+      "continent": "EU",
+      "zoneITU": "(E)",
+      "zoneCQ": "16",
+      "entityCode": 54,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "UA2,RA2",
+      "entity": "Kaliningrad",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "15",
+      "entityCode": 126,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "UA-UI8-0,RA-RZ",
+      "entity": "Asiatic Russia",
+      "continent": "AS",
+      "zoneITU": "(F)",
+      "zoneCQ": "(G)",
+      "entityCode": 15,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "UJ-UM",
+      "entity": "Uzbekistan",
+      "continent": "AS",
+      "zoneITU": "30",
+      "zoneCQ": "17",
+      "entityCode": 292,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "UN-UQ",
+      "entity": "Kazakhstan",
+      "continent": "AS",
+      "zoneITU": "29-31",
+      "zoneCQ": "17",
+      "entityCode": 130,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "UR-UZ,EM-EO",
+      "entity": "Ukraine",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "16",
+      "entityCode": 288,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V2",
+      "entity": "Antigua & Barbuda",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 94,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V3",
+      "entity": "Belize",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 66,
+      "notes": [
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V4",
+      "entity": "St. Kitts & Nevis",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 249,
+      "notes": [
+        "current_note_37",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V5",
+      "entity": "Namibia",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 464,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V6",
+      "entity": "Micronesia",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "27",
+      "entityCode": 173,
+      "notes": [
+        "current_note_38"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V7",
+      "entity": "Marshall Is.",
+      "continent": "OC",
+      "zoneITU": "65",
+      "zoneCQ": "31",
+      "entityCode": 168,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "V8",
+      "entity": "Brunei Darussalam",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 345,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VA-VG,VO,VY",
+      "entity": "Canada",
+      "continent": "NA",
+      "zoneITU": "(H)",
+      "zoneCQ": "01-05",
+      "entityCode": 1,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK,AX",
+      "entity": "Australia",
+      "continent": "OC",
+      "zoneITU": "(I)",
+      "zoneCQ": "29,30",
+      "entityCode": 150,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK0",
+      "entity": "Heard I.",
+      "continent": "AF",
+      "zoneITU": "68",
+      "zoneCQ": "39",
+      "entityCode": 111,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK0",
+      "entity": "Macquarie I.",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "30",
+      "entityCode": 153,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK9C",
+      "entity": "Cocos (Keeling) Is.",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "29",
+      "entityCode": 38,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK9L",
+      "entity": "Lord Howe I.",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "30",
+      "entityCode": 147,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK9M",
+      "entity": "Mellish Reef",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "30",
+      "entityCode": 171,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK9N",
+      "entity": "Norfolk I.",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "32",
+      "entityCode": 189,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK9W",
+      "entity": "Willis I.",
+      "continent": "OC",
+      "zoneITU": "55",
+      "zoneCQ": "30",
+      "entityCode": 303,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VK9X",
+      "entity": "Christmas I.",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "29",
+      "entityCode": 35,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP2E",
+      "entity": "Anguilla",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 12,
+      "notes": [
+        "current_note_37"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP2M",
+      "entity": "Montserrat",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 96,
+      "notes": [
+        "current_note_37"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP2V",
+      "entity": "British Virgin Is.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 65,
+      "notes": [
+        "current_note_37",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP5",
+      "entity": "Turks & Caicos Is.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 89,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP6",
+      "entity": "Pitcairn I.",
+      "continent": "OC",
+      "zoneITU": "63",
+      "zoneCQ": "32",
+      "entityCode": 172,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP6",
+      "entity": "Ducie I.",
+      "continent": "OC",
+      "zoneITU": "63",
+      "zoneCQ": "32",
+      "entityCode": 513,
+      "notes": [
+        "current_note_46",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP8",
+      "entity": "Falkland Is.",
+      "continent": "SA",
+      "zoneITU": "16",
+      "zoneCQ": "13",
+      "entityCode": 141,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP8,LU",
+      "entity": "South Georgia I.",
+      "continent": "SA",
+      "zoneITU": "73",
+      "zoneCQ": "13",
+      "entityCode": 235,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP8,LU",
+      "entity": "South Orkney Is.",
+      "continent": "SA",
+      "zoneITU": "73",
+      "zoneCQ": "13",
+      "entityCode": 238,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP8,LU",
+      "entity": "South Sandwich Is.",
+      "continent": "SA",
+      "zoneITU": "73",
+      "zoneCQ": "13",
+      "entityCode": 240,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP8,LU,CE9,HF0,4K1",
+      "entity": "South Shetland Is.",
+      "continent": "SA",
+      "zoneITU": "73",
+      "zoneCQ": "13",
+      "entityCode": 241,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VP9",
+      "entity": "Bermuda",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "05",
+      "entityCode": 64,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VQ9",
+      "entity": "Chagos Is.",
+      "continent": "AF",
+      "zoneITU": "41",
+      "zoneCQ": "39",
+      "entityCode": 33,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VR",
+      "entity": "Hong Kong",
+      "continent": "AS",
+      "zoneITU": "44",
+      "zoneCQ": "24",
+      "entityCode": 321,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VU",
+      "entity": "India",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 324,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VU4",
+      "entity": "Andaman & Nicobar Is.",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 11,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "VU7",
+      "entity": "Lakshadweep Is.",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 142,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XA-XI",
+      "entity": "Mexico",
+      "continent": "NA",
+      "zoneITU": "10",
+      "zoneCQ": "06",
+      "entityCode": 50,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XA4-XI4",
+      "entity": "Revillagigedo",
+      "continent": "NA",
+      "zoneITU": "10",
+      "zoneCQ": "06",
+      "entityCode": 204,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XT",
+      "entity": "Burkina Faso",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 480,
+      "notes": [
+        "current_note_39",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XU",
+      "entity": "Cambodia",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 312,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XW",
+      "entity": "Laos",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 143,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XX9",
+      "entity": "Macao",
+      "continent": "AS",
+      "zoneITU": "44",
+      "zoneCQ": "24",
+      "entityCode": 152,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "XY,XZ",
+      "entity": "Myanmar",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 309,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YA,T6",
+      "entity": "Afghanistan",
+      "continent": "AS",
+      "zoneITU": "40",
+      "zoneCQ": "21",
+      "entityCode": 3,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YB-YH",
+      "entity": "Indonesia",
+      "continent": "OC",
+      "zoneITU": "51,54",
+      "zoneCQ": "28",
+      "entityCode": 327,
+      "notes": [
+        "current_note_40",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YI",
+      "entity": "Iraq",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 333,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YJ",
+      "entity": "Vanuatu",
+      "continent": "OC",
+      "zoneITU": "56",
+      "zoneCQ": "32",
+      "entityCode": 158,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YK",
+      "entity": "Syria",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 384,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YL",
+      "entity": "Latvia",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "15",
+      "entityCode": 145,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YN,H6-7,HT",
+      "entity": "Nicaragua",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 86,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YO-YR",
+      "entity": "Romania",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "20",
+      "entityCode": 275,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YS,HU",
+      "entity": "El Salvador",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 74,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YT,YU",
+      "entity": "Serbia",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 296,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YV-YY,4M",
+      "entity": "Venezuela",
+      "continent": "SA",
+      "zoneITU": "12",
+      "zoneCQ": "09",
+      "entityCode": 148,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "YV0",
+      "entity": "Aves I.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 17,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "Z2",
+      "entity": "Zimbabwe",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "38",
+      "entityCode": 452,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "Z3",
+      "entity": "North Macedonia (Republic of)",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 502,
+      "notes": [
+        "current_note_41",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "Z6,",
+      "entity": "Republic of Kosovo",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 522,
+      "notes": [
+        "current_note_1",
+        "current_note_55"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "Z8",
+      "entity": "South Sudan (Republic of)",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "34",
+      "entityCode": 521,
+      "notes": [
+        "current_note_54"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZA",
+      "entity": "Albania",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 7,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZB2",
+      "entity": "Gibraltar",
+      "continent": "EU",
+      "zoneITU": "37",
+      "zoneCQ": "14",
+      "entityCode": 233,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZC4",
+      "entity": "UK Sovereign Base Areas on Cyprus",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 283,
+      "notes": [
+        "current_note_42",
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZD7",
+      "entity": "St. Helena",
+      "continent": "AF",
+      "zoneITU": "66",
+      "zoneCQ": "36",
+      "entityCode": 250,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZD8",
+      "entity": "Ascension I.",
+      "continent": "AF",
+      "zoneITU": "66",
+      "zoneCQ": "36",
+      "entityCode": 205,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZD9",
+      "entity": "Tristan da Cunha & Gough I.",
+      "continent": "AF",
+      "zoneITU": "66",
+      "zoneCQ": "38",
+      "entityCode": 274,
+      "notes": [],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZF",
+      "entity": "Cayman Is.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 69,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZK3",
+      "entity": "Tokelau Is.",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "31",
+      "entityCode": 270,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZL-ZM",
+      "entity": "New Zealand",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "32",
+      "entityCode": 170,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZL7",
+      "entity": "Chatham Is.",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "32",
+      "entityCode": 34,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZL8",
+      "entity": "Kermadec Is.",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "32",
+      "entityCode": 133,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZL9",
+      "entity": "New Zealand Subantarctic Islands",
+      "continent": "OC",
+      "zoneITU": "60",
+      "zoneCQ": "32",
+      "entityCode": 16,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZP",
+      "entity": "Paraguay",
+      "continent": "SA",
+      "zoneITU": "14",
+      "zoneCQ": "11",
+      "entityCode": 132,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZR-ZU",
+      "entity": "Republic of South Africa",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 462,
+      "notes": [
+        "qsl_service",
+        "third_party_traffic"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "ZS8",
+      "entity": "Prince Edward & Marion Is.",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 201,
+      "notes": [
+        "qsl_service"
+      ],
+      "isCurrent": true
+    },
+    {
+      "prefix": "",
+      "entity": "Blenheim Reef",
+      "continent": "AF",
+      "zoneITU": "41",
+      "zoneCQ": "39",
+      "entityCode": 23,
+      "notes": [
+        "deleted_note_2"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "",
+      "entity": "Geyser Reef",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 93,
+      "notes": [
+        "deleted_note_3"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "",
+      "entity": "Abu Ail Is.",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 2,
+      "notes": [
+        "deleted_note_4"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "1M,",
+      "entity": "Minerva Reef",
+      "continent": "OC",
+      "zoneITU": "62",
+      "zoneCQ": "32",
+      "entityCode": 178,
+      "notes": [
+        "deleted_note_1",
+        "deleted_note_5"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "4W",
+      "entity": "Yemen Arab Republic",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 154,
+      "notes": [
+        "deleted_note_6"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "7J1",
+      "entity": "Okino Tori-shima",
+      "continent": "AS",
+      "zoneITU": "45",
+      "zoneCQ": "27",
+      "entityCode": 194,
+      "notes": [
+        "deleted_note_7"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "8Z4",
+      "entity": "Saudi Arabia/Iraq Neutral Zone",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 226,
+      "notes": [
+        "deleted_note_8"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "8Z5,9K3",
+      "entity": "Kuwait/Saudi Arabia Neutral Zone",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 68,
+      "notes": [
+        "deleted_note_9"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "9S4",
+      "entity": "Saar",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 210,
+      "notes": [
+        "deleted_note_10"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "9U5",
+      "entity": "Ruanda-Urundi",
+      "continent": "AF",
+      "zoneITU": "52",
+      "zoneCQ": "36",
+      "entityCode": 208,
+      "notes": [
+        "deleted_note_11"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "AC3,",
+      "entity": "Sikkim",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 231,
+      "notes": [
+        "deleted_note_1",
+        "deleted_note_12"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "AC4,",
+      "entity": "Tibet",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "23",
+      "entityCode": 268,
+      "notes": [
+        "deleted_note_1",
+        "deleted_note_13"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "C9",
+      "entity": "Manchuria",
+      "continent": "AS",
+      "zoneITU": "33",
+      "zoneCQ": "24",
+      "entityCode": 164,
+      "notes": [
+        "deleted_note_14"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "CN2",
+      "entity": "Tangier",
+      "continent": "AF",
+      "zoneITU": "37",
+      "zoneCQ": "33",
+      "entityCode": 264,
+      "notes": [
+        "deleted_note_15"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "CR8",
+      "entity": "Damao, Diu",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 42,
+      "notes": [
+        "deleted_note_16"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "CR8",
+      "entity": "Goa",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 101,
+      "notes": [
+        "deleted_note_16"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "CR8,CR10",
+      "entity": "Portuguese Timor",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 200,
+      "notes": [
+        "deleted_note_17"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "DA-DM",
+      "entity": "Germany",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 81,
+      "notes": [
+        "deleted_note_18"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "DM,Y2-9",
+      "entity": "German Democratic Republic",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "14",
+      "entityCode": 229,
+      "notes": [
+        "deleted_note_19"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "EA9",
+      "entity": "Ifni",
+      "continent": "AF",
+      "zoneITU": "37",
+      "zoneCQ": "33",
+      "entityCode": 113,
+      "notes": [
+        "deleted_note_20"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "FF",
+      "entity": "French West Africa",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 59,
+      "notes": [
+        "deleted_note_21"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "FH,FB8",
+      "entity": "Comoros",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 39,
+      "notes": [
+        "deleted_note_22"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "FI8",
+      "entity": "French Indo-China",
+      "continent": "AS",
+      "zoneITU": "49",
+      "zoneCQ": "26",
+      "entityCode": 58,
+      "notes": [
+        "deleted_note_23"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "FN8",
+      "entity": "French India",
+      "continent": "AS",
+      "zoneITU": "41",
+      "zoneCQ": "22",
+      "entityCode": 67,
+      "notes": [
+        "deleted_note_24"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "FQ8",
+      "entity": "French Equatorial Africa",
+      "continent": "AF",
+      "zoneITU": "47,52",
+      "zoneCQ": "36",
+      "entityCode": 57,
+      "notes": [
+        "deleted_note_25"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "HK0",
+      "entity": "Bajo Nuevo",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 19,
+      "notes": [
+        "deleted_note_26"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "HK0,KP3,KS4",
+      "entity": "Serrana Bank & Roncador Cay",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 228,
+      "notes": [
+        "deleted_note_26"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "I1",
+      "entity": "Trieste",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 271,
+      "notes": [
+        "deleted_note_27"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "I5",
+      "entity": "Italian Somaliland",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 115,
+      "notes": [
+        "deleted_note_28"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "JZ0",
+      "entity": "Netherlands New Guinea",
+      "continent": "OC",
+      "zoneITU": "51",
+      "zoneCQ": "28",
+      "entityCode": 184,
+      "notes": [
+        "deleted_note_29"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "KH5K",
+      "entity": "Kingman Reef",
+      "continent": "OC",
+      "zoneITU": "61",
+      "zoneCQ": "31",
+      "entityCode": 134,
+      "notes": [
+        "deleted_note_30"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "KR6,8,JR6,KA6",
+      "entity": "Okinawa (Ryukyu Is.)",
+      "continent": "AS",
+      "zoneITU": "45",
+      "zoneCQ": "25",
+      "entityCode": 193,
+      "notes": [
+        "deleted_note_31"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "KS4",
+      "entity": "Swan Is.",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 261,
+      "notes": [
+        "deleted_note_32"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "KZ5",
+      "entity": "Canal Zone",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "07",
+      "entityCode": 28,
+      "notes": [
+        "deleted_note_33"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "OK-OM",
+      "entity": "Czechoslovakia",
+      "continent": "EU",
+      "zoneITU": "28",
+      "zoneCQ": "15",
+      "entityCode": 218,
+      "notes": [
+        "deleted_note_34"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "P2,VK9",
+      "entity": "Papua Territory",
+      "continent": "OC",
+      "zoneITU": "51",
+      "zoneCQ": "28",
+      "entityCode": 198,
+      "notes": [
+        "deleted_note_35"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "P2,VK9",
+      "entity": "Territory of New Guinea",
+      "continent": "OC",
+      "zoneITU": "51",
+      "zoneCQ": "28",
+      "entityCode": 267,
+      "notes": [
+        "deleted_note_35"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "PJ",
+      "entity": "Bonaire, Curacao",
+      "continent": "SA",
+      "zoneITU": "11",
+      "zoneCQ": "09",
+      "entityCode": 85,
+      "notes": [
+        "deleted_note_36"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "PJ",
+      "entity": "St. Maarten, Saba, St. Eustatius",
+      "continent": "NA",
+      "zoneITU": "11",
+      "zoneCQ": "08",
+      "entityCode": 255,
+      "notes": [
+        "deleted_note_36"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "PK1-3",
+      "entity": "Java",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 119,
+      "notes": [
+        "deleted_note_37"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "PK4",
+      "entity": "Sumatra",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 258,
+      "notes": [
+        "deleted_note_37"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "PK5",
+      "entity": "Netherlands Borneo",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 183,
+      "notes": [
+        "deleted_note_37"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "PK6",
+      "entity": "Celebe & Molucca Is.",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 30,
+      "notes": [
+        "deleted_note_37"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "R1/M",
+      "entity": "Malyj Vysotskij I.",
+      "continent": "EU",
+      "zoneITU": "29",
+      "zoneCQ": "16",
+      "entityCode": 151,
+      "notes": [
+        "deleted_note_52"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "ST0",
+      "entity": "Southern Sudan",
+      "continent": "AF",
+      "zoneITU": "47,48",
+      "zoneCQ": "34",
+      "entityCode": 244,
+      "notes": [
+        "deleted_note_38"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "UN1",
+      "entity": "Karelo-Finnish Republic",
+      "continent": "EU",
+      "zoneITU": "19",
+      "zoneCQ": "16",
+      "entityCode": 128,
+      "notes": [
+        "deleted_note_39"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VO",
+      "entity": "Newfoundland, Labrador",
+      "continent": "NA",
+      "zoneITU": "09",
+      "zoneCQ": "02,05",
+      "entityCode": 186,
+      "notes": [
+        "deleted_note_40"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VQ1,5H1",
+      "entity": "Zanzibar",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "37",
+      "entityCode": 307,
+      "notes": [
+        "deleted_note_41"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VQ6",
+      "entity": "British Somaliland",
+      "continent": "AF",
+      "zoneITU": "48",
+      "zoneCQ": "37",
+      "entityCode": 26,
+      "notes": [
+        "deleted_note_42"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VQ9",
+      "entity": "Aldabra",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 8,
+      "notes": [
+        "deleted_note_43"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VQ9",
+      "entity": "Desroches",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 44,
+      "notes": [
+        "deleted_note_43"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VQ9",
+      "entity": "Farquhar",
+      "continent": "AF",
+      "zoneITU": "53",
+      "zoneCQ": "39",
+      "entityCode": 55,
+      "notes": [
+        "deleted_note_43"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VS2,9M2",
+      "entity": "Malaya",
+      "continent": "AS",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 155,
+      "notes": [
+        "deleted_note_44"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VS4",
+      "entity": "Sarawak",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 220,
+      "notes": [
+        "deleted_note_44"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VS9A,P,S",
+      "entity": "People's Democratic Rep. of Yemen",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 243,
+      "notes": [
+        "deleted_note_45"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VS9H",
+      "entity": "Kuria Muria I.",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 139,
+      "notes": [
+        "deleted_note_46"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "VS9K",
+      "entity": "Kamaran Is.",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "21",
+      "entityCode": 127,
+      "notes": [
+        "deleted_note_47"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "ZC5",
+      "entity": "British North Borneo",
+      "continent": "OC",
+      "zoneITU": "54",
+      "zoneCQ": "28",
+      "entityCode": 25,
+      "notes": [
+        "deleted_note_44"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "ZC6,4X1",
+      "entity": "Palestine",
+      "continent": "AS",
+      "zoneITU": "39",
+      "zoneCQ": "20",
+      "entityCode": 196,
+      "notes": [
+        "deleted_note_48"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "ZD4",
+      "entity": "Gold Coast, Togoland",
+      "continent": "AF",
+      "zoneITU": "46",
+      "zoneCQ": "35",
+      "entityCode": 102,
+      "notes": [
+        "deleted_note_49"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "ZS0,1",
+      "entity": "Penguin Is.",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 493,
+      "notes": [
+        "deleted_note_50"
+      ],
+      "isCurrent": false
+    },
+    {
+      "prefix": "ZS9",
+      "entity": "Walvis Bay",
+      "continent": "AF",
+      "zoneITU": "57",
+      "zoneCQ": "38",
+      "entityCode": 488,
+      "notes": [
+        "deleted_note_51"
+      ],
+      "isCurrent": false
+    }
+  ]
+}

@@ -13,4 +13,14 @@ export interface QsoEntry {
   notes?: string;
   qslStatus?: string;
   qrzLogId?: string;
+  
+  // Award-related fields (computed on save)
+  dxccEntity?: number;     // DXCC entity code
+  cqZone?: number;         // CQ zone (1-40)
+  ituZone?: number;        // ITU zone (1-90)
+  continent?: string;      // Continent code (AF, AN, AS, EU, NA, OC, SA)
+  country?: string;        // Country/entity name
+  state?: string;          // US state code (for WAS)
+  grid?: string;           // Grid square (4 or 6 char)
+  iota?: string;           // IOTA reference (e.g., "EU-005")
 }

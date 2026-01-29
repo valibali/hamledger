@@ -16,6 +16,7 @@ export default {
     return {
       utcTime: '00:00:00',
       clockInterval: 0,
+      dataRefreshInterval: 0,
     };
   },
   computed: {
@@ -42,21 +43,23 @@ export default {
     this.updateUTCClock();
     this.clockInterval = window.setInterval(this.updateUTCClock, 1000);
     await this.propStore.updatePropagationData();
+    await this.loadLocalWeather();
 
-    // Frissítjük a propagációs adatokat 15 percenként
-    setInterval(
+    // Refresh propagation and weather data every 30 seconds
+    this.dataRefreshInterval = window.setInterval(
       () => {
         this.propStore.updatePropagationData();
+        this.loadLocalWeather();
       },
-      15 * 60 * 1000
+      30 * 1000
     );
-
-    // Betöltjük a helyi időjárást a config maidenhead locator alapján
-    await this.loadLocalWeather();
   },
   beforeUnmount() {
     if (this.clockInterval) {
       clearInterval(this.clockInterval);
+    }
+    if (this.dataRefreshInterval) {
+      clearInterval(this.dataRefreshInterval);
     }
   },
   methods: {

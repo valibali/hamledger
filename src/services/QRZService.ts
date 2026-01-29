@@ -87,6 +87,7 @@ export class QRZService extends OnlineStationService {
       grid: callsignElem.querySelector('grid')?.textContent || '',
       qth: callsignElem.querySelector('addr2')?.textContent || '',
       time_offset: parseInt(callsignElem.querySelector('GMTOffset')?.textContent || '0'),
+      state: callsignElem.querySelector('state')?.textContent || '',
     };
   }
 

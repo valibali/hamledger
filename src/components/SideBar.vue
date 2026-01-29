@@ -1,4 +1,6 @@
 <script lang="ts">
+import { useAwardsStore } from '../store/awards';
+
 interface SidebarItem {
   view: string;
   icon: string;
@@ -9,6 +11,7 @@ export default {
   name: 'SideBar',
   data() {
     return {
+      awardsStore: useAwardsStore(),
       currentView: 'qso',
       sidebarItems: [
         {
@@ -45,9 +48,19 @@ export default {
           @click="
             currentView = item.view;
             $emit('view-change', item.view);
+            if (item.view === 'awards') awardsStore.markAchievementsViewed();
           "
         >
-          <svg class="sidebar-icon" viewBox="0 0 192 192" v-html="item.icon"></svg>
+          <div class="sidebar-icon-wrapper">
+            <svg class="sidebar-icon" viewBox="0 0 192 192" v-html="item.icon"></svg>
+            <!-- Achievement badge for awards -->
+            <span 
+              v-if="item.view === 'awards' && awardsStore.unviewedCount > 0" 
+              class="achievement-badge"
+            >
+              {{ awardsStore.unviewedCount > 9 ? '9+' : awardsStore.unviewedCount }}
+            </span>
+          </div>
         </li>
       </ul>
     </nav>
@@ -110,5 +123,38 @@ export default {
 .sidebar-item:hover .sidebar-icon {
   transform: scale(1.1);
   fill: var(--main-color);
+}
+
+.sidebar-icon-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.achievement-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: #f44336;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 </style>

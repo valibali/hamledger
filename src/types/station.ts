@@ -7,6 +7,7 @@ export interface BaseStationData {
   grid?: string;
   qth: string;
   time_offset?: number;
+  state?: string;
 }
 
 export interface QRZData extends BaseStationData {
