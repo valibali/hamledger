@@ -2082,3 +2082,16 @@ ipcMain.handle('system:openFolder', async (_, filePath: string) => {
     };
   }
 });
+
+ipcMain.handle('system:openExternal', async (_, url: string) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening external URL:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});

@@ -67,5 +67,10 @@
     "file": "HamLedger.log",
     "maxSize": 5242880,
     "maxFiles": 5
+  },
+  "contest": {
+    "focusLockDisabled": false,
+    "showFocusToggle": false,
+    "activeSession": null
   }
 }

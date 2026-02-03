@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { toRaw } from 'vue';
 import { CallsignHelper } from '../utils/callsign';
 import { useRigStore } from './rig';
 import { defaultContestRules } from '../services/contestRules';
@@ -9,8 +10,11 @@ import type {
   ContestQso,
   ContestSession,
   ContestStats,
+  ContestSetup,
+  ContestSessionSnapshot,
 } from '../types/contest';
 import { useQrzStore } from './qrz';
+import '../types/electron';
 
 interface ContestState {
   activeSession: ContestSession | null;
@@ -23,32 +27,70 @@ interface ContestState {
   scoringState: {
     points: number;
     multipliers: string[];
+    score: number;
   };
   activeView: 'contest' | 'voiceKeyer' | 'review';
+  setupPending: boolean;
+  sessionElapsedMs: number;
+  sessionLastStartedAt: number | null;
 }
 
 const contestProfiles: ContestProfile[] = [
   {
-    id: 'generic-serial',
-    name: 'Generic Serial',
+    id: 'dx',
+    name: 'DX Log',
+    exchangeType: 'none',
+    exchangeFields: [],
+    multiplierField: 'country',
+  },
+  {
+    id: 'dxpedition',
+    name: 'DXpedition',
+    exchangeType: 'none',
+    exchangeFields: [],
+    multiplierField: 'country',
+  },
+  {
+    id: 'dxserial',
+    name: 'DX Serial',
     exchangeType: 'serial',
     exchangeFields: [
       { key: 'rstRecv', label: 'RST R', placeholder: '59', required: true },
       { key: 'serialRecv', label: 'Serial R', placeholder: '001', type: 'number', required: true },
+      { key: 'exchangeRecv', label: 'Exch R', placeholder: 'Loc/Region', type: 'text' },
     ],
     serialStartsAt: 1,
     multiplierField: 'country',
   },
   {
-    id: 'region',
-    name: 'Region/State',
-    exchangeType: 'region',
+    id: 'dxsatellit',
+    name: 'DX Satellite',
+    exchangeType: 'custom',
     exchangeFields: [
-      { key: 'rstRecv', label: 'RST R', placeholder: '59', required: true },
-      { key: 'region', label: 'Region', placeholder: 'CA/NY/EA', type: 'text', required: true },
+      { key: 'exchangeRecv', label: 'Grid', placeholder: 'JN58', type: 'text', validate: 'grid' },
+    ],
+    multiplierField: 'grid',
+  },
+  {
+    id: 'vhfdx',
+    name: 'VHF DX',
+    exchangeType: 'custom',
+    exchangeFields: [
+      { key: 'exchangeRecv', label: 'Grid', placeholder: 'JN58', type: 'text', validate: 'grid' },
+    ],
+    multiplierField: 'grid',
+  },
+  {
+    id: 'vhfserial',
+    name: 'VHF Serial',
+    exchangeType: 'serial',
+    exchangeFields: [
+      { key: 'rstRecv', label: 'RST R', placeholder: '59', required: false },
+      { key: 'serialRecv', label: 'Serial R', placeholder: '001', type: 'number', required: true },
+      { key: 'exchangeRecv', label: 'Grid', placeholder: 'JN58', type: 'text', validate: 'grid' },
     ],
     serialStartsAt: 1,
-    multiplierField: 'region',
+    multiplierField: 'grid',
   },
 ];
 
@@ -83,22 +125,37 @@ export const useContestStore = defineStore('contest', {
     qsoDraft: createDraft(),
     recentQsos: [],
     stats: createEmptyStats(),
-    contestProfile: contestProfiles[0],
-    serialCounter: contestProfiles[0].serialStartsAt || 1,
+    contestProfile: contestProfiles.find(profile => profile.id === 'dxserial') || contestProfiles[0],
+    serialCounter:
+      contestProfiles.find(profile => profile.id === 'dxserial')?.serialStartsAt || 1,
     scoringState: {
       points: 0,
       multipliers: [],
+      score: 0,
     },
     activeView: 'contest',
+    setupPending: false,
+    sessionElapsedMs: 0,
+    sessionLastStartedAt: null,
   }),
 
   getters: {
     profiles(): ContestProfile[] {
       return contestProfiles;
     },
+    sessionElapsed(state): number {
+      if (state.activeSession?.status === 'running' && state.sessionLastStartedAt) {
+        return state.sessionElapsedMs + (Date.now() - state.sessionLastStartedAt);
+      }
+      return state.sessionElapsedMs;
+    },
     isDraftValid(state): boolean {
       if (!state.qsoDraft.callsign) return false;
       if (!CallsignHelper.isValidCallsign(state.qsoDraft.callsign)) return false;
+
+      if (state.qsoDraft.exchange.serialSent && !/^[0-9]+$/.test(state.qsoDraft.exchange.serialSent)) {
+        return false;
+      }
 
       return state.contestProfile.exchangeFields.every(field => {
         const value =
@@ -106,6 +163,10 @@ export const useContestStore = defineStore('contest', {
 
         if (field.required && (!value || value.trim() === '')) return false;
         if (field.type === 'number' && value && !/^[0-9]+$/.test(value)) return false;
+        if (field.validate === 'grid' && value) {
+          const normalized = value.trim().toUpperCase();
+          if (!(normalized.length === 4 || normalized.length === 6)) return false;
+        }
         return true;
       });
     },
@@ -122,6 +183,9 @@ export const useContestStore = defineStore('contest', {
   },
 
   actions: {
+    setSessions(sessions: ContestSession[]) {
+      this.sessions = sessions;
+    },
     setActiveView(view: 'contest' | 'voiceKeyer' | 'review') {
       this.activeView = view;
     },
@@ -132,30 +196,184 @@ export const useContestStore = defineStore('contest', {
       this.serialCounter = profile.serialStartsAt || 1;
       this.clearDraft();
     },
-    enterContestMode() {
-      if (this.activeSession) {
-        this.exitContestMode();
+    loadSessionSnapshot(snapshot: ContestSessionSnapshot) {
+      const profile = contestProfiles.find(item => item.id === snapshot.session.profileId);
+      if (profile) {
+        this.contestProfile = profile;
       }
-
-      const sessionId = `contest-${Date.now()}`;
-      this.activeSession = {
-        id: sessionId,
-        profileId: this.contestProfile.id,
-        startedAt: new Date().toISOString(),
-        qsos: [],
-      };
-
-      this.serialCounter = this.contestProfile.serialStartsAt || 1;
-      this.scoringState = { points: 0, multipliers: [] };
+      this.activeSession = snapshot.session;
+      this.sessionElapsedMs = snapshot.sessionElapsedMs;
+      this.sessionLastStartedAt = snapshot.sessionLastStartedAt;
+      this.serialCounter = snapshot.serialCounter;
+      this.scoringState = snapshot.scoringState;
+      if (this.scoringState.score === undefined) {
+        this.scoringState.score = 0;
+      }
+      this.recentQsos = snapshot.session.qsos.slice(-20).reverse();
+      this.stats = createEmptyStats();
+      this.clearDraft();
+      this.refreshStats();
+      this.setupPending = false;
+    },
+    async persistActiveSession() {
+      try {
+        const settings = await window.electronAPI.loadSettings();
+        if (!settings) return;
+        const nextSettings = { ...settings } as Record<string, unknown>;
+        const contestSettings = { ...(nextSettings.contest as Record<string, unknown> | undefined) };
+        const safeClone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+        const activeSessionRaw = this.activeSession ? safeClone(toRaw(this.activeSession)) : null;
+        const sessionsRaw = safeClone(toRaw(this.sessions));
+        const scoringStateRaw = safeClone(toRaw(this.scoringState));
+        if (this.activeSession) {
+          contestSettings.activeSession = {
+            session: activeSessionRaw,
+            sessionElapsedMs: this.sessionElapsedMs,
+            sessionLastStartedAt: this.sessionLastStartedAt,
+            serialCounter: this.serialCounter,
+            scoringState: scoringStateRaw,
+          } satisfies ContestSessionSnapshot;
+        } else {
+          contestSettings.activeSession = null;
+        }
+        contestSettings.sessions = sessionsRaw;
+        nextSettings.contest = contestSettings;
+        await window.electronAPI.saveSettings(nextSettings);
+      } catch (error) {
+        console.warn('Failed to persist contest session', error);
+      }
+    },
+    setSetupPending(value: boolean) {
+      this.setupPending = value;
+    },
+    enterContestMode() {
+      if (this.activeSession && this.activeSession.status !== 'closed') {
+        this.setupPending = false;
+        return;
+      }
+      this.exitContestMode();
+      this.setupPending = true;
+      this.sessionElapsedMs = 0;
+      this.sessionLastStartedAt = null;
       this.stats = createEmptyStats();
       this.recentQsos = [];
+      this.scoringState = { points: 0, multipliers: [], score: 0 };
       this.clearDraft();
     },
     exitContestMode() {
+      if (!this.activeSession) {
+        this.setupPending = false;
+        return;
+      }
+      if (this.activeSession.status === 'running') {
+        this.pauseSession();
+      }
+      this.activeSession.status =
+        this.activeSession.status === 'running' ? 'paused' : this.activeSession.status;
+      this.setupPending = false;
+      void this.persistActiveSession();
+    },
+    createSession(setup: ContestSetup, profileIdOverride?: string) {
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = String(now.getFullYear());
+      const sessionId = `contest-${day}${month}${year}`;
+      const profileId =
+        profileIdOverride ||
+        {
+          DX: 'dx',
+          DXPEDITION: 'dxpedition',
+          DXSERIAL: 'dxserial',
+          DXSATELLIT: 'dxsatellit',
+          VHFDX: 'vhfdx',
+          VHFSERIAL: 'vhfserial',
+        }[setup.logType] || 'dx';
+      this.activeSession = {
+        id: sessionId,
+        profileId,
+        startedAt: undefined,
+        qsos: [],
+        status: 'idle',
+        setup,
+      };
+      this.setContestProfile(profileId);
+      const startSerial = Number(setup.serialSentStart);
+      if (!Number.isNaN(startSerial) && startSerial > 0) {
+        this.serialCounter = startSerial;
+      }
+      this.sessionElapsedMs = 0;
+      this.sessionLastStartedAt = null;
+      this.stats = createEmptyStats();
+      this.recentQsos = [];
+      this.scoringState = { points: 0, multipliers: [], score: 0 };
+      this.clearDraft();
+      this.setupPending = false;
+      void this.persistActiveSession();
+    },
+    updateSessionSetup(setup: ContestSetup) {
       if (!this.activeSession) return;
+      this.activeSession.setup = setup;
+      const startSerial = Number(setup.serialSentStart);
+      if (!Number.isNaN(startSerial) && startSerial > 0 && this.activeSession.qsos.length === 0) {
+        this.serialCounter = startSerial;
+      }
+      this.clearDraft();
+      void this.persistActiveSession();
+    },
+    startSession() {
+      if (!this.activeSession) return;
+      if (this.activeSession.status === 'running') return;
+      if (!this.activeSession.startedAt) {
+        this.activeSession.startedAt = new Date().toISOString();
+      }
+      this.activeSession.status = 'running';
+      this.sessionLastStartedAt = Date.now();
+      void this.persistActiveSession();
+    },
+    pauseSession() {
+      if (!this.activeSession || this.activeSession.status !== 'running') return;
+      if (this.sessionLastStartedAt) {
+        this.sessionElapsedMs += Date.now() - this.sessionLastStartedAt;
+      }
+      this.sessionLastStartedAt = null;
+      this.activeSession.status = 'paused';
+      void this.persistActiveSession();
+    },
+    stopSession() {
+      if (!this.activeSession) return;
+      if (this.activeSession.status === 'running') {
+        this.pauseSession();
+      }
+      this.activeSession.status = 'stopped';
+      this.activeSession.endedAt = new Date().toISOString();
+      void this.persistActiveSession();
+    },
+    closeSession() {
+      if (!this.activeSession) return;
+      if (this.activeSession.status === 'running') {
+        this.pauseSession();
+      }
+      this.activeSession.status = 'closed';
       this.activeSession.endedAt = new Date().toISOString();
       this.sessions.unshift(this.activeSession);
       this.activeSession = null;
+      this.setupPending = false;
+      void this.persistActiveSession();
+    },
+    loadArchivedSession(session: ContestSession) {
+      this.activeSession = { ...session, status: 'paused' };
+      const startedAt = session.startedAt ? new Date(session.startedAt).getTime() : 0;
+      const endedAt = session.endedAt ? new Date(session.endedAt).getTime() : Date.now();
+      this.sessionElapsedMs = startedAt ? Math.max(0, endedAt - startedAt) : 0;
+      this.sessionLastStartedAt = null;
+      this.serialCounter = this.contestProfile.serialStartsAt || 1;
+      this.scoringState = { points: 0, multipliers: [], score: 0 };
+      this.recentQsos = session.qsos.slice(-20).reverse();
+      this.stats = createEmptyStats();
+      this.clearDraft();
+      this.refreshStats();
+      void this.persistActiveSession();
     },
     setDraftCallsign(callsign: string) {
       this.qsoDraft.callsign = callsign.toUpperCase();
@@ -183,16 +401,31 @@ export const useContestStore = defineStore('contest', {
           exchange[field.key] = '';
         }
       });
-      exchange.serialSent = String(currentSerial).padStart(3, '0');
+      if (this.contestProfile.exchangeType !== 'none') {
+        const startSerial = this.activeSession?.setup.serialSentStart;
+        const serial =
+          startSerial && /^[0-9]+$/.test(startSerial)
+            ? startSerial
+            : String(currentSerial).padStart(3, '0');
+        exchange.serialSent = serial;
+      }
+      if (!exchange.exchangeSent) {
+        exchange.exchangeSent = this.activeSession?.setup.sentExchange || '';
+      }
+      if (!exchange.exchangeRecv) {
+        exchange.exchangeRecv = '';
+      }
       this.qsoDraft.exchange = exchange;
     },
     logQso() {
-      if (!this.activeSession) return;
+      if (!this.activeSession || this.activeSession.status !== 'running') return;
       if (!this.isDraftValid) return;
 
       const rigStore = useRigStore();
       const now = new Date();
-      const serialSent = this.serialCounter;
+      const serialSent = this.qsoDraft.exchange.serialSent
+        ? Number(this.qsoDraft.exchange.serialSent)
+        : this.serialCounter;
       const serialRecv = this.qsoDraft.exchange.serialRecv
         ? Number(this.qsoDraft.exchange.serialRecv)
         : undefined;
@@ -213,9 +446,11 @@ export const useContestStore = defineStore('contest', {
       };
 
       const points = defaultContestRules.computePoints(qso, this.activeSession);
+      const multiplierFactor = defaultContestRules.computeMultiplierFactor(qso, this.activeSession);
       const mult = defaultContestRules.computeMultipliers(qso, this.activeSession);
 
       qso.points = points;
+      qso.multiplierFactor = multiplierFactor;
       qso.isMult = mult.isMult;
       qso.multValue = mult.value;
 
@@ -223,6 +458,13 @@ export const useContestStore = defineStore('contest', {
       this.recentQsos = this.activeSession.qsos.slice(-20).reverse();
 
       this.scoringState.points += points;
+      this.scoringState.score += points * multiplierFactor;
+      if (multiplierFactor > 1) {
+        const value = String(multiplierFactor);
+        if (!this.scoringState.multipliers.includes(value)) {
+          this.scoringState.multipliers.push(value);
+        }
+      }
       if (mult.isMult && mult.value !== undefined) {
         const value = String(mult.value).toUpperCase();
         if (!this.scoringState.multipliers.includes(value)) {
@@ -231,7 +473,11 @@ export const useContestStore = defineStore('contest', {
       }
 
       if (this.contestProfile.exchangeType === 'serial') {
-        this.serialCounter += 1;
+        if (!Number.isNaN(serialSent) && serialSent >= this.serialCounter) {
+          this.serialCounter = serialSent + 1;
+        } else {
+          this.serialCounter += 1;
+        }
       }
 
       this.refreshStats();
@@ -239,6 +485,7 @@ export const useContestStore = defineStore('contest', {
 
       const qrzStore = useQrzStore();
       qrzStore.enqueueLookup(qso.callsign);
+      void this.persistActiveSession();
     },
     refreshStats() {
       if (!this.activeSession) return;
@@ -262,8 +509,20 @@ export const useContestStore = defineStore('contest', {
         buckets[bucket] += 1;
       });
 
-      const multipliersCount = this.scoringState.multipliers.length;
-      const estimatedPoints = this.scoringState.points;
+      const estimatedPoints = qsos.reduce((sum, qso) => sum + (qso.points || 0), 0);
+      const multiplierSet = new Set<string>();
+      const scoreSum = qsos.reduce((sum, qso) => {
+        const factor = defaultContestRules.computeMultiplierFactor(qso, this.activeSession);
+        qso.multiplierFactor = factor;
+        if (factor > 1) {
+          multiplierSet.add(String(factor));
+        }
+        return sum + (qso.points || 0) * factor;
+      }, 0);
+      this.scoringState.points = estimatedPoints;
+      this.scoringState.multipliers = Array.from(multiplierSet);
+      this.scoringState.score = scoreSum;
+      const multipliersCount = multiplierSet.size;
 
       this.stats = {
         totalQsos: total,
@@ -275,7 +534,7 @@ export const useContestStore = defineStore('contest', {
         },
         sparkline: buckets,
         estimatedPoints,
-        estimatedScore: multipliersCount ? estimatedPoints * multipliersCount : estimatedPoints,
+        estimatedScore: scoreSum || estimatedPoints,
       };
     },
   },

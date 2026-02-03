@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Contest Catalog",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "name",
+      "section",
+      "rulesUrl",
+      "rulesSummary",
+      "rulesText",
+      "sponsor",
+      "description",
+      "suggestedProfileId",
+      "defaultSentExchange"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "name": { "type": "string", "minLength": 1 },
+      "section": { "type": "string" },
+      "rulesUrl": { "type": ["string", "null"] },
+      "rulesSummary": { "type": "string" },
+      "sponsor": { "type": "string" },
+      "description": { "type": "string" },
+      "suggestedProfileId": { "type": "string", "minLength": 1 },
+      "defaultSentExchange": { "type": "string" }
+    }
+  }
+}

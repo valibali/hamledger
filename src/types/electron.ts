@@ -89,6 +89,7 @@ declare global {
       saveAdifFile: (
         content: string
       ) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+      openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       loadSettings: () => Promise<Record<string, unknown> | null>;
       saveSettings: (settings: Record<string, unknown>) => Promise<void>;
       updateQso: (qso: QsoEntry) => Promise<UpdateResponse>;

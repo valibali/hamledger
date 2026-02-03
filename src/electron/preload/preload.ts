@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   generateQslLabels: (labelDataArray: QslLabelData[]) => ipcRenderer.invoke('qsl:generateLabels', labelDataArray),
   openFolder: (filePath: string) => ipcRenderer.invoke('system:openFolder', filePath),
+  openExternal: (url: string) => ipcRenderer.invoke('system:openExternal', url),
   catSetPTT: (enabled: boolean) => ipcRenderer.invoke('cat:setPTT', enabled),
   serialListPorts: () => ipcRenderer.invoke('serial:listPorts'),
   serialOpen: (path: string, baudRate: number) =>

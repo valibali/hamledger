@@ -256,6 +256,28 @@
         }
       }
     },
+    "contest": {
+      "type": "object",
+      "description": "Contest mode settings",
+      "properties": {
+        "focusLockDisabled": {
+          "type": "boolean",
+          "description": "Disable auto focus in contest entry",
+          "default": false
+        },
+        "showFocusToggle": {
+          "type": "boolean",
+          "description": "Show focus toggle in contest entry",
+          "default": false
+        },
+        "activeSession": {
+          "type": ["object", "null"],
+          "description": "Persisted contest session snapshot",
+          "default": null,
+          "additionalProperties": true
+        }
+      }
+    },
     "wsjtx": {
       "type": "object",
       "description": "WSJT-X integration settings",

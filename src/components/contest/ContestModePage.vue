@@ -8,10 +8,13 @@ import ContestStatsSparkline from './ContestStatsSparkline.vue';
 import ContestDxClusterStrip from './ContestDxClusterStrip.vue';
 import GraylineMap from './GraylineMap.vue';
 import DxCluster from '../DxCluster.vue';
+import ContestSetupModal from './ContestSetupModal.vue';
 import { usePropClockWeather } from '../../composables/usePropClockWeather';
 import { usePropagationColors } from '../../composables/usePropagationColors';
 import { CallsignHelper } from '../../utils/callsign';
 import { configHelper } from '../../utils/configHelper';
+import type { ContestSetup, ContestSession, ContestSessionSnapshot } from '../../types/contest';
+import '../../types/electron';
 
 const contestStore = useContestStore();
 const rigStore = useRigStore();
@@ -29,16 +32,25 @@ const callsignIndex = ref<string[]>([]);
 const bigramIndex = ref<Map<string, string[]>>(new Map());
 let timerHandle: number | undefined;
 let statsHandle: number | undefined;
+const stopConfirmOpen = ref(false);
+const resumeModalOpen = ref(false);
+const resumeSnapshot = ref<ContestSessionSnapshot | null>(null);
+const setupSource = ref<'new' | 'reconfig' | null>(null);
+const newSessionModalOpen = ref(false);
+const sessionsModalOpen = ref(false);
 
 const activeSession = computed(() => contestStore.activeSession);
 const draft = computed(() => contestStore.qsoDraft);
-const profiles = computed(() => contestStore.profiles);
 const { utcTime, propStore, weatherStore } = usePropClockWeather();
 const { kIndexColor, aIndexColor, sfiColor } = usePropagationColors();
 const isCatOnline = computed(() => rigStore.isConnected);
 
 const sessionLabel = computed(() => {
   return activeSession.value?.id ?? 'No active session';
+});
+
+const contestTitle = computed(() => {
+  return activeSession.value?.setup.logType || 'No contest selected';
 });
 
 const qsos = computed(() => activeSession.value?.qsos ?? []);
@@ -240,12 +252,7 @@ const focusCallsign = () => {
 };
 
 const formatSessionClock = () => {
-  if (!activeSession.value) {
-    sessionClock.value = '00:00:00';
-    return;
-  }
-  const start = new Date(activeSession.value.startedAt).getTime();
-  const diff = Math.max(0, Date.now() - start);
+  const diff = contestStore.sessionElapsed;
   const hours = Math.floor(diff / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
@@ -274,10 +281,6 @@ const isEditableElement = (el: Element | null) => {
 const isSuggestionElement = (el: Element | null) => {
   if (!el) return false;
   return Boolean((el as HTMLElement).closest('.callsign-suggest'));
-};
-
-const setSerialRecvRef = (el: Element | null) => {
-  serialRecvInputRef.value = el as HTMLInputElement | null;
 };
 
 const focusSuggestion = (index: number) => {
@@ -458,9 +461,185 @@ const handleCallsignKeydown = (event: KeyboardEvent) => {
 
 const handleLogQso = () => {
   if (!contestStore.isDraftValid) return;
+  if (!contestStore.activeSession || contestStore.activeSession.status !== 'running') return;
   suggestionsOpen.value = false;
   contestStore.logQso();
   focusCallsign();
+};
+
+const handleSetupSave = (setup: ContestSetup, profileId: string) => {
+  if (setupSource.value === 'reconfig' && contestStore.activeSession) {
+    contestStore.updateSessionSetup(setup);
+    contestStore.setContestProfile(profileId);
+    setupSource.value = null;
+    return;
+  }
+  contestStore.createSession(setup, profileId);
+  contestStore.startSession();
+  setupSource.value = null;
+};
+
+const handleSetupCancel = () => {
+  contestStore.setSetupPending(false);
+  setupSource.value = null;
+};
+
+const handleStartSession = () => {
+  if (!contestStore.activeSession) {
+    setupSource.value = 'new';
+    contestStore.setSetupPending(true);
+    return;
+  }
+  contestStore.startSession();
+};
+
+const normalizeSnapshot = (snapshot: ContestSessionSnapshot): ContestSessionSnapshot => {
+  const sessionElapsedMs = snapshot.sessionElapsedMs ?? 0;
+  const lastStarted = snapshot.sessionLastStartedAt;
+  if (snapshot.session.status === 'running' && lastStarted) {
+    return {
+      ...snapshot,
+      session: { ...snapshot.session, status: 'paused' },
+      sessionElapsedMs: sessionElapsedMs + (Date.now() - lastStarted),
+      sessionLastStartedAt: null,
+    };
+  }
+  return snapshot;
+};
+
+const resumeSession = () => {
+  if (!resumeSnapshot.value) return;
+  contestStore.loadSessionSnapshot(resumeSnapshot.value);
+  void contestStore.persistActiveSession();
+  resumeSnapshot.value = null;
+  resumeModalOpen.value = false;
+};
+
+const startNewSession = () => {
+  resumeSnapshot.value = null;
+  resumeModalOpen.value = false;
+  setupSource.value = 'new';
+  contestStore.setSetupPending(true);
+  void contestStore.persistActiveSession();
+};
+
+const createDefaultSetup = (): ContestSetup => ({
+  logType: 'DX',
+  modeCategory: 'MIXED',
+  operatorCategory: 'SINGLE-OP',
+  assistedCategory: 'UNASSISTED',
+  powerCategory: 'LOW',
+  bandCategory: 'ALL',
+  overlayCategory: 'NONE',
+  sentExchange: '',
+  serialSentStart: '001',
+  multipliers: [],
+  startTime: new Date().toISOString(),
+});
+
+const startDefaultSession = () => {
+  contestStore.createSession(createDefaultSetup());
+  contestStore.startSession();
+  newSessionModalOpen.value = false;
+};
+
+const openSetupFromNewSession = () => {
+  newSessionModalOpen.value = false;
+  setupSource.value = 'new';
+  contestStore.setSetupPending(true);
+};
+
+const openSetupFromTopbar = () => {
+  if (!contestStore.activeSession) {
+    setupSource.value = 'new';
+  } else {
+    setupSource.value = 'reconfig';
+  }
+  contestStore.setSetupPending(true);
+};
+
+const openSessionsModal = () => {
+  sessionsModalOpen.value = true;
+};
+
+const closeSessionsModal = () => {
+  sessionsModalOpen.value = false;
+};
+
+const loadArchivedSession = (sessionId: string) => {
+  const session = contestStore.sessions.find(item => item.id === sessionId);
+  if (!session) return;
+  contestStore.loadArchivedSession(session);
+  sessionsModalOpen.value = false;
+};
+
+const exportSessionAdif = async (sessionId: string) => {
+  const session = contestStore.sessions.find(item => item.id === sessionId);
+  if (!session) return;
+  const qsos = session.qsos.map(qso => ({
+    callsign: qso.callsign,
+    band: qso.band,
+    freqRx: 0,
+    mode: qso.mode,
+    rstr: qso.rstRecv,
+    rstt: qso.rstSent,
+    datetime: qso.datetime,
+    remark: [
+      qso.exchange.serialRecv ? `RR ${qso.exchange.serialRecv}` : null,
+      qso.exchange.exchangeRecv ? `EXR ${qso.exchange.exchangeRecv}` : null,
+      qso.exchange.serialSent ? `RS ${qso.exchange.serialSent}` : null,
+      qso.exchange.exchangeSent ? `EXS ${qso.exchange.exchangeSent}` : null,
+    ]
+      .filter(Boolean)
+      .join(' | '),
+  }));
+  const result = await qsoStore.exportAdif(qsos as any);
+  if (!result.success) {
+    alert(result.error || 'ADIF export failed');
+  }
+};
+
+const printSessionStats = (sessionId: string) => {
+  const session = contestStore.sessions.find(item => item.id === sessionId);
+  if (!session) return;
+  const totalQsos = session.qsos.length;
+  const points = session.qsos.reduce((sum, qso) => sum + (qso.points || 0), 0);
+  const score = session.qsos.reduce(
+    (sum, qso) => sum + (qso.points || 0) * (qso.multiplierFactor || 1),
+    0
+  );
+  const mults = new Set(
+    session.qsos
+      .map(qso => String(qso.multiplierFactor || 1))
+      .filter(value => value !== '1')
+  );
+  const win = window.open('', '_blank', 'width=600,height=700');
+  if (!win) return;
+  win.document.write(`
+    <html><head><title>Contest Session Stats</title></head><body>
+    <h2>${session.setup.logType}</h2>
+    <p>Session: ${session.id}</p>
+    <p>Start: ${session.startedAt || 'n/a'}</p>
+    <p>End: ${session.endedAt || 'n/a'}</p>
+    <p>QSOs: ${totalQsos}</p>
+    <p>Points: ${points}</p>
+    <p>Multipliers: ${mults.size}</p>
+    <p>Score: ${score}</p>
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  win.print();
+};
+
+const requestCloseSession = () => {
+  if (!contestStore.activeSession) return;
+  stopConfirmOpen.value = true;
+};
+
+const confirmCloseSession = () => {
+  stopConfirmOpen.value = false;
+  contestStore.closeSession();
 };
 
 onMounted(async () => {
@@ -476,10 +655,38 @@ onMounted(async () => {
     // Ignore config load errors, contest mode can still function
   }
 
+  try {
+    const settings = await window.electronAPI.loadSettings();
+    const savedSessions = (settings as any)?.contest?.sessions as ContestSession[] | undefined;
+    if (savedSessions) {
+      contestStore.setSessions(savedSessions);
+    }
+  } catch {
+    // Ignore session load errors
+  }
+
   focusLockDisabled.value =
     configHelper.getSetting(['contest'], 'focusLockDisabled') === true ||
     localStorage.getItem('hamledger:contestFocusLockDisabled') === '1';
   showFocusToggle.value = configHelper.getSetting(['contest'], 'showFocusToggle') === true;
+
+  try {
+    const settings = await window.electronAPI.loadSettings();
+    const snapshot = (settings as any)?.contest?.activeSession as ContestSessionSnapshot | null;
+    if (!contestStore.activeSession && snapshot?.session && snapshot.session.status !== 'closed') {
+      resumeSnapshot.value = normalizeSnapshot(snapshot);
+      resumeModalOpen.value = true;
+      contestStore.setSetupPending(false);
+    } else if (!contestStore.activeSession) {
+      newSessionModalOpen.value = true;
+      contestStore.setSetupPending(false);
+    }
+  } catch {
+    if (!contestStore.activeSession) {
+      newSessionModalOpen.value = true;
+      contestStore.setSetupPending(false);
+    }
+  }
 
   timerHandle = window.setInterval(formatSessionClock, 1000);
   statsHandle = window.setInterval(() => contestStore.refreshStats(), 5000);
@@ -518,20 +725,39 @@ watch(
   <div class="contest-mode">
     <div class="contest-topbar panel">
       <div class="topbar-left">
-        <div class="profile-select">
-          <label>Contest</label>
-          <select
-            :value="contestStore.contestProfile.id"
-            @change="contestStore.setContestProfile(($event.target as HTMLSelectElement).value)"
-          >
-            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
-              {{ profile.name }}
-            </option>
-          </select>
-        </div>
         <div class="session-info">
-          <span class="session-label">Session: {{ sessionLabel }}</span>
+          <span class="session-label">
+            {{ contestTitle }}
+            <button class="setup-cog" type="button" title="Contest setup" @click="openSetupFromTopbar">
+              ⚙
+            </button>
+          </span>
+          <span class="session-sub">Session: {{ sessionLabel }}</span>
           <span class="session-timer">{{ sessionClock }}</span>
+        </div>
+        <div class="session-controls">
+          <button
+            class="session-btn"
+            :disabled="contestStore.activeSession?.status === 'running'"
+            @click="handleStartSession"
+          >
+            Start
+          </button>
+          <button
+            class="session-btn"
+            :disabled="contestStore.activeSession?.status !== 'running'"
+            @click="contestStore.pauseSession"
+          >
+            Pause
+          </button>
+          <button
+            class="session-btn"
+            :disabled="!contestStore.activeSession || contestStore.activeSession.status === 'closed'"
+            @click="requestCloseSession"
+          >
+            Stop
+          </button>
+          <button class="session-btn" type="button" @click="openSessionsModal">Sessions</button>
         </div>
       </div>
       <div class="topbar-center">
@@ -609,6 +835,15 @@ watch(
                 Log (Enter)
               </button>
               <button class="clear-btn" @click="contestStore.clearDraft">Clear (Esc)</button>
+              <select
+                class="profile-select-inline"
+                :value="contestStore.contestProfile.id"
+                @change="contestStore.setContestProfile(($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="profile in contestStore.profiles" :key="profile.id" :value="profile.id">
+                  {{ profile.name }}
+                </option>
+              </select>
             </div>
           </div>
         </div>
@@ -649,31 +884,69 @@ watch(
               </button>
             </div>
           </div>
-          <div class="entry-field">
-            <label>RST S</label>
-            <input
-              type="text"
-              :value="draft.rstSent"
-              @input="contestStore.setDraftExchangeField('rstSent', ($event.target as HTMLInputElement).value)"
-            />
+          <div v-if="contestStore.contestProfile.exchangeType !== 'none'" class="entry-row">
+            <div class="entry-field">
+              <label>RST S</label>
+              <input
+                type="text"
+                :value="draft.rstSent"
+                @input="contestStore.setDraftExchangeField('rstSent', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
+            <div class="entry-field">
+              <label>Serial S</label>
+              <div class="serial-field">
+                <input type="text" :value="draft.exchange.serialSent" readonly />
+              </div>
+            </div>
+            <div class="entry-field">
+              <label>{{ contestStore.contestProfile.id === 'dxsatellit' || contestStore.contestProfile.id === 'vhfdx' || contestStore.contestProfile.id === 'vhfserial' ? 'Grid S' : 'Exch S' }}</label>
+              <input
+                type="text"
+                :value="draft.exchange.exchangeSent"
+                :placeholder="contestStore.contestProfile.id === 'dxsatellit' || contestStore.contestProfile.id === 'vhfdx' || contestStore.contestProfile.id === 'vhfserial' ? 'Grid' : 'Loc/Region'"
+                readonly
+              />
+            </div>
           </div>
-          <div class="entry-field">
-            <label>Serial S</label>
-            <input type="text" :value="draft.exchange.serialSent" readonly />
-          </div>
-          <div
-            v-for="field in contestStore.contestProfile.exchangeFields"
-            :key="field.key"
-            class="entry-field"
-          >
-            <label>{{ field.label }}</label>
-            <input
-              :type="field.type || 'text'"
-              :placeholder="field.placeholder"
-              :value="field.key === 'rstRecv' ? draft.rstRecv : draft.exchange[field.key]"
-              :ref="field.key === 'serialRecv' ? setSerialRecvRef : undefined"
-              @input="contestStore.setDraftExchangeField(field.key, ($event.target as HTMLInputElement).value)"
-            />
+          <div v-if="contestStore.contestProfile.exchangeType !== 'none'" class="entry-row">
+            <div class="entry-field">
+              <label>RST R</label>
+              <input
+                type="text"
+                :value="draft.rstRecv"
+                @input="contestStore.setDraftExchangeField('rstRecv', ($event.target as HTMLInputElement).value)"
+              />
+            </div>
+            <div class="entry-field">
+              <label>Serial R</label>
+              <input
+                type="text"
+                :value="draft.exchange.serialRecv"
+                placeholder="001"
+                ref="serialRecvInputRef"
+                @input="
+                  contestStore.setDraftExchangeField(
+                    'serialRecv',
+                    ($event.target as HTMLInputElement).value
+                  )
+                "
+              />
+            </div>
+            <div class="entry-field">
+              <label>{{ contestStore.contestProfile.id === 'dxsatellit' || contestStore.contestProfile.id === 'vhfdx' || contestStore.contestProfile.id === 'vhfserial' ? 'Grid R' : 'Exch R' }}</label>
+              <input
+                type="text"
+                :value="draft.exchange.exchangeRecv"
+                :placeholder="contestStore.contestProfile.id === 'dxsatellit' || contestStore.contestProfile.id === 'vhfdx' || contestStore.contestProfile.id === 'vhfserial' ? 'Grid' : 'Loc/Region'"
+                @input="
+                  contestStore.setDraftExchangeField(
+                    'exchangeRecv',
+                    ($event.target as HTMLInputElement).value
+                  )
+                "
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -701,9 +974,15 @@ watch(
             <span>{{ qso.band }}</span>
             <span>{{ qso.mode }}</span>
             <span>
-              {{ qso.exchange.serialRecv || qso.exchange.region || '--' }}
+              {{
+                qso.exchange.serialRecv ||
+                qso.exchange.exchangeRecv ||
+                qso.exchange.region ||
+                qso.exchange.grid ||
+                '--'
+              }}
             </span>
-            <span>{{ qso.points }}</span>
+            <span>{{ (qso.points || 0) * (qso.multiplierFactor || 1) }}</span>
             <span class="qrz-cell">
               <span v-if="qrzLoading(qso.callsign)" class="spinner"></span>
               <span v-else>
@@ -770,6 +1049,118 @@ watch(
       </div>
     </div>
   </div>
+
+  <div v-if="resumeModalOpen" class="stats-modal-backdrop">
+    <div class="stats-modal panel" @click.stop>
+      <div class="modal-header">
+        <h3 class="panel-title">Resume contest session?</h3>
+      </div>
+      <div class="modal-body resume-body">
+        <div class="resume-row">
+          <span class="resume-key">Log type</span>
+          <span class="resume-val">{{ resumeSnapshot?.session.setup.logType }}</span>
+        </div>
+        <div class="resume-row">
+          <span class="resume-key">Status</span>
+          <span class="resume-val">{{ resumeSnapshot?.session.status }}</span>
+        </div>
+        <div class="resume-row">
+          <span class="resume-key">QSOs</span>
+          <span class="resume-val">{{ resumeSnapshot?.session.qsos.length }}</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-secondary" type="button" @click="startNewSession">
+          Start New
+        </button>
+        <button class="modal-primary" type="button" @click="resumeSession">
+          Resume
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="stopConfirmOpen" class="stats-modal-backdrop">
+    <div class="stats-modal panel" @click.stop>
+      <div class="modal-header">
+        <h3 class="panel-title">Close contest session?</h3>
+      </div>
+      <div class="modal-body">
+        Closing will end this session and remove it from the resume prompt.
+      </div>
+      <div class="modal-footer">
+        <button class="modal-secondary" type="button" @click="stopConfirmOpen = false">
+          Cancel
+        </button>
+        <button class="modal-primary" type="button" @click="confirmCloseSession">
+          Close Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="newSessionModalOpen" class="stats-modal-backdrop">
+    <div class="stats-modal panel" @click.stop>
+      <div class="modal-header">
+        <h3 class="panel-title">Start new contest session?</h3>
+      </div>
+      <div class="modal-body">
+        No active session was found. Would you like to configure a contest setup first?
+      </div>
+      <div class="modal-footer">
+        <button class="modal-secondary" type="button" @click="startDefaultSession">
+          Start Default
+        </button>
+        <button class="modal-primary" type="button" @click="openSetupFromNewSession">
+          Go to Setup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="sessionsModalOpen" class="stats-modal-backdrop" @click="closeSessionsModal">
+    <div class="stats-modal panel sessions-modal" @click.stop>
+      <div class="modal-header">
+        <h3 class="panel-title">Contest Sessions</h3>
+        <button class="panel-action" type="button" @click="closeSessionsModal">Close</button>
+      </div>
+      <div class="modal-body sessions-body">
+        <div v-if="!contestStore.sessions.length" class="sessions-empty">
+          No archived sessions yet.
+        </div>
+        <div v-for="session in contestStore.sessions" :key="session.id" class="session-row">
+          <div class="session-meta">
+            <div class="session-name">{{ session.setup.logType }}</div>
+            <div class="session-subline">
+              {{ session.startedAt || 'n/a' }} → {{ session.endedAt || 'n/a' }}
+            </div>
+            <div class="session-subline">QSOs: {{ session.qsos.length }}</div>
+          </div>
+          <div class="session-actions">
+            <button class="panel-action" type="button" @click="loadArchivedSession(session.id)">
+              Load
+            </button>
+            <button class="panel-action" type="button" @click="exportSessionAdif(session.id)">
+              Export ADIF
+            </button>
+            <button class="panel-action" type="button" @click="printSessionStats(session.id)">
+              Print Stats
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ContestSetupModal
+    :open="contestStore.setupPending"
+    :profiles="contestStore.profiles"
+    :initial-setup="setupSource === 'reconfig' ? contestStore.activeSession?.setup ?? null : null"
+    :initial-profile-id="setupSource === 'reconfig' ? contestStore.activeSession?.profileId ?? null : null"
+    :setup-mode="setupSource"
+    :on-save="handleSetupSave"
+    :on-cancel="handleSetupCancel"
+  />
 </template>
 
 <style scoped>
@@ -901,21 +1292,6 @@ watch(
   opacity: 0.5;
 }
 
-.profile-select {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  color: #b9b9b9;
-}
-
-.profile-select select {
-  background: #2b2b2b;
-  color: #fff;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  padding: 0.3rem 0.6rem;
-}
 
 .session-info {
   display: flex;
@@ -925,13 +1301,51 @@ watch(
 
 .session-label {
   font-size: 0.85rem;
-  color: #b9b9b9;
+  color: #f2e2a0;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.setup-cog {
+  background: transparent;
+  border: none;
+  color: #f2e2a0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.session-sub {
+  font-size: 0.75rem;
+  color: #9f9f9f;
 }
 
 .session-timer {
   font-size: 1.1rem;
   font-weight: 700;
   color: #ffa500;
+}
+
+.session-controls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.session-btn {
+  border: 1px solid #3a3a3a;
+  background: #2b2b2b;
+  color: #f2f2f2;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.session-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .rig-info {
@@ -1018,6 +1432,15 @@ watch(
   cursor: pointer;
 }
 
+.profile-select-inline {
+  background: #2e2e2e;
+  color: #fff;
+  border: 1px solid #3b3b3b;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+}
+
 .focus-toggle {
   background: #1f1f1f;
   color: #ffc37a;
@@ -1096,8 +1519,14 @@ watch(
 }
 
 .entry-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.entry-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 0.75rem;
 }
 
@@ -1105,6 +1534,10 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.serial-field input {
+  width: 100%;
 }
 
 .entry-field.callsign {
@@ -1128,7 +1561,7 @@ watch(
 }
 
 .callsign {
-  grid-column: span 2;
+  width: 100%;
 }
 
 .callsign-input {
@@ -1329,6 +1762,51 @@ watch(
   justify-content: space-between;
 }
 
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.modal-primary {
+  border-radius: 8px;
+  border: 1px solid rgba(46, 204, 113, 0.7);
+  background: rgba(46, 204, 113, 0.18);
+  color: #9bf1c9;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+.modal-secondary {
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #2b2b2b;
+  color: #f2f2f2;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+.resume-body {
+  flex-direction: column;
+  width: 100%;
+}
+
+.resume-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #d6d6d6;
+}
+
+.resume-key {
+  color: #8c8c8c;
+}
+
+.resume-val {
+  color: #f2f2f2;
+}
+
 .toggle-row {
   display: inline-flex;
   align-items: center;
@@ -1336,6 +1814,55 @@ watch(
   font-size: 0.85rem;
   color: #d6d6d6;
   min-width: 45%;
+}
+
+.sessions-modal {
+  width: min(680px, 92vw);
+}
+
+.sessions-body {
+  flex-direction: column;
+  width: 100%;
+}
+
+.sessions-empty {
+  font-size: 0.85rem;
+  color: #b0b0b0;
+}
+
+.session-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2c2c2c;
+}
+
+.session-row:last-child {
+  border-bottom: none;
+}
+
+.session-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.session-name {
+  font-size: 0.9rem;
+  color: #f2e2a0;
+  font-weight: 600;
+}
+
+.session-subline {
+  font-size: 0.75rem;
+  color: #9a9a9a;
+}
+
+.session-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .map-panel {
