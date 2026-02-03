@@ -572,7 +572,7 @@ export default {
 </script>
 
 <template>
-  <main class="config-panel">
+  <main class="config-panel panel">
     <div class="config-container">
       <div class="config-header">
         <h2 class="section-title">Configuration</h2>
@@ -625,7 +625,7 @@ export default {
           </div>
 
           <!-- Connection Diagnostics Panel (only for CAT Control) -->
-          <div v-if="isCatControlCategory" class="diagnostics-panel">
+          <div v-if="isCatControlCategory" class="diagnostics-panel panel">
             <div class="diagnostics-header">
               <h4>Connection Diagnostics</h4>
               <button 
@@ -1675,10 +1675,6 @@ input:checked + .slider:before {
 
 /* Diagnostics Panel Styles */
 .diagnostics-panel {
-  background: #333;
-  border: 1px solid #555;
-  border-radius: 4px;
-  padding: 1rem;
   margin-bottom: 1rem;
 }
 

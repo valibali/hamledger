@@ -58,6 +58,18 @@ export const useDxClusterStore = defineStore('dxCluster', {
   },
 
   actions: {
+    connectCluster(): void {
+      this.startAutoRefresh();
+    },
+
+    disconnectCluster(): void {
+      this.stopAutoRefresh();
+    },
+
+    onSpotClick(spot: DxSpot): void {
+      // Default behavior is handled in components; keep for API parity
+      console.debug('[DX Cluster] Spot clicked:', spot.DXCall, spot.Frequency);
+    },
     async fetchSpots(): Promise<void> {
       this.loading = true;
       this.error = null;

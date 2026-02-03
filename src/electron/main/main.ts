@@ -17,6 +17,8 @@ import { promisify } from 'util';
 import { Extract } from 'unzipper';
 import { wsjtxService } from '../../services/WSJTXService';
 import { getBandFromFrequency } from '../../utils/bands';
+import { registerCatController } from './catController';
+import { SerialManager } from './serial/serialManager';
 
 interface FetchOptions {
   headers: {
@@ -690,6 +692,13 @@ app.on('before-quit', () => {
 
 // Rigctld connection management
 let rigctldSocket: Socket | null = null;
+const serialManager = new SerialManager();
+
+serialManager.on('event', event => {
+  BrowserWindow.getAllWindows().forEach(window => {
+    window.webContents.send('serial:event', event);
+  });
+});
 
 // Rigctld handlers
 ipcMain.handle('rigctld:connect', async (_, host: string, port: number, attemptFirewallFix: boolean = true) => {
@@ -848,65 +857,67 @@ ipcMain.handle('rigctld:disconnect', async () => {
   }
 });
 
-ipcMain.handle('rigctld:command', async (_, command: string) => {
+async function sendRigctldCommand(command: string) {
   try {
     if (!rigctldSocket) {
       return { success: false, error: 'Not connected to rigctld' };
     }
 
-    return new Promise(resolve => {
-      let responseData = '';
+    return await new Promise<{ success: boolean; data?: string[] | string | null; error?: string }>(
+      resolve => {
+        let responseData = '';
 
-      const timeout = setTimeout(() => {
-        resolve({ success: false, error: 'Command timeout' });
-      }, 5000);
+        const timeout = setTimeout(() => {
+          resolve({ success: false, error: 'Command timeout' });
+        }, 5000);
 
-      const onData = (data: Buffer) => {
-        responseData += data.toString();
+        const onData = (data: Buffer) => {
+          responseData += data.toString();
 
-        // Extended Response Protocol: look for RPRT at the end
-        if (responseData.includes('RPRT ')) {
-          clearTimeout(timeout);
-          rigctldSocket?.off('data', onData);
+          // Extended Response Protocol: look for RPRT at the end
+          if (responseData.includes('RPRT ')) {
+            clearTimeout(timeout);
+            rigctldSocket?.off('data', onData);
 
-          const lines = responseData.trim().split('\n');
+            const lines = responseData.trim().split('\n');
 
-          // Find the RPRT line (should be last)
-          const rprtLine = lines.find(line => line.startsWith('RPRT '));
-          if (!rprtLine) {
-            resolve({ success: false, error: 'Invalid response format' });
-            return;
+            // Find the RPRT line (should be last)
+            const rprtLine = lines.find(line => line.startsWith('RPRT '));
+            if (!rprtLine) {
+              resolve({ success: false, error: 'Invalid response format' });
+              return;
+            }
+
+            const errorCode = parseInt(rprtLine.split(' ')[1]);
+            if (errorCode !== 0) {
+              resolve({ success: false, error: `Rigctld error code: ${errorCode}` });
+              return;
+            }
+
+            // Parse Extended Response Protocol format
+            const dataLines = lines.filter(
+              line => !line.startsWith('RPRT ') && line.includes(':') && !line.endsWith(':')
+            );
+
+            if (dataLines.length > 0) {
+              // Extract values from "Key: Value" format
+              const values = dataLines.map(line => {
+                const colonIndex = line.indexOf(': ');
+                return colonIndex !== -1 ? line.substring(colonIndex + 2) : line;
+              });
+              resolve({ success: true, data: values });
+            } else {
+              // For set commands, no data is returned
+              resolve({ success: true, data: null });
+            }
           }
+        };
 
-          const errorCode = parseInt(rprtLine.split(' ')[1]);
-          if (errorCode !== 0) {
-            resolve({ success: false, error: `Rigctld error code: ${errorCode}` });
-            return;
-          }
-
-          // Parse Extended Response Protocol format
-          const dataLines = lines.filter(
-            line => !line.startsWith('RPRT ') && line.includes(':') && !line.endsWith(':')
-          );
-
-          if (dataLines.length > 0) {
-            // Extract values from "Key: Value" format
-            const values = dataLines.map(line => {
-              const colonIndex = line.indexOf(': ');
-              return colonIndex !== -1 ? line.substring(colonIndex + 2) : line;
-            });
-            resolve({ success: true, data: values });
-          } else {
-            // For set commands, no data is returned
-            resolve({ success: true, data: null });
-          }
-        }
-      };
-
-      rigctldSocket?.on('data', onData);
-      // Use Extended Response Protocol with '+' prefix for newline separation
-      rigctldSocket?.write('+' + command + '\n');
-    });
+        rigctldSocket?.on('data', onData);
+        // Use Extended Response Protocol with '+' prefix for newline separation
+        rigctldSocket?.write('+' + command + '\n');
+      }
+    );
   } catch (error) {
     console.error('Rigctld command error:', error);
     return {
@@ -914,6 +925,15 @@ ipcMain.handle('rigctld:command', async (_, command: string) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+registerCatController(async command => {
+  const result = await sendRigctldCommand(command);
+  return { success: result.success, error: result.error };
+});
+
+ipcMain.handle('rigctld:command', async (_, command: string) => {
+  return sendRigctldCommand(command);
 });
 
 ipcMain.handle('rigctld:capabilities', async () => {
@@ -962,6 +982,65 @@ ipcMain.handle('rigctld:capabilities', async () => {
     };
   }
 });
+
+ipcMain.handle('serial:listPorts', async () => {
+  try {
+    const ports = await serialManager.listPorts();
+    return ports;
+  } catch (error) {
+    console.error('Serial list error:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('serial:open', async (_event, path: string, baudRate: number) => {
+  try {
+    await serialManager.open(path, baudRate);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Open failed' };
+  }
+});
+
+ipcMain.handle('serial:close', async (_event, path: string) => {
+  try {
+    await serialManager.close(path);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Close failed' };
+  }
+});
+
+ipcMain.handle('serial:send', async (_event, path: string, data: string | Uint8Array) => {
+  try {
+    await serialManager.send(path, data);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Send failed' };
+  }
+});
+
+ipcMain.handle(
+  'voiceKeyer:saveClip',
+  async (_event, payload: { name: string; data: ArrayBuffer | Uint8Array }) => {
+    try {
+      const baseDir = app.getPath('userData');
+    const clipDir = path.join(baseDir, 'voice-keyer');
+    fs.mkdirSync(clipDir, { recursive: true });
+
+    const safeName = payload.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const filePath = path.join(clipDir, `${Date.now()}-${safeName}.wav`);
+    const data =
+      payload.data instanceof ArrayBuffer ? new Uint8Array(payload.data) : payload.data;
+    fs.writeFileSync(filePath, data);
+
+    return { success: true, path: filePath };
+  } catch (error) {
+    console.error('Save voice clip error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Save failed' };
+  }
+  }
+);
 
 // Check if rigctld is running (quick check for startup detection)
 ipcMain.handle('rigctld:checkRunning', async () => {

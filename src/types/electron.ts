@@ -52,6 +52,14 @@ interface RawDxSpot {
 
 type DxSpotData = RawDxSpot[];
 
+interface SerialPortInfo {
+  path: string;
+  manufacturer?: string;
+  serialNumber?: string;
+  vendorId?: string;
+  productId?: string;
+}
+
 interface RigConnectionData {
   connected: boolean;
   isExternal?: boolean;
@@ -160,6 +168,19 @@ declare global {
       onWSJTXDecode: (callback: (decode: WSJTXDecodeMessage) => void) => void;
       onWSJTXQSOLogged: (callback: (qso: QsoEntry) => void) => void;
       onWSJTXAddQSO: (callback: (qso: QsoEntry) => void) => void;
+      catSetPTT: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+      serialListPorts: () => Promise<SerialPortInfo[]>;
+      serialOpen: (path: string, baudRate: number) => Promise<{ success: boolean; error?: string }>;
+      serialClose: (path: string) => Promise<{ success: boolean; error?: string }>;
+      serialSend: (
+        path: string,
+        data: string | Uint8Array
+      ) => Promise<{ success: boolean; error?: string }>;
+      onSerialEvent: (callback: (event: unknown) => void) => void;
+      saveVoiceClip: (payload: {
+        name: string;
+        data: ArrayBuffer | Uint8Array;
+      }) => Promise<{ success: boolean; path?: string; error?: string }>;
     };
   }
 }

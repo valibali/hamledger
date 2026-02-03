@@ -66,4 +66,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   generateQslLabels: (labelDataArray: QslLabelData[]) => ipcRenderer.invoke('qsl:generateLabels', labelDataArray),
   openFolder: (filePath: string) => ipcRenderer.invoke('system:openFolder', filePath),
+  catSetPTT: (enabled: boolean) => ipcRenderer.invoke('cat:setPTT', enabled),
+  serialListPorts: () => ipcRenderer.invoke('serial:listPorts'),
+  serialOpen: (path: string, baudRate: number) =>
+    ipcRenderer.invoke('serial:open', path, baudRate),
+  serialClose: (path: string) => ipcRenderer.invoke('serial:close', path),
+  serialSend: (path: string, data: string | Uint8Array) =>
+    ipcRenderer.invoke('serial:send', path, data),
+  onSerialEvent: (callback: (event: unknown) => void) => {
+    ipcRenderer.on('serial:event', (_event, payload) => callback(payload));
+  },
+  saveVoiceClip: (payload: { name: string; data: ArrayBuffer }) =>
+    ipcRenderer.invoke('voiceKeyer:saveClip', payload),
 });

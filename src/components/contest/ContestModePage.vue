@@ -1,0 +1,1359 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useContestStore } from '../../store/contest';
+import { useQsoStore } from '../../store/qso';
+import { useRigStore } from '../../store/rig';
+import { useQrzStore } from '../../store/qrz';
+import ContestStatsSparkline from './ContestStatsSparkline.vue';
+import ContestDxClusterStrip from './ContestDxClusterStrip.vue';
+import GraylineMap from './GraylineMap.vue';
+import DxCluster from '../DxCluster.vue';
+import { usePropClockWeather } from '../../composables/usePropClockWeather';
+import { usePropagationColors } from '../../composables/usePropagationColors';
+import { CallsignHelper } from '../../utils/callsign';
+import { configHelper } from '../../utils/configHelper';
+
+const contestStore = useContestStore();
+const rigStore = useRigStore();
+const qrzStore = useQrzStore();
+const qsoStore = useQsoStore();
+
+const callsignInputRef = ref<HTMLInputElement | null>(null);
+const serialRecvInputRef = ref<HTMLInputElement | null>(null);
+const sessionClock = ref('00:00:00');
+const focusLockDisabled = ref(false);
+const showFocusToggle = ref(false);
+const suggestionsOpen = ref(false);
+const suggestionIndex = ref(0);
+const callsignIndex = ref<string[]>([]);
+const bigramIndex = ref<Map<string, string[]>>(new Map());
+let timerHandle: number | undefined;
+let statsHandle: number | undefined;
+
+const activeSession = computed(() => contestStore.activeSession);
+const draft = computed(() => contestStore.qsoDraft);
+const profiles = computed(() => contestStore.profiles);
+const { utcTime, propStore, weatherStore } = usePropClockWeather();
+const { kIndexColor, aIndexColor, sfiColor } = usePropagationColors();
+const isCatOnline = computed(() => rigStore.isConnected);
+
+const sessionLabel = computed(() => {
+  return activeSession.value?.id ?? 'No active session';
+});
+
+const qsos = computed(() => activeSession.value?.qsos ?? []);
+const qsoTimestamps = computed(() =>
+  qsos.value.map(qso => new Date(qso.datetime).getTime()).sort((a, b) => a - b)
+);
+const sessionStart = computed(() => activeSession.value?.startedAt ?? '');
+
+const rateFromLastN = (count: number) => {
+  const list = qsos.value;
+  if (list.length < 2) return 0;
+  const slice = list.slice(-count);
+  if (slice.length < 2) return 0;
+  const start = new Date(slice[0].datetime).getTime();
+  const end = new Date(slice[slice.length - 1].datetime).getTime();
+  const minutes = Math.max(1 / 60, (end - start) / 60000);
+  return Math.round((slice.length / minutes) * 60);
+};
+
+const rateLastHour = computed(() => {
+  const now = Date.now();
+  const count = qsos.value.filter(qso => now - new Date(qso.datetime).getTime() <= 3600000)
+    .length;
+  return Math.round((count / 60) * 60);
+});
+
+const thisHourRate = computed(() => {
+  const now = new Date();
+  const hourStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0)
+  ).getTime();
+  const elapsedMinutes = Math.max(1 / 60, (Date.now() - hourStart) / 60000);
+  const count = qsos.value.filter(qso => new Date(qso.datetime).getTime() >= hourStart).length;
+  return Math.round((count / elapsedMinutes) * 60);
+});
+
+const last10QsoRate = computed(() => rateFromLastN(10));
+const last100QsoRate = computed(() => rateFromLastN(100));
+const multiplierCount = computed(() => contestStore.scoringState.multipliers.length);
+
+const rateForWindow = (minutes: number) => {
+  const now = Date.now();
+  const windowMs = minutes * 60 * 1000;
+  const count = qsos.value.filter(qso => now - new Date(qso.datetime).getTime() <= windowMs)
+    .length;
+  return minutes > 0 ? Math.round((count / minutes) * 60) : 0;
+};
+
+const movingAvg20 = computed(() => rateForWindow(20));
+const movingAvg30 = computed(() => rateForWindow(30));
+const movingAvg60 = computed(() => rateForWindow(60));
+
+const bestRateForWindow = (minutes: number) => {
+  const times = qsoTimestamps.value;
+  if (!times.length) return 0;
+  const windowMs = minutes * 60 * 1000;
+  let maxCount = 0;
+  let left = 0;
+  for (let right = 0; right < times.length; right += 1) {
+    while (times[right] - times[left] > windowMs) {
+      left += 1;
+    }
+    const count = right - left + 1;
+    if (count > maxCount) maxCount = count;
+  }
+  return Math.round((maxCount / minutes) * 60);
+};
+
+const best10MinRate = computed(() => bestRateForWindow(10));
+const bestHourRate = computed(() => bestRateForWindow(60));
+
+const statsModalOpen = ref(false);
+const statsCards = computed(() => [
+  { key: 'last10', label: 'Last 10 QSOs', value: last10QsoRate.value },
+  { key: 'last100', label: 'Last 100 QSOs', value: last100QsoRate.value },
+  { key: 'last60', label: 'Last 60 min', value: rateLastHour.value },
+  { key: 'thisHour', label: 'This hour', value: thisHourRate.value },
+  { key: 'best10', label: 'Best 10 min', value: best10MinRate.value },
+  { key: 'best60', label: 'Best hour', value: bestHourRate.value },
+  { key: 'avg20', label: 'Avg 20 min', value: movingAvg20.value },
+  { key: 'avg30', label: 'Avg 30 min', value: movingAvg30.value },
+  { key: 'avg60', label: 'Avg 60 min', value: movingAvg60.value },
+  { key: 'points', label: 'Points', value: contestStore.scoringState.points },
+  { key: 'mults', label: 'Multipliers', value: multiplierCount.value },
+  { key: 'score', label: 'Score', value: contestStore.stats.estimatedScore },
+]);
+
+const statCardEnabled = ref(
+  Object.fromEntries(statsCards.value.map(card => [card.key, true]))
+);
+
+const visibleStatCards = computed(() =>
+  statsCards.value.filter(card => statCardEnabled.value[card.key])
+);
+
+const frequencyMain = computed(() => rigStore.currentFrequencyParts?.main || '--.--');
+const frequencyHz = computed(() => {
+  const hz = rigStore.currentFrequencyParts?.hz || '00';
+  return hz.slice(0, 2);
+});
+
+const kIndexTint = computed(() => kIndexColor(propStore.propData.kIndex));
+const aIndexTint = computed(() => aIndexColor(propStore.propData.aIndex));
+const sfiTint = computed(() => sfiColor(propStore.propData.sfi));
+
+const qrzInfo = (callsign: string) => {
+  const key = CallsignHelper.extractBaseCallsign(callsign).toUpperCase();
+  return qrzStore.cache[key];
+};
+
+const qrzLoading = (callsign: string) => {
+  const key = CallsignHelper.extractBaseCallsign(callsign).toUpperCase();
+  return qrzStore.inFlight[key] === true;
+};
+
+const buildCallsignIndex = () => {
+  const set = new Set<string>();
+  qsoStore.allQsos.forEach(qso => {
+    if (qso.callsign) {
+      set.add(CallsignHelper.extractBaseCallsign(qso.callsign).toUpperCase());
+    }
+  });
+  const list = Array.from(set);
+  callsignIndex.value = list;
+
+  const nextBigramIndex = new Map<string, string[]>();
+  list.forEach(callsign => {
+    if (callsign.length < 2) return;
+    const seen = new Set<string>();
+    for (let i = 0; i < callsign.length - 1; i += 1) {
+      const key = callsign.slice(i, i + 2);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bucket = nextBigramIndex.get(key) ?? [];
+      bucket.push(callsign);
+      nextBigramIndex.set(key, bucket);
+    }
+  });
+  bigramIndex.value = nextBigramIndex;
+};
+
+const escapeRegex = (value: string) => value.replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&');
+
+const getSuggestionParts = (callsign: string) => {
+  const query = draft.value.callsign.trim().toUpperCase();
+  if (query.length < 2) return [{ text: callsign, match: false }];
+  if (query.includes('*') || query.includes('?')) return [{ text: callsign, match: false }];
+  const source = callsign.toUpperCase();
+  const index = source.indexOf(query);
+  if (index === -1) return [{ text: callsign, match: false }];
+  const before = callsign.slice(0, index);
+  const match = callsign.slice(index, index + query.length);
+  const after = callsign.slice(index + query.length);
+  const parts = [];
+  if (before) parts.push({ text: before, match: false });
+  parts.push({ text: match, match: true });
+  if (after) parts.push({ text: after, match: false });
+  return parts;
+};
+
+const callsignSuggestions = computed(() => {
+  if (!suggestionsOpen.value) return [];
+  const query = draft.value.callsign.trim().toUpperCase();
+  if (query.length < 2) return [];
+
+  const hasWildcard = query.includes('*') || query.includes('?');
+  let matcher: RegExp | null = null;
+
+  if (hasWildcard) {
+    const pattern = escapeRegex(query).replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
+    matcher = new RegExp(pattern, 'i');
+  }
+
+  const sourceList =
+    !hasWildcard && query.length >= 2
+      ? bigramIndex.value.get(query.slice(0, 2)) ?? callsignIndex.value
+      : callsignIndex.value;
+
+  const results = sourceList.filter(callsign => {
+    if (!query) return false;
+    if (matcher) return matcher.test(callsign);
+    return callsign.includes(query);
+  });
+
+  return results.slice(0, 10);
+});
+
+const applySuggestion = (callsign: string) => {
+  contestStore.setDraftCallsign(callsign);
+  suggestionsOpen.value = false;
+  focusCallsign();
+};
+
+const focusCallsign = () => {
+  if (!callsignInputRef.value) return;
+  callsignInputRef.value.focus();
+  const length = callsignInputRef.value.value.length;
+  callsignInputRef.value.setSelectionRange(length, length);
+};
+
+const formatSessionClock = () => {
+  if (!activeSession.value) {
+    sessionClock.value = '00:00:00';
+    return;
+  }
+  const start = new Date(activeSession.value.startedAt).getTime();
+  const diff = Math.max(0, Date.now() - start);
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  sessionClock.value = [hours, minutes, seconds]
+    .map(val => String(val).padStart(2, '0'))
+    .join(':');
+};
+
+const isModalOpen = () => {
+  return Boolean(
+    document.querySelector('dialog[open]') ||
+      document.querySelector('[aria-modal="true"]') ||
+      document.querySelector('.modal')
+  );
+};
+
+const isEditableElement = (el: Element | null) => {
+  if (!el) return false;
+  if (el === callsignInputRef.value) return false;
+  const tag = el.tagName.toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+  if ((el as HTMLElement).isContentEditable) return true;
+  return false;
+};
+
+const isSuggestionElement = (el: Element | null) => {
+  if (!el) return false;
+  return Boolean((el as HTMLElement).closest('.callsign-suggest'));
+};
+
+const setSerialRecvRef = (el: Element | null) => {
+  serialRecvInputRef.value = el as HTMLInputElement | null;
+};
+
+const focusSuggestion = (index: number) => {
+  const items = document.querySelectorAll<HTMLButtonElement>('.callsign-suggest .suggest-item');
+  const target = items[index];
+  if (target) target.focus();
+};
+
+const focusSerialRecv = () => {
+  if (serialRecvInputRef.value) {
+    serialRecvInputRef.value.focus();
+    if (serialRecvInputRef.value.type !== 'number') {
+      const length = serialRecvInputRef.value.value.length;
+      serialRecvInputRef.value.setSelectionRange(length, length);
+    }
+  }
+};
+
+const insertAtCursor = (input: HTMLInputElement, text: string) => {
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  const nextValue = input.value.slice(0, start) + text + input.value.slice(end);
+  contestStore.setDraftCallsign(nextValue);
+  suggestionsOpen.value = true;
+  suggestionIndex.value = 0;
+  input.value = nextValue;
+  const caret = start + text.length;
+  input.setSelectionRange(caret, caret);
+};
+
+const deleteAtCursor = (input: HTMLInputElement) => {
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  if (start === end && start > 0) {
+    const nextValue = input.value.slice(0, start - 1) + input.value.slice(end);
+    contestStore.setDraftCallsign(nextValue);
+    suggestionsOpen.value = true;
+    suggestionIndex.value = 0;
+    input.value = nextValue;
+    input.setSelectionRange(start - 1, start - 1);
+  } else if (start !== end) {
+    const nextValue = input.value.slice(0, start) + input.value.slice(end);
+    contestStore.setDraftCallsign(nextValue);
+    suggestionsOpen.value = true;
+    suggestionIndex.value = 0;
+    input.value = nextValue;
+    input.setSelectionRange(start, start);
+  }
+};
+
+const handleGlobalKeydown = (event: KeyboardEvent) => {
+  if (focusLockDisabled.value) return;
+  if (contestStore.activeView !== 'contest') return;
+  if (isModalOpen()) return;
+
+  const activeEl = document.activeElement as Element | null;
+  if (isEditableElement(activeEl) || isSuggestionElement(activeEl)) {
+    if (activeEl === callsignInputRef.value && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      const query = draft.value.callsign.trim();
+      if (query.length >= 2) {
+        suggestionsOpen.value = true;
+        if (!callsignSuggestions.value.length) return;
+        event.preventDefault();
+        suggestionIndex.value =
+          event.key === 'ArrowDown'
+            ? Math.min(suggestionIndex.value + 1, callsignSuggestions.value.length - 1)
+            : Math.max(suggestionIndex.value - 1, 0);
+        requestAnimationFrame(() => focusSuggestion(suggestionIndex.value));
+        return;
+      }
+    }
+    if (callsignSuggestions.value.length) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        suggestionIndex.value = Math.min(
+          suggestionIndex.value + 1,
+          callsignSuggestions.value.length - 1
+        );
+        focusSuggestion(suggestionIndex.value);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        suggestionIndex.value = Math.max(suggestionIndex.value - 1, 0);
+        focusSuggestion(suggestionIndex.value);
+        return;
+      }
+      if (event.key === 'Escape') {
+        suggestionsOpen.value = false;
+        return;
+      }
+    }
+    if (event.key === 'Enter' && contestStore.isDraftValid) {
+      event.preventDefault();
+      contestStore.logQso();
+      focusCallsign();
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      suggestionsOpen.value = false;
+      contestStore.clearDraft();
+      focusCallsign();
+    }
+    return;
+  }
+
+  const input = callsignInputRef.value;
+  if (!input) return;
+
+  if (event.key === 'Enter') {
+    if (contestStore.isDraftValid) {
+      event.preventDefault();
+      contestStore.logQso();
+      focusCallsign();
+    }
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    suggestionsOpen.value = false;
+    contestStore.clearDraft();
+    focusCallsign();
+    return;
+  }
+
+  if (event.key === 'Backspace') {
+    event.preventDefault();
+    focusCallsign();
+    deleteAtCursor(input);
+    return;
+  }
+
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+  if (/^[a-zA-Z0-9/]$/.test(event.key)) {
+    event.preventDefault();
+    focusCallsign();
+    insertAtCursor(input, event.key.toUpperCase());
+  }
+};
+
+const handleCallsignKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const query = draft.value.callsign.trim();
+    if (query.length < 2) return;
+    if (!callsignSuggestions.value.length) {
+      suggestionsOpen.value = true;
+      return;
+    }
+    event.preventDefault();
+    suggestionIndex.value =
+      event.key === 'ArrowDown'
+        ? Math.min(suggestionIndex.value + 1, callsignSuggestions.value.length - 1)
+        : Math.max(suggestionIndex.value - 1, 0);
+    requestAnimationFrame(() => focusSuggestion(suggestionIndex.value));
+    return;
+  }
+
+  if (event.key === 'Enter' || event.key === 'Tab') {
+    const trimmed = draft.value.callsign.trim();
+    if (CallsignHelper.isValidCallsign(trimmed)) {
+      event.preventDefault();
+      suggestionsOpen.value = false;
+      focusSerialRecv();
+      return;
+    }
+    if (callsignSuggestions.value.length && suggestionsOpen.value) {
+      const selection = callsignSuggestions.value[suggestionIndex.value];
+      if (selection) {
+        event.preventDefault();
+        applySuggestion(selection);
+        focusSerialRecv();
+      }
+    }
+  }
+};
+
+const handleLogQso = () => {
+  if (!contestStore.isDraftValid) return;
+  suggestionsOpen.value = false;
+  contestStore.logQso();
+  focusCallsign();
+};
+
+onMounted(async () => {
+  contestStore.setActiveView('contest');
+  focusCallsign();
+  formatSessionClock();
+  contestStore.refreshStats();
+  buildCallsignIndex();
+
+  try {
+    await configHelper.initSettings();
+  } catch {
+    // Ignore config load errors, contest mode can still function
+  }
+
+  focusLockDisabled.value =
+    configHelper.getSetting(['contest'], 'focusLockDisabled') === true ||
+    localStorage.getItem('hamledger:contestFocusLockDisabled') === '1';
+  showFocusToggle.value = configHelper.getSetting(['contest'], 'showFocusToggle') === true;
+
+  timerHandle = window.setInterval(formatSessionClock, 1000);
+  statsHandle = window.setInterval(() => contestStore.refreshStats(), 5000);
+  window.addEventListener('keydown', handleGlobalKeydown, { capture: true });
+});
+
+onBeforeUnmount(() => {
+  if (timerHandle) window.clearInterval(timerHandle);
+  if (statsHandle) window.clearInterval(statsHandle);
+  window.removeEventListener('keydown', handleGlobalKeydown, true);
+});
+
+watch(
+  () => qsoStore.allQsos.length,
+  () => {
+    buildCallsignIndex();
+  }
+);
+
+watch(
+  () => draft.value.callsign,
+  value => {
+    const trimmed = value.trim();
+    if (trimmed.length < 2) {
+      suggestionsOpen.value = false;
+      suggestionIndex.value = 0;
+      return;
+    }
+    suggestionsOpen.value = true;
+    suggestionIndex.value = 0;
+  }
+);
+</script>
+
+<template>
+  <div class="contest-mode">
+    <div class="contest-topbar panel">
+      <div class="topbar-left">
+        <div class="profile-select">
+          <label>Contest</label>
+          <select
+            :value="contestStore.contestProfile.id"
+            @change="contestStore.setContestProfile(($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
+              {{ profile.name }}
+            </option>
+          </select>
+        </div>
+        <div class="session-info">
+          <span class="session-label">Session: {{ sessionLabel }}</span>
+          <span class="session-timer">{{ sessionClock }}</span>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="rig-info">
+          <span v-if="isCatOnline" class="cat-badge">CAT</span>
+          <span class="rig-frequency">
+            <span class="freq-main">{{ frequencyMain }}</span
+            ><span class="freq-dot">.</span><span class="freq-hz">{{ frequencyHz }}</span>
+            <span class="freq-unit">MHz</span>
+          </span>
+          <span class="vfo-badge">{{ rigStore.currentVfo || 'VFO' }}</span>
+          <span class="rig-mode">{{ rigStore.currentMode }}</span>
+        </div>
+        <div class="rig-status" :class="rigStore.rigState.ptt ? 'tx' : 'rx'">
+          {{ rigStore.rigState.ptt ? 'TX' : 'RX' }}
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="prop-compact">
+          <div class="prop-row" :class="{ 'is-loading': propStore.isLoading }">
+            <span class="prop-key">SFI</span>
+            <span class="prop-val" :style="{ color: sfiTint }">{{ propStore.propData.sfi }}</span>
+            <span class="prop-key">A</span>
+            <span class="prop-val" :style="{ color: aIndexTint }">
+              {{ propStore.propData.aIndex }}
+            </span>
+            <span class="prop-key">K</span>
+            <span class="prop-val" :style="{ color: kIndexTint }">
+              {{ propStore.propData.kIndex }}
+            </span>
+            <span v-if="propStore.propData.aurora !== undefined" class="prop-key">Aur</span>
+            <span v-if="propStore.propData.aurora !== undefined" class="prop-val">
+              {{ propStore.propData.aurora ? 'YES' : 'NO' }}
+            </span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-key">UTC</span>
+            <span class="prop-val">{{ utcTime }}</span>
+            <span class="prop-key">WX</span>
+            <span class="prop-val" :class="{ 'is-loading': weatherStore.isLoading }">
+              {{ weatherStore.weatherInfo }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="contest-body">
+      <div class="contest-layout">
+        <div class="contest-left">
+          <div class="contest-grid">
+          <section class="entry-panel panel">
+        <div class="entry-header">
+          <div>
+            <h2 class="panel-title">QSO Entry</h2>
+            <p class="entry-hint">Type anywhere to focus callsign · Tab to move · Enter logs</p>
+          </div>
+          <div class="entry-status">
+            <span class="status-pill" :class="contestStore.isDraftValid ? 'ok' : 'warn'">
+              {{ contestStore.isDraftValid ? 'Callsign OK' : 'Enter callsign' }}
+            </span>
+            <span class="status-pill" v-if="contestStore.isCallsignWorkedForBand">
+              Worked
+            </span>
+            <div class="entry-actions">
+              <button
+                v-if="showFocusToggle"
+                class="focus-toggle"
+                type="button"
+                @click="focusLockDisabled = !focusLockDisabled"
+              >
+                Focus: {{ focusLockDisabled ? 'Off' : 'On' }}
+              </button>
+              <button class="log-btn" :disabled="!contestStore.isDraftValid" @click="handleLogQso">
+                Log (Enter)
+              </button>
+              <button class="clear-btn" @click="contestStore.clearDraft">Clear (Esc)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="entry-grid">
+          <div class="entry-field callsign">
+            <label>Callsign</label>
+            <input
+              ref="callsignInputRef"
+              type="text"
+              :value="draft.callsign"
+              @input="
+                contestStore.setDraftCallsign(($event.target as HTMLInputElement).value);
+                suggestionsOpen = true;
+                suggestionIndex = 0;
+              "
+              @keydown="handleCallsignKeydown"
+              placeholder="K1ABC"
+              class="callsign-input"
+            />
+            <div v-if="callsignSuggestions.length" class="callsign-suggest">
+              <button
+                v-for="suggestion in callsignSuggestions"
+                :key="suggestion"
+                type="button"
+                class="suggest-item"
+                tabindex="-1"
+                :class="{ active: callsignSuggestions[suggestionIndex] === suggestion }"
+                @click="applySuggestion(suggestion)"
+              >
+                <span
+                  v-for="(part, index) in getSuggestionParts(suggestion)"
+                  :key="`${suggestion}-${index}`"
+                  :class="{ 'match-highlight': part.match }"
+                >
+                  {{ part.text }}
+                </span>
+              </button>
+            </div>
+          </div>
+          <div class="entry-field">
+            <label>RST S</label>
+            <input
+              type="text"
+              :value="draft.rstSent"
+              @input="contestStore.setDraftExchangeField('rstSent', ($event.target as HTMLInputElement).value)"
+            />
+          </div>
+          <div class="entry-field">
+            <label>Serial S</label>
+            <input type="text" :value="draft.exchange.serialSent" readonly />
+          </div>
+          <div
+            v-for="field in contestStore.contestProfile.exchangeFields"
+            :key="field.key"
+            class="entry-field"
+          >
+            <label>{{ field.label }}</label>
+            <input
+              :type="field.type || 'text'"
+              :placeholder="field.placeholder"
+              :value="field.key === 'rstRecv' ? draft.rstRecv : draft.exchange[field.key]"
+              :ref="field.key === 'serialRecv' ? setSerialRecvRef : undefined"
+              @input="contestStore.setDraftExchangeField(field.key, ($event.target as HTMLInputElement).value)"
+            />
+          </div>
+        </div>
+      </section>
+
+          <section class="recent-panel panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Recent QSOs</h2>
+          <span class="panel-sub">Last {{ contestStore.recentQsos.length }}</span>
+        </div>
+        <div class="recent-table">
+          <div class="recent-row header">
+            <span>Call</span>
+            <span>Band</span>
+            <span>Mode</span>
+            <span>Exch</span>
+            <span>Pts</span>
+            <span>QRZ</span>
+          </div>
+          <div
+            v-for="qso in contestStore.recentQsos"
+            :key="qso.id"
+            class="recent-row"
+          >
+            <span class="recent-call">{{ qso.callsign }}</span>
+            <span>{{ qso.band }}</span>
+            <span>{{ qso.mode }}</span>
+            <span>
+              {{ qso.exchange.serialRecv || qso.exchange.region || '--' }}
+            </span>
+            <span>{{ qso.points }}</span>
+            <span class="qrz-cell">
+              <span v-if="qrzLoading(qso.callsign)" class="spinner"></span>
+              <span v-else>
+                {{ qrzInfo(qso.callsign)?.name || '--' }}
+              </span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-panel panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Rate & Score</h2>
+          <span class="panel-sub">QSOs: {{ contestStore.stats.totalQsos }}</span>
+          <button class="panel-action" type="button" @click="statsModalOpen = true">
+            Customize
+          </button>
+        </div>
+        <div class="stats-grid compact">
+          <div v-for="card in visibleStatCards" :key="card.key" class="stat">
+            <span class="stat-label">{{ card.label }}</span>
+            <span class="stat-value">{{ card.value }}</span>
+          </div>
+        </div>
+        <ContestStatsSparkline
+          :timestamps="qsoTimestamps"
+          :started-at="sessionStart"
+        />
+      </section>
+
+          <section class="map-panel panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Grayline Map</h2>
+          <span class="panel-sub">Always on screen</span>
+        </div>
+        <div class="map-shell">
+          <GraylineMap />
+        </div>
+      </section>
+          </div>
+        </div>
+        <div class="contest-right">
+          <DxCluster :contest-mode="true" />
+        </div>
+      </div>
+    </div>
+
+    <section class="speed-dial-panel panel">
+      <ContestDxClusterStrip @spot-clicked="focusCallsign" />
+    </section>
+  </div>
+
+  <div v-if="statsModalOpen" class="stats-modal-backdrop" @click="statsModalOpen = false">
+    <div class="stats-modal panel" @click.stop>
+      <div class="modal-header">
+        <h3 class="panel-title">Rate & Score Cards</h3>
+        <button class="panel-action" type="button" @click="statsModalOpen = false">Close</button>
+      </div>
+      <div class="modal-body">
+        <label v-for="card in statsCards" :key="card.key" class="toggle-row">
+          <input v-model="statCardEnabled[card.key]" type="checkbox" />
+          <span>{{ card.label }}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.contest-mode {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow: hidden;
+  font-size: 0.92rem;
+  zoom: 0.92;
+  --contest-pad: 0.35rem;
+  box-sizing: border-box;
+}
+
+.contest-layout {
+  display: flex;
+  gap: 0.6rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.contest-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.contest-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.contest-right {
+  width: 300px;
+  min-width: 300px;
+  overflow: hidden;
+}
+
+.speed-dial-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+
+:deep(.contest-right .dx-cluster) {
+  background: #1b1b1b;
+  border-color: #2c2c2c;
+  border-radius: 10px;
+}
+
+@media (max-width: 1280px) {
+  .contest-layout {
+    flex-direction: column;
+  }
+
+  .contest-right {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .contest-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.contest-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar-left,
+.topbar-right,
+.topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.topbar-center {
+  flex: 1;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.topbar-right {
+  align-items: flex-start;
+}
+
+.prop-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: flex-end;
+  font-size: 0.75rem;
+  color: #cfcfcf;
+}
+
+.prop-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: baseline;
+}
+
+.prop-key {
+  color: #9a9a9a;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+}
+
+.prop-val {
+  color: #f2f2f2;
+  font-weight: 600;
+}
+
+.is-loading {
+  opacity: 0.5;
+}
+
+.profile-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #b9b9b9;
+}
+
+.profile-select select {
+  background: #2b2b2b;
+  color: #fff;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+}
+
+.session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.session-label {
+  font-size: 0.85rem;
+  color: #b9b9b9;
+}
+
+.session-timer {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffa500;
+}
+
+.rig-info {
+  display: flex;
+  gap: 0.5rem;
+  font-weight: 700;
+  align-items: baseline;
+}
+
+.rig-frequency {
+  font-weight: 800;
+  color: #9bd1ff;
+  letter-spacing: 0.04em;
+}
+
+.freq-main {
+  font-size: 1.45rem;
+}
+
+.freq-dot {
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.freq-hz {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.freq-unit {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-left: 0.3rem;
+}
+
+.rig-status {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid #3a3a3a;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.vfo-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid #3a3a3a;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.75rem;
+  color: #f2f2f2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cat-badge {
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid #2ecc71;
+  background: rgba(46, 204, 113, 0.18);
+  color: #9bf1c9;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.rig-status.tx {
+  background: rgba(255, 74, 74, 0.2);
+  color: #ff5b5b;
+}
+
+.rig-status.rx {
+  background: rgba(87, 255, 168, 0.15);
+  color: #7bffb0;
+}
+
+.log-btn,
+.clear-btn {
+  background: #2e2e2e;
+  color: #fff;
+  border: 1px solid #3b3b3b;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.focus-toggle {
+  background: #1f1f1f;
+  color: #ffc37a;
+  border: 1px dashed #444;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.log-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.contest-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.6rem;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.entry-panel {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+
+.entry-hint {
+  font-size: 0.85rem;
+  color: #bdbdbd;
+}
+
+.entry-status {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-left: auto;
+}
+
+.status-pill {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid #3a3a3a;
+  color: #cfcfcf;
+}
+
+.status-pill.ok {
+  background: rgba(87, 255, 168, 0.15);
+  color: #7bffb0;
+}
+
+.status-pill.warn {
+  background: rgba(255, 183, 77, 0.2);
+  color: #ffc37a;
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.entry-field.callsign {
+  position: relative;
+}
+
+.entry-field label {
+  font-size: 0.75rem;
+  color: #b9b9b9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.entry-field input {
+  background: #2b2b2b;
+  color: #fff;
+  border: 1px solid #3b3b3b;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  font-size: 1rem;
+}
+
+.callsign {
+  grid-column: span 2;
+}
+
+.callsign-input {
+  font-size: 1.6rem;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+  color: #b8ff8a;
+  text-transform: uppercase;
+}
+
+.callsign-suggest {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: #181818;
+  border: 1px solid #2b2b2b;
+  border-radius: 6px;
+  padding: 0.35rem;
+  z-index: 20;
+  min-width: 240px;
+}
+
+.suggest-item {
+  background: #232323;
+  border: 1px solid #2f2f2f;
+  color: #fff;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.match-highlight {
+  background: rgba(127, 211, 255, 0.35);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.suggest-item:hover {
+  border-color: #ffa500;
+  color: #ffa500;
+}
+
+.suggest-item.active {
+  border-color: #ffa500;
+  color: #ffa500;
+  background: rgba(255, 165, 0, 0.15);
+}
+
+.recent-panel {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+.panel-sub {
+  color: #9a9a9a;
+  font-size: 0.8rem;
+}
+
+.recent-table {
+  display: grid;
+  gap: 0.4rem;
+  overflow-y: auto;
+}
+
+.recent-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.7fr 1fr 0.5fr 1.2fr;
+  gap: 0.4rem;
+  padding: 0.4rem 0.2rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #242424;
+}
+
+.recent-row.header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #9a9a9a;
+  border-bottom: 1px solid #333;
+}
+
+.recent-call {
+  font-weight: 700;
+  color: #fff;
+}
+
+.qrz-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ffa500;
+  animation: spin 0.8s linear infinite;
+}
+
+.stats-panel {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.stats-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.stat {
+  background: #222;
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #2f2f2f;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: #9f9f9f;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f5f5f5;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.panel-action {
+  margin-left: auto;
+  background: #2c2c2c;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #e6e6e6;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+
+.stats-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2200;
+}
+
+.stats-modal {
+  width: min(420px, 90vw);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modal-header,
+.modal-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.modal-body {
+  justify-content: space-between;
+}
+
+.toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #d6d6d6;
+  min-width: 45%;
+}
+
+.map-panel {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.map-shell {
+  flex: 1;
+  min-height: 240px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

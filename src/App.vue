@@ -19,6 +19,7 @@ export default {
     return {
       showSetupWizard: false,
       isInitialized: false,
+      showModeSelector: false,
     };
   },
   async mounted() {
@@ -33,6 +34,9 @@ export default {
     }
 
     this.isInitialized = true;
+    if (!this.showSetupWizard) {
+      this.showModeSelector = true;
+    }
   },
   methods: {
     async checkInitialSetup() {
@@ -70,6 +74,13 @@ export default {
       
       // Initialize awards
       await this.initializeAwards();
+
+      this.showModeSelector = true;
+    },
+    selectStartupView(view: string) {
+      this.showModeSelector = false;
+      (this.$refs.mainContent as any)?.handleViewChange(view);
+      (this.$refs.sideBar as any)?.setView?.(view);
     },
   },
 };
@@ -80,12 +91,27 @@ export default {
     <template v-if="isInitialized">
       <SideBar
         v-if="!showSetupWizard"
+        ref="sideBar"
         @view-change="view => ($refs.mainContent as any)?.handleViewChange(view)"
       />
       <MainContent v-if="!showSetupWizard" ref="mainContent" />
       <SetupWizard v-if="showSetupWizard" @complete="onSetupComplete" />
       <!-- Toast notifications for achievements -->
       <ToastNotifications v-if="!showSetupWizard" />
+      <div v-if="showModeSelector" class="startup-modal">
+        <div class="startup-card">
+          <h2>Start Mode</h2>
+          <p>Select the operating mode to open.</p>
+          <div class="startup-actions">
+            <button class="startup-btn" @click="selectStartupView('qso')">
+              Normal Logging
+            </button>
+            <button class="startup-btn primary" @click="selectStartupView('contest')">
+              Contest Mode
+            </button>
+          </div>
+        </div>
+      </div>
     </template>
     <div v-else class="loading-container">
       <div class="loading-content">
@@ -103,7 +129,7 @@ export default {
 .app-container {
   display: flex;
   height: 100vh;
-  padding: 1rem;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -149,6 +175,60 @@ export default {
 .loading-subtext {
   color: var(--gray-color);
   font-size: 0.9rem;
+}
+
+.startup-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.startup-card {
+  background: #1f1f1f;
+  border: 1px solid #2f2f2f;
+  border-radius: 10px;
+  padding: 2rem;
+  min-width: 360px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.startup-card h2 {
+  color: var(--main-color);
+  font-size: 1.4rem;
+}
+
+.startup-card p {
+  color: var(--gray-color);
+  font-size: 0.95rem;
+}
+
+.startup-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.startup-btn {
+  background: #2b2b2b;
+  border: 1px solid #3a3a3a;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.startup-btn.primary {
+  background: rgba(255, 165, 0, 0.2);
+  border-color: var(--main-color);
+  color: var(--main-color);
 }
 
 @keyframes spin {

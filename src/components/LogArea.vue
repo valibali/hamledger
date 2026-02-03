@@ -174,7 +174,7 @@ export default {
     </div>
 
     <!-- Filters Panel -->
-    <div v-if="showFilters" class="filters-panel">
+    <div v-if="showFilters" class="filters-panel panel">
       <div class="filters-content">
         <div class="filters-row">
           <div class="filter-group search-group">
@@ -441,10 +441,6 @@ export default {
 }
 
 .filters-panel {
-  background: #2b2b2b;
-  border: 1px solid #444;
-  border-radius: 4px;
-  padding: 1rem;
   margin-bottom: 1rem;
 }
 

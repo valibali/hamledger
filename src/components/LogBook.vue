@@ -824,7 +824,7 @@ export default {
     </div>
 
     <!-- Filters Panel -->
-    <div class="filters-panel">
+    <div class="filters-panel panel">
       <div class="filters-row">
         <div class="filter-group search-group">
           <label>Search:</label>
@@ -970,7 +970,7 @@ export default {
     </div>
 
     <!-- Batch Actions Panel -->
-    <div v-if="batchMode" class="batch-panel">
+    <div v-if="batchMode" class="batch-panel panel">
       <div class="batch-info">
         <span class="batch-count">{{ selectedQsos.size }} QSOs selected</span>
         <div class="batch-selection-actions">
@@ -1370,10 +1370,6 @@ export default {
 }
 
 .filters-panel {
-  background: #2b2b2b;
-  border: 1px solid #444;
-  border-radius: 4px;
-  padding: 1rem;
   margin-bottom: 1rem;
 }
 
@@ -1788,10 +1784,6 @@ export default {
 }
 
 .batch-panel {
-  background: #2b2b2b;
-  border: 1px solid #444;
-  border-radius: 4px;
-  padding: 1rem;
   margin-bottom: 1rem;
 }
 

@@ -1,86 +1,14 @@
-<script lang="ts">
-import { usePropagationStore } from '../../store/propagation';
-import { useWeatherStore } from '../../store/weather';
-import { DateHelper } from '../../utils/dateHelper';
-import { configHelper } from '../../utils/configHelper';
-import { MaidenheadLocator } from '../../utils/maidenhead';
+<script setup lang="ts">
+import { computed } from 'vue';
+import { usePropClockWeather } from '../../composables/usePropClockWeather';
+import { usePropagationColors } from '../../composables/usePropagationColors';
 
-export default {
-  name: 'PropClockWeather',
-  setup() {
-    const propStore = usePropagationStore();
-    const weatherStore = useWeatherStore();
-    return { propStore, weatherStore };
-  },
-  data() {
-    return {
-      utcTime: '00:00:00',
-      clockInterval: 0,
-      dataRefreshInterval: 0,
-    };
-  },
-  computed: {
-    kIndexColor() {
-      const aIndex = this.propStore.propData.kIndex;
-      if (aIndex <= 2.25) return '#4ade80'; // green
-      if (aIndex <= 5.4) return '#fb923c'; // orange
-      return '#ef4444'; // red
-    },
-    aIndexColor() {
-      const aIndex = this.propStore.propData.aIndex;
-      if (aIndex <= 10) return '#4ade80'; // green
-      if (aIndex <= 12) return '#fb923c'; // orange
-      return '#ef4444'; // red
-    },
-    sfiColor() {
-      const sfi = this.propStore.propData.sfi;
-      if (sfi <= 25) return '#ef4444'; // red
-      if (sfi <= 50) return '#fb923c'; // orange
-      return '#4ade80'; // green
-    },
-  },
-  async mounted() {
-    this.updateUTCClock();
-    this.clockInterval = window.setInterval(this.updateUTCClock, 1000);
-    await this.propStore.updatePropagationData();
-    await this.loadLocalWeather();
+const { utcTime, propStore, weatherStore } = usePropClockWeather();
+const { kIndexColor, aIndexColor, sfiColor } = usePropagationColors();
 
-    // Refresh propagation and weather data every 30 seconds
-    this.dataRefreshInterval = window.setInterval(
-      () => {
-        this.propStore.updatePropagationData();
-        this.loadLocalWeather();
-      },
-      30 * 1000
-    );
-  },
-  beforeUnmount() {
-    if (this.clockInterval) {
-      clearInterval(this.clockInterval);
-    }
-    if (this.dataRefreshInterval) {
-      clearInterval(this.dataRefreshInterval);
-    }
-  },
-  methods: {
-    updateUTCClock() {
-      this.utcTime = DateHelper.getCurrentUTCTime();
-    },
-    async loadLocalWeather() {
-      try {
-        await configHelper.initSettings();
-        const grid = configHelper.getSetting(['station'], 'grid');
-
-        if (grid) {
-          const coords = MaidenheadLocator.gridToLatLon(grid);
-          await this.weatherStore.updateWeatherInfo(coords.lat, coords.lon);
-        }
-      } catch (error) {
-        console.error('Error loading local weather:', error);
-      }
-    },
-  },
-};
+const kColor = computed(() => kIndexColor(propStore.propData.kIndex));
+const aColor = computed(() => aIndexColor(propStore.propData.aIndex));
+const sfi = computed(() => sfiColor(propStore.propData.sfi));
 </script>
 
 <template>
@@ -88,28 +16,25 @@ export default {
     <h2 class="section-title">Propagation, Clock & WX</h2>
     <div class="prop-clock-weather-content">
       <div class="propagation-info">
-        <div v-if="propStore.isLoading" class="prop-loading">
-          <span>Loading...</span>
-        </div>
-        <div v-else-if="propStore.error" class="prop-error">
+        <div v-if="propStore.error" class="prop-error">
           <span>{{ propStore.error }}</span>
         </div>
-        <div v-else class="prop-data">
+        <div v-else class="prop-data" :class="{ 'is-loading': propStore.isLoading }">
           <div class="prop-item">
             <span class="prop-label">SFI</span>
-            <span class="prop-value" :style="{ color: sfiColor }">{{
+            <span class="prop-value" :style="{ color: sfi }">{{
               propStore.propData.sfi
             }}</span>
           </div>
           <div class="prop-item">
             <span class="prop-label">A</span>
-            <span class="prop-value" :style="{ color: aIndexColor }">{{
+            <span class="prop-value" :style="{ color: aColor }">{{
               propStore.propData.aIndex
             }}</span>
           </div>
           <div class="prop-item">
             <span class="prop-label">K</span>
-            <span class="prop-value" :style="{ color: kIndexColor }">
+            <span class="prop-value" :style="{ color: kColor }">
               {{ propStore.propData.kIndex }}</span>
           </div>
           <div v-if="propStore.propData.aurora !== undefined" class="prop-item">
@@ -119,7 +44,11 @@ export default {
             </span>
           </div>
         </div>
-        <div v-if="propStore.propData.station" class="prop-station">
+        <div
+          v-if="propStore.propData.station"
+          class="prop-station"
+          :class="{ 'is-loading': propStore.isLoading }"
+        >
           <span class="station-label">{{ propStore.propData.station }}</span>
         </div>
       </div>
@@ -131,9 +60,14 @@ export default {
         </div>
         <div class="local-weather">
           <span class="weather-label">Local WX:</span>
-          <span v-if="weatherStore.isLoading" class="weather-loading">Loading...</span>
-          <span v-else-if="weatherStore.error" class="weather-error">{{ weatherStore.error }}</span>
-          <span v-else class="weather-value">{{ weatherStore.weatherInfo }}</span>
+          <span v-if="weatherStore.error" class="weather-error">{{ weatherStore.error }}</span>
+          <span
+            v-else
+            class="weather-value"
+            :class="{ 'is-loading': weatherStore.isLoading }"
+          >
+            {{ weatherStore.weatherInfo }}
+          </span>
         </div>
       </div>
     </div>
@@ -197,11 +131,6 @@ export default {
   text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
 }
 
-.prop-loading {
-  font-size: 0.8rem;
-  color: #ccc;
-  font-style: italic;
-}
 
 .prop-error {
   font-size: 0.8rem;
@@ -249,14 +178,13 @@ export default {
   color: #eee;
 }
 
-.weather-loading {
-  font-size: 0.8rem;
-  color: #ccc;
-  font-style: italic;
-}
 
 .weather-error {
   font-size: 0.8rem;
   color: #ff6b6b;
+}
+
+.is-loading {
+  opacity: 0.5;
 }
 </style>

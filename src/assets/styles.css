@@ -93,8 +93,45 @@ input:hover {
 }
 
 .panel {
-  padding: 1rem;
-  border: 1px solid var(--border-color);
+  background: var(--panel-bg, #333);
+  border: var(--panel-border, 1px solid var(--border-color));
+  border-radius: var(--panel-radius, 5px);
+  padding: var(--panel-pad, 1rem);
+  box-sizing: border-box;
+}
+
+.panel-title {
+  font-size: var(--panel-title-size, var(--font-size-md));
+  color: var(--panel-title-color, var(--main-color));
+  letter-spacing: var(--panel-title-spacing, 0.5px);
+  text-transform: var(--panel-title-transform, uppercase);
+  margin: var(--panel-title-margin, 0 0 var(--spacing-sm));
+}
+
+.mode-normal {
+  --panel-bg: #333;
+  --panel-border: 1px solid var(--border-color);
+  --panel-radius: 5px;
+  --panel-pad: 1rem;
+  --page-pad: var(--panel-pad);
+  --panel-title-color: var(--main-color);
+  --panel-title-size: var(--font-size-md);
+  --panel-title-spacing: 0.5px;
+  --panel-title-transform: uppercase;
+  --panel-title-margin: 0 0 var(--spacing-sm);
+}
+
+.mode-contest {
+  --panel-bg: #1b1b1b;
+  --panel-border: 1px solid #2c2c2c;
+  --panel-radius: 10px;
+  --panel-pad: 0.65rem;
+  --page-pad: var(--panel-pad);
+  --panel-title-color: #ffa500;
+  --panel-title-size: 1.05rem;
+  --panel-title-spacing: 0.04em;
+  --panel-title-transform: uppercase;
+  --panel-title-margin: 0 0 0.6rem;
 }
 
 /* Custom scrollbar styles */

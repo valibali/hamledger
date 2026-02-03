@@ -5,19 +5,30 @@ import type { DxSpot } from '../types/dxCluster';
 import { useQsoStore } from '../store/qso';
 import { useRigStore } from '../store/rig';
 import type { MagnifierPosition, ScaleTick, LayoutSpot, TimerHandle } from '../types/dxCluster';
+import { useContestStore } from '../store/contest';
+import { defaultContestRules } from '../services/contestRules';
+import { isCallsignWorked } from '../services/workedMultService';
 
 export default defineComponent({
   name: 'DxCluster',
+  props: {
+    contestMode: {
+      type: Boolean,
+      default: false,
+    },
+  },
 
   setup() {
     const dxStore = useDxClusterStore();
     const qsoStore = useQsoStore();
     const rigStore = useRigStore();
+    const contestStore = useContestStore();
 
     return {
       dxStore,
       qsoStore,
       rigStore,
+      contestStore,
     };
   },
 
@@ -163,7 +174,39 @@ export default defineComponent({
       }
     },
 
+    getContestMeta(spot: DxSpot) {
+      const session = this.contestStore.activeSession;
+      if (!session) return { worked: false, isMult: false };
+      const band = this.dxStore.filters.selectedBand || undefined;
+      const worked = isCallsignWorked(spot.DXCall, session, band, undefined);
+
+      const tempQso = {
+        id: `spot-${spot.DXCall}-${spot.Frequency}`,
+        callsign: spot.DXCall,
+        band: band || 'Unknown',
+        mode: this.rigStore.currentMode || 'SSB',
+        datetime: new Date().toISOString(),
+        rstSent: '59',
+        rstRecv: '59',
+        exchange: {},
+        points: 0,
+        isMult: false,
+      };
+
+      const mult = defaultContestRules.computeMultipliers(tempQso, session);
+      return {
+        worked,
+        isMult: mult.isMult,
+      };
+    },
+
     isSpotWorked(callsign: string): boolean {
+      if (this.contestMode) {
+        const session = this.contestStore.activeSession;
+        if (!session) return false;
+        const band = this.dxStore.filters.selectedBand || undefined;
+        return isCallsignWorked(callsign, session, band, undefined);
+      }
       return this.qsoStore.currentSession.some(
         qso => qso.callsign.toUpperCase() === callsign.toUpperCase()
       );
@@ -181,12 +224,16 @@ export default defineComponent({
         return timeB.getTime() - timeA.getTime(); // Newest first
       });
 
+      const contestFiltered = this.contestMode
+        ? sortedSpots.filter(spot => !this.getContestMeta(spot).worked)
+        : sortedSpots;
       const layoutSpots: LayoutSpot[] = [];
-      const halfPoint = Math.ceil(sortedSpots.length / 2);
+      const halfPoint = Math.ceil(contestFiltered.length / 2);
 
-      for (let i = 0; i < sortedSpots.length; i++) {
-        const spot = sortedSpots[i];
+      for (let i = 0; i < contestFiltered.length; i++) {
+        const spot = contestFiltered[i];
         const position = this.getSpotPosition(spot.Frequency);
+        const contestMeta = this.contestMode ? this.getContestMeta(spot) : null;
 
         // First half goes to column 0, second half to column 1
         const column = i < halfPoint ? 0 : 1;
@@ -196,10 +243,13 @@ export default defineComponent({
         let opacity = this.getSpotOpacity(spot.Time, spot.Date);
         if (column === 1) {
           const indexInSecondColumn = i - halfPoint;
-          const totalInSecondColumn = sortedSpots.length - halfPoint;
+          const totalInSecondColumn = contestFiltered.length - halfPoint;
           // Linear interpolation from normal opacity to 15% for oldest
           const ageFactor = indexInSecondColumn / (totalInSecondColumn - 1);
           opacity = Math.max(0.15, opacity * (1 - ageFactor * 0.85));
+        }
+        if (this.contestMode) {
+          opacity = contestMeta?.isMult ? 1 : 0.5;
         }
 
         layoutSpots.push({
@@ -209,6 +259,7 @@ export default defineComponent({
           column,
           customOpacity: opacity,
           worked: this.isSpotWorked(spot.DXCall),
+          isMult: contestMeta?.isMult,
         });
       }
 
@@ -232,6 +283,7 @@ export default defineComponent({
           const spotFreq = parseFloat(spot.Frequency);
           return Math.abs(spotFreq - freq) <= 5;
         })
+        .filter(spot => (this.contestMode ? !this.getContestMeta(spot).worked : true))
         .sort((a, b) => {
           // Sort by age (newest first)
           const timeA = new Date(
@@ -348,8 +400,8 @@ export default defineComponent({
 </script>
 
 <template>
-  <div class="dx-cluster">
-    <h2 class="section-title">DX Cluster - {{ filters.selectedBand }} band</h2>
+  <div class="dx-cluster panel">
+    <h2 class="panel-title">DX Cluster - {{ filters.selectedBand }} band</h2>
 
     <div class="dx-cluster-main">
       <!-- Frequency Scale and Spots -->
@@ -402,6 +454,8 @@ export default defineComponent({
                 worked: spot.worked,
                 lotw: spot.LOTW,
                 eqsl: spot.EQSL,
+                'contest-new': contestMode,
+                'contest-mult': contestMode && spot.isMult,
                 [`column-${spot.column}`]: true,
               }"
               :title="`${spot.DXCall} - ${formatFrequency(spot.Frequency)} - Spotters: ${spot.Spotters.join(', ')} - ${spot.Comment}`"
@@ -439,6 +493,8 @@ export default defineComponent({
               worked: isSpotWorked(spot.DXCall),
               lotw: spot.LOTW,
               eqsl: spot.EQSL,
+              'contest-new': contestMode,
+              'contest-mult': contestMode && getContestMeta(spot).isMult,
             }"
             @click="handleSpotClick(spot)"
           >
@@ -564,12 +620,9 @@ export default defineComponent({
   width: auto;
   display: flex;
   flex-direction: column;
-  background: var(--bg-lighter);
-  border-radius: var(--border-radius-lg);
   overflow: hidden;
-  border: 1px solid var(--border-color);
-  padding: 1rem;
 }
+
 
 .dx-cluster-main {
   display: flex;
@@ -773,6 +826,15 @@ export default defineComponent({
   border: 1px solid rgba(34, 197, 94, 0.9);
 }
 
+.spot-label.contest-new {
+  color: #ff6a4d;
+  border: 1px solid rgba(255, 106, 77, 0.5);
+}
+
+.spot-label.contest-mult {
+  animation: contest-mult-blink 1.2s ease-in-out infinite;
+}
+
 .spot-label.lotw {
   border-right: 3px solid #3b82f6;
 }
@@ -784,6 +846,18 @@ export default defineComponent({
 .spot-label.lotw.eqsl {
   border-right: 3px solid #3b82f6;
   box-shadow: inset -3px 0 0 #f59e0b;
+}
+
+@keyframes contest-mult-blink {
+  0% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(255, 68, 68, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+  }
 }
 
 .loading,
@@ -876,6 +950,14 @@ export default defineComponent({
   border: 1px solid rgba(34, 197, 94, 0.9);
 }
 
+.magnifier-spot.contest-new {
+  border: 1px solid rgba(255, 106, 77, 0.5);
+}
+
+.magnifier-spot.contest-mult {
+  animation: contest-mult-blink 1.2s ease-in-out infinite;
+}
+
 .magnifier-spot.lotw {
   border-right: 3px solid #3b82f6;
 }
@@ -894,6 +976,10 @@ export default defineComponent({
   font-size: 0.9rem;
   color: var(--text-primary);
   margin-bottom: 0.2rem;
+}
+
+.magnifier-spot.contest-new .spot-call {
+  color: #ff6a4d;
 }
 
 .spot-freq {

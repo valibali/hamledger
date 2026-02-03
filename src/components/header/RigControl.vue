@@ -2,34 +2,28 @@
 import { useRigStore } from '../../store/rig';
 import { useQsoStore } from '../../store/qso';
 import { configHelper } from '../../utils/configHelper';
-import type { RigModel } from '../../types/rig';
-
-interface ConnectionForm {
-  host: string;
-  port: number;
-  model: number | undefined;
-  device: string | undefined;
-}
-
-interface GroupedModel {
-  name: string;
-  models: RigModel[];
-}
+import { useRigctldConnectionDialog } from '../../composables/useRigctldConnectionDialog';
+import { useRigctldConnectionForm } from '../../composables/useRigctldConnectionForm';
+import { useRigctldModels } from '../../composables/useRigctldModels';
+import RigctldConnectionDialog from '../rig/RigctldConnectionDialog.vue';
 
 export default {
   name: 'RigControl',
+  components: {
+    RigctldConnectionDialog,
+  },
   data() {
     return {
       rigStore: useRigStore(),
       qsoStore: useQsoStore(),
+      rigctldDialog: useRigctldConnectionDialog(),
+      rigctldForm: useRigctldConnectionForm(),
+      rigctldModels: useRigctldModels(),
       rigModel: '',
       rigPort: '',
-      showConnectionDialog: false,
       showWSJTXDialog: false,
       showTakeBackDialog: false,
       showAdminRetryDialog: false,
-      rigModels: [] as RigModel[],
-      loadingModels: false,
       wsjtxEnabled: false,
       firewallStatus: {
         isConfiguring: false,
@@ -37,12 +31,6 @@ export default {
         error: null as string | null,
         userCancelled: false,
       },
-      connectionForm: {
-        host: 'localhost',
-        port: 4532,
-        model: undefined,
-        device: undefined,
-      } as ConnectionForm,
       wsjtxForm: {
         enabled: false,
         port: 2237,
@@ -56,7 +44,8 @@ export default {
     await this.loadRigModels();
     await this.checkWSJTXSettings();
     // Auto-connect if configuration exists and WSJT-X is not enabled
-    if (this.connectionForm.host && this.connectionForm.port && !this.wsjtxEnabled) {
+    const form = this.getConnectionForm();
+    if (form.host && form.port && !this.wsjtxEnabled) {
       await this.handleConnect();
     }
   },
@@ -114,41 +103,38 @@ export default {
     wsjtxStatus() {
       return this.qsoStore.wsjtxStatus;
     },
-    groupedModels(): GroupedModel[] {
-      const grouped = new Map<string, GroupedModel>();
-
-      for (const model of this.rigModels) {
-        if (!grouped.has(model.manufacturer)) {
-          grouped.set(model.manufacturer, {
-            name: model.manufacturer,
-            models: [],
-          });
-        }
-        grouped.get(model.manufacturer)!.models.push(model);
-      }
-
-      // Sort manufacturers and models within each group
-      const result = Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name));
-      result.forEach(group => {
-        group.models.sort((a, b) => a.model.localeCompare(b.model));
-      });
-
-      return result;
-    },
     wsjtxAllowed(): boolean {
       return (configHelper.getSetting(['wsjtx'], 'enabled') as boolean) || false;
     },
+    rigctldDialogOpen(): boolean {
+      return this.rigctldDialog.isOpen.value;
+    },
+  },
+  watch: {
+    rigctldDialogOpen(newValue: boolean, oldValue: boolean) {
+      if (!newValue && oldValue) {
+        this.loadRigConfig();
+      }
+    },
   },
   methods: {
+    getConnectionForm() {
+      return (
+        (this.rigctldForm.connectionForm as any).value ?? this.rigctldForm.connectionForm
+      );
+    },
+    getRigModelsList() {
+      return (this.rigctldModels.rigModels as any).value ?? this.rigctldModels.rigModels ?? [];
+    },
     async loadRigConfig() {
-      await configHelper.initSettings();
-
-      // Get rig model number from config
+      await this.rigctldForm.loadRigConfig();
       const rigModelNumber = configHelper.getSetting(['rig'], 'rigModel');
 
-      // Find rig name from the loaded models list
-      if (rigModelNumber && this.rigModels.length > 0) {
-        const rigModel = this.rigModels.find(model => model.id === rigModelNumber);
+      const models = this.getRigModelsList();
+      if (rigModelNumber && models.length > 0) {
+        const rigModel = models.find(
+          model => model.id === rigModelNumber
+        );
         this.rigModel = rigModel
           ? `${rigModel.manufacturer} ${rigModel.model}`
           : `Model ${rigModelNumber}`;
@@ -157,71 +143,24 @@ export default {
       }
 
       this.rigPort = configHelper.getSetting(['rig'], 'port') || 'localhost:4532';
-
-      // Load connection settings
-      this.connectionForm.host = configHelper.getSetting(['rig'], 'host') || 'localhost';
-      this.connectionForm.port = configHelper.getSetting(['rig'], 'port') || 4532;
-      this.connectionForm.model = rigModelNumber;
-      this.connectionForm.device = configHelper.getSetting(['rig'], 'device');
     },
 
     async loadRigModels() {
-      this.loadingModels = true;
-      try {
-        const response = await window.electronAPI.executeCommand('rigctld -l');
-        if (response.success && response.data) {
-          this.rigModels = this.parseRigModels(response.data);
-          // Reload rig config after models are loaded to get the correct name
-          await this.loadRigConfig();
-        } else {
-          console.error('Failed to load rig models:', response.error);
-        }
-      } catch (error) {
-        console.error('Error loading rig models:', error);
-      } finally {
-        this.loadingModels = false;
-      }
-    },
-
-    parseRigModels(output: string): RigModel[] {
-      const lines = output.split('\n');
-      const models: RigModel[] = [];
-
-      for (const line of lines) {
-        // Skip header and empty lines
-        if (line.trim() === '' || line.includes('Rig #') || line.includes('---')) {
-          continue;
-        }
-
-        // Parse each line: "  1025  Yaesu                  MARK-V Field FT-1000MP  20210318.0      Stable      RIG_MODEL_FT1000MPMKVFLD"
-        const match = line.match(
-          /^\s*(\d+)\s+([^\s]+)\s+(.+?)\s+\d{8}\.\d+\s+(Alpha|Beta|Stable|Untested)\s+/
-        );
-        if (match) {
-          const [, id, manufacturer, model, status] = match;
-          models.push({
-            id: parseInt(id),
-            manufacturer: manufacturer.trim(),
-            model: model.trim(),
-            status: status.trim(),
-          });
-        }
-      }
-
-      return models;
+      await this.rigctldModels.loadRigModels();
+      await this.loadRigConfig();
     },
 
     async handleConnect() {
       try {
+        const form = this.getConnectionForm();
         const response = await this.rigStore.connect(
-          this.connectionForm.host,
-          this.connectionForm.port,
-          this.connectionForm.model,
-          this.connectionForm.device
+          form.host,
+          form.port,
+          form.model,
+          form.device
         );
 
         if (this.rigStore.isConnected) {
-          this.showConnectionDialog = false;
           // Start polling for rig state updates
           this.startRigPolling();
         } else if (response.shouldRetry) {
@@ -230,15 +169,9 @@ export default {
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           // Retry connection without attempting firewall fix again
-          await this.rigStore.connect(
-            this.connectionForm.host,
-            this.connectionForm.port,
-            this.connectionForm.model,
-            this.connectionForm.device
-          );
+          await this.rigStore.connect(form.host, form.port, form.model, form.device);
 
           if (this.rigStore.isConnected) {
-            this.showConnectionDialog = false;
             this.startRigPolling();
           } else {
             // Still failed after firewall fix, offer admin option
@@ -266,7 +199,6 @@ export default {
         const response = await this.rigStore.startRigctldElevated();
 
         if (this.rigStore.isConnected) {
-          this.showConnectionDialog = false;
           this.startRigPolling();
         } else if (response.userCancelled) {
           console.log('User cancelled elevated rigctld start');
@@ -313,12 +245,8 @@ export default {
         this.loadWSJTXSettings();
         this.showWSJTXDialog = true;
       } else {
-        this.showConnectionDialog = true;
+        this.rigctldDialog.open();
       }
-    },
-
-    closeConnectionDialog() {
-      this.showConnectionDialog = false;
     },
 
     closeWSJTXDialog() {
@@ -360,50 +288,6 @@ export default {
       this.closeWSJTXDialog();
     },
 
-    async saveConnectionSettings() {
-      // Check if model changed
-      const currentModel = configHelper.getSetting(['rig'], 'rigModel');
-      const modelChanged = currentModel !== this.connectionForm.model;
-
-      // Save to config (only save the model number, not the name)
-      await configHelper.updateSetting(['rig'], 'host', this.connectionForm.host);
-      await configHelper.updateSetting(['rig'], 'port', this.connectionForm.port);
-      if (this.connectionForm.model) {
-        await configHelper.updateSetting(['rig'], 'rigModel', this.connectionForm.model);
-      }
-      if (this.connectionForm.device) {
-        await configHelper.updateSetting(['rig'], 'device', this.connectionForm.device);
-      }
-
-      // Update the displayed rig model name
-      if (this.connectionForm.model) {
-        const rigModel = this.rigModels.find(model => model.id === this.connectionForm.model);
-        if (rigModel) {
-          this.rigModel = `${rigModel.manufacturer} ${rigModel.model}`;
-        }
-      }
-
-      // If model changed, restart rigctld
-      if (modelChanged) {
-        console.log('Rig model changed, restarting rigctld...');
-        try {
-          const response = await window.electronAPI.rigctldRestart();
-          if (!response.success) {
-            console.error('Failed to restart rigctld:', response.error);
-          }
-        } catch (error) {
-          console.error('Error restarting rigctld:', error);
-        }
-
-        // Wait a moment for rigctld to restart
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      // Connect with new settings only if WSJT-X is not enabled
-      if (!this.wsjtxEnabled) {
-        await this.handleConnect();
-      }
-    },
 
     async checkWSJTXSettings() {
       await configHelper.initSettings();
@@ -603,72 +487,7 @@ export default {
       </div>
     </div>
 
-    <!-- Connection Settings Dialog -->
-    <div
-      v-if="showConnectionDialog"
-      class="connection-dialog-overlay"
-      @click="closeConnectionDialog"
-    >
-      <div class="connection-dialog" @click.stop>
-        <h3>Rigctld Connection Settings</h3>
-        <form @submit.prevent="saveConnectionSettings">
-          <div class="form-group">
-            <label for="host">Host:</label>
-            <input
-              id="host"
-              v-model="connectionForm.host"
-              type="text"
-              placeholder="localhost"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="port">Port:</label>
-            <input
-              id="port"
-              v-model.number="connectionForm.port"
-              type="number"
-              placeholder="4532"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="model">Rig Model (optional):</label>
-            <select id="model" v-model.number="connectionForm.model" :disabled="loadingModels">
-              <option :value="undefined">Select a rig model...</option>
-              <optgroup
-                v-for="manufacturer in groupedModels"
-                :key="manufacturer.name"
-                :label="manufacturer.name"
-              >
-                <option
-                  v-for="model in manufacturer.models"
-                  :key="model.id"
-                  :value="model.id"
-                  :title="`Status: ${model.status}`"
-                >
-                  {{ model.model }} ({{ model.id }}) - {{ model.status }}
-                </option>
-              </optgroup>
-            </select>
-            <div v-if="loadingModels" class="loading-text">Loading rig models...</div>
-          </div>
-          <div class="form-group">
-            <label for="device">COM port:</label>
-            <input
-              id="device"
-              v-model="connectionForm.device"
-              type="text"
-              placeholder="e.g. /dev/ttyUSB0"
-            />
-          </div>
-          <div class="dialog-buttons">
-            <button type="button" @click="closeConnectionDialog">Cancel</button>
-            <button type="submit" class="connect-btn">Connect</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <RigctldConnectionDialog />
 
     <!-- WSJT-X Settings Dialog -->
     <div v-if="showWSJTXDialog" class="connection-dialog-overlay" @click="closeWSJTXDialog">

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AppHeader from './AppHeader.vue';
 import QsoPanel from './QsoPanel.vue';
 import LogArea from './LogArea.vue';
@@ -7,6 +7,7 @@ import LogBook from './LogBook.vue';
 import ConfigView from './ConfigView.vue';
 import DxCluster from './DxCluster.vue';
 import Awards from './Awards.vue';
+import ContestModeShell from './contest/ContestModeShell.vue';
 import { configHelper } from '../utils/configHelper';
 
 export default {
@@ -19,10 +20,14 @@ export default {
     ConfigView,
     DxCluster,
     Awards,
+    ContestModeShell,
   },
   setup() {
     const currentView = ref('qso');
-    return { currentView };
+    const viewClass = computed(() =>
+      currentView.value === 'contest' ? 'mode-contest' : 'mode-normal'
+    );
+    return { currentView, viewClass };
   },
   methods: {
     handleViewChange(view: string) {
@@ -36,7 +41,7 @@ export default {
 </script>
 
 <template>
-  <div class="main-content">
+  <div class="main-content" :class="viewClass">
     <template v-if="currentView === 'qso'">
       <div class="qso-layout">
         <div class="left-column">
@@ -49,6 +54,7 @@ export default {
         </div>
       </div>
     </template>
+    <ContestModeShell v-else-if="currentView === 'contest'" />
     <LogBook v-else-if="currentView === 'logbook'" />
     <Awards v-else-if="currentView === 'awards'" />
     <ConfigView v-else-if="currentView === 'settings'" />
@@ -59,8 +65,16 @@ export default {
 .main-content {
   margin-left: 60px;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  padding: var(--page-pad, 0.35rem);
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.main-content.mode-contest {
+  padding-bottom: var(--page-pad);
 }
 
 .qso-layout {

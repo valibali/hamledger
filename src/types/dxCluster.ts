@@ -67,4 +67,5 @@ export interface LayoutSpot extends DxSpot {
   column: number;
   customOpacity: number;
   worked: boolean;
+  isMult?: boolean;
 }
