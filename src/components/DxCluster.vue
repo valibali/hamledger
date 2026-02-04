@@ -173,6 +173,28 @@ export default defineComponent({
         return 0.5;
       }
     },
+    getSpotAgeMinutes(spot: DxSpot): number {
+      try {
+        const [day, month, year] = spot.Date.split('/');
+        const isoDate = `20${year}-${month}-${day}T${spot.Time}:00Z`;
+        const spotTime = new Date(isoDate);
+        return (Date.now() - spotTime.getTime()) / (1000 * 60);
+      } catch {
+        return 0;
+      }
+    },
+    toRgba(color: string, alpha: number): string {
+      if (color.startsWith('#')) {
+        const hex = color.replace('#', '');
+        const full =
+          hex.length === 3 ? hex.split('').map(value => value + value).join('') : hex;
+        const r = parseInt(full.slice(0, 2), 16);
+        const g = parseInt(full.slice(2, 4), 16);
+        const b = parseInt(full.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+      return color;
+    },
 
     getContestMeta(spot: DxSpot) {
       const session = this.contestStore.activeSession;
@@ -193,11 +215,46 @@ export default defineComponent({
         isMult: false,
       };
 
-      const mult = defaultContestRules.computeMultipliers(tempQso, session);
+      const factor = defaultContestRules.computeMultiplierFactor(tempQso, session);
       return {
         worked,
-        isMult: mult.isMult,
+        isMult: factor > 1,
       };
+    },
+    getContestDisplayState(spot: DxSpot) {
+      const meta = this.getContestMeta(spot);
+      const settings = this.contestStore.dxDisplaySettings;
+      if (meta.worked) {
+        return {
+          ...meta,
+          hidden: this.getSpotAgeMinutes(spot) > settings.workedHideMinutes,
+          opacity: settings.workedOpacity,
+          bgColor: 'transparent',
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          blink: false,
+        };
+      }
+      if (meta.isMult) {
+        return {
+          ...meta,
+          hidden: false,
+          opacity: settings.multOpacity,
+          bgColor: this.toRgba(settings.multBg, settings.multBgOpacity),
+          borderColor: 'rgba(255, 255, 255, 0.8)',
+          blink: settings.multBlink,
+        };
+      }
+      return {
+        ...meta,
+        hidden: false,
+        opacity: settings.regularOpacity,
+        bgColor: this.toRgba(settings.regularBg, settings.regularBgOpacity),
+        borderColor: 'rgba(255, 255, 255, 0.25)',
+        blink: false,
+      };
+    },
+    shouldHideContestSpot(spot: DxSpot): boolean {
+      return this.getContestDisplayState(spot).hidden;
     },
 
     isSpotWorked(callsign: string): boolean {
@@ -225,7 +282,7 @@ export default defineComponent({
       });
 
       const contestFiltered = this.contestMode
-        ? sortedSpots.filter(spot => !this.getContestMeta(spot).worked)
+        ? sortedSpots.filter(spot => !this.shouldHideContestSpot(spot))
         : sortedSpots;
       const layoutSpots: LayoutSpot[] = [];
       const halfPoint = Math.ceil(contestFiltered.length / 2);
@@ -233,7 +290,7 @@ export default defineComponent({
       for (let i = 0; i < contestFiltered.length; i++) {
         const spot = contestFiltered[i];
         const position = this.getSpotPosition(spot.Frequency);
-        const contestMeta = this.contestMode ? this.getContestMeta(spot) : null;
+        const contestState = this.contestMode ? this.getContestDisplayState(spot) : null;
 
         // First half goes to column 0, second half to column 1
         const column = i < halfPoint ? 0 : 1;
@@ -249,7 +306,7 @@ export default defineComponent({
           opacity = Math.max(0.15, opacity * (1 - ageFactor * 0.85));
         }
         if (this.contestMode) {
-          opacity = contestMeta?.isMult ? 1 : 0.5;
+          opacity = contestState?.opacity ?? opacity;
         }
 
         layoutSpots.push({
@@ -258,8 +315,11 @@ export default defineComponent({
           leftOffset,
           column,
           customOpacity: opacity,
-          worked: this.isSpotWorked(spot.DXCall),
-          isMult: contestMeta?.isMult,
+          worked: contestState?.worked ?? this.isSpotWorked(spot.DXCall),
+          isMult: contestState?.isMult,
+          bgColor: contestState?.bgColor,
+          blink: contestState?.blink,
+          borderColor: contestState?.borderColor,
         });
       }
 
@@ -283,7 +343,7 @@ export default defineComponent({
           const spotFreq = parseFloat(spot.Frequency);
           return Math.abs(spotFreq - freq) <= 5;
         })
-        .filter(spot => (this.contestMode ? !this.getContestMeta(spot).worked : true))
+        .filter(spot => (this.contestMode ? !this.shouldHideContestSpot(spot) : true))
         .sort((a, b) => {
           // Sort by age (newest first)
           const timeA = new Date(
@@ -448,6 +508,8 @@ export default defineComponent({
                 top: `${100 - spot.position}%`,
                 left: `${spot.leftOffset}px`,
                 opacity: spot.customOpacity,
+                background: spot.bgColor || undefined,
+                borderColor: spot.borderColor || undefined,
                 zIndex: spot.column + 1,
               }"
               :class="{
@@ -456,6 +518,7 @@ export default defineComponent({
                 eqsl: spot.EQSL,
                 'contest-new': contestMode,
                 'contest-mult': contestMode && spot.isMult,
+                'contest-blink': contestMode && spot.blink,
                 [`column-${spot.column}`]: true,
               }"
               :title="`${spot.DXCall} - ${formatFrequency(spot.Frequency)} - Spotters: ${spot.Spotters.join(', ')} - ${spot.Comment}`"
@@ -489,12 +552,18 @@ export default defineComponent({
             v-for="spot in magnifierSpots"
             :key="`mag-${spot.Nr}`"
             class="magnifier-spot"
+            :style="{
+              opacity: contestMode ? getContestDisplayState(spot).opacity : undefined,
+              background: contestMode ? getContestDisplayState(spot).bgColor : undefined,
+              borderColor: contestMode ? getContestDisplayState(spot).borderColor : undefined,
+            }"
             :class="{
               worked: isSpotWorked(spot.DXCall),
               lotw: spot.LOTW,
               eqsl: spot.EQSL,
               'contest-new': contestMode,
               'contest-mult': contestMode && getContestMeta(spot).isMult,
+              'contest-blink': contestMode && getContestDisplayState(spot).blink,
             }"
             @click="handleSpotClick(spot)"
           >
@@ -827,11 +896,16 @@ export default defineComponent({
 }
 
 .spot-label.contest-new {
-  color: #ff6a4d;
-  border: 1px solid rgba(255, 106, 77, 0.5);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .spot-label.contest-mult {
+  color: #ff4d4d;
+  border-color: rgba(255, 77, 77, 0.7);
+}
+
+.spot-label.contest-blink {
   animation: contest-mult-blink 1.2s ease-in-out infinite;
 }
 
@@ -951,10 +1025,16 @@ export default defineComponent({
 }
 
 .magnifier-spot.contest-new {
-  border: 1px solid rgba(255, 106, 77, 0.5);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .magnifier-spot.contest-mult {
+  color: #ff4d4d;
+  border-color: rgba(255, 77, 77, 0.7);
+}
+
+.magnifier-spot.contest-blink {
   animation: contest-mult-blink 1.2s ease-in-out infinite;
 }
 
@@ -979,7 +1059,11 @@ export default defineComponent({
 }
 
 .magnifier-spot.contest-new .spot-call {
-  color: #ff6a4d;
+  color: #ffffff;
+}
+
+.magnifier-spot.contest-mult .spot-call {
+  color: #ff4d4d;
 }
 
 .spot-freq {

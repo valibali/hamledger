@@ -24,6 +24,7 @@ const speedDialSettings = ref({
   type: 'topMult' as 'topMult' | 'newest' | 'activeDe' | 'mostReportedDx',
 });
 const draftSettings = ref({ ...speedDialSettings.value });
+const draftDisplaySettings = ref({ ...contestStore.dxDisplaySettings });
 
 const spots = computed(() => dxStore.spots);
 
@@ -56,11 +57,11 @@ const getSpotMeta = (spot: DxSpot) => {
     isMult: false,
   };
 
-  const mult = defaultContestRules.computeMultipliers(tempQso, session);
+  const factor = defaultContestRules.computeMultiplierFactor(tempQso, session);
   return {
     worked,
-    isMult: mult.isMult,
-    multValue: mult.value ?? '',
+    isMult: factor > 1,
+    multValue: factor > 1 ? factor : '',
   };
 };
 
@@ -90,6 +91,59 @@ const getSpotTime = (spot: DxSpot) => {
   return new Date(`20${year}-${month}-${day}T${spot.Time}:00Z`).getTime();
 };
 
+const getSpotAgeMinutes = (spot: DxSpot) => (Date.now() - getSpotTime(spot)) / (1000 * 60);
+
+const toRgba = (color: string, alpha: number) => {
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    const full = hex.length === 3 ? hex.split('').map(v => v + v).join('') : hex;
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return color;
+};
+
+const getSpotDisplay = (spot: DxSpot) => {
+  const meta = getSpotMeta(spot);
+  const settings = contestStore.dxDisplaySettings;
+  if (meta.worked) {
+    return {
+      meta,
+      hidden: getSpotAgeMinutes(spot) > settings.workedHideMinutes,
+      opacity: settings.workedOpacity,
+      backgroundColor: 'transparent',
+      blink: false,
+    };
+  }
+  if (meta.isMult) {
+    return {
+      meta,
+      hidden: false,
+      opacity: settings.multOpacity,
+      backgroundColor: toRgba(settings.multBg, settings.multBgOpacity),
+      blink: settings.multBlink,
+    };
+  }
+  return {
+    meta,
+    hidden: false,
+    opacity: settings.regularOpacity,
+    backgroundColor: toRgba(settings.regularBg, settings.regularBgOpacity),
+    blink: false,
+  };
+};
+
+const getSpotCardStyle = (spot: DxSpot, index: number) => {
+  const display = getSpotDisplay(spot);
+  const selected = selectedKey.value === index;
+  return {
+    opacity: display.opacity,
+    backgroundColor: selected ? 'rgba(34, 197, 94, 0.25)' : display.backgroundColor,
+  };
+};
+
 const maxCards = computed(() => Math.min(10, Math.max(1, speedDialSettings.value.maxCards)));
 const timeLimitMinutes = computed(() =>
   Math.max(1, Number(speedDialSettings.value.timeLimitMinutes) || 1)
@@ -100,13 +154,13 @@ const rankedSpots = computed(() => {
   const pool = spots.value
     .map(spot => ({
       spot,
-      meta: getSpotMeta(spot),
+      display: getSpotDisplay(spot),
     }))
-    .filter(entry => !entry.meta.worked && getSpotTime(entry.spot) >= cutoff);
+    .filter(entry => !entry.display.hidden && getSpotTime(entry.spot) >= cutoff);
 
   if (speedDialSettings.value.type === 'topMult') {
     return pool
-      .filter(entry => entry.meta.isMult)
+      .filter(entry => entry.display.meta.isMult)
       .sort((a, b) => getSpotTime(b.spot) - getSpotTime(a.spot))
       .map(entry => entry.spot)
       .slice(0, maxCards.value);
@@ -213,11 +267,13 @@ const handleSpeedDialKeydown = (event: KeyboardEvent) => {
 
 const openSettings = () => {
   draftSettings.value = { ...speedDialSettings.value };
+  draftDisplaySettings.value = { ...contestStore.dxDisplaySettings };
   settingsOpen.value = true;
 };
 
 const saveSettings = () => {
   speedDialSettings.value = { ...draftSettings.value };
+  contestStore.setDxDisplaySettings(draftDisplaySettings.value);
   settingsOpen.value = false;
 };
 
@@ -256,6 +312,54 @@ watch(
   }
 );
 
+watch(
+  () => draftDisplaySettings.value.workedHideMinutes,
+  value => {
+    const next = Math.max(1, Number(value) || 1);
+    if (next !== value) draftDisplaySettings.value.workedHideMinutes = next;
+  }
+);
+
+watch(
+  () => draftDisplaySettings.value.multBgOpacity,
+  value => {
+    const next = Math.min(1, Math.max(0, Number(value) || 0));
+    if (next !== value) draftDisplaySettings.value.multBgOpacity = next;
+  }
+);
+
+watch(
+  () => draftDisplaySettings.value.regularBgOpacity,
+  value => {
+    const next = Math.min(1, Math.max(0, Number(value) || 0));
+    if (next !== value) draftDisplaySettings.value.regularBgOpacity = next;
+  }
+);
+
+watch(
+  () => draftDisplaySettings.value.multOpacity,
+  value => {
+    const next = Math.min(1, Math.max(0, Number(value) || 0));
+    if (next !== value) draftDisplaySettings.value.multOpacity = next;
+  }
+);
+
+watch(
+  () => draftDisplaySettings.value.regularOpacity,
+  value => {
+    const next = Math.min(1, Math.max(0, Number(value) || 0));
+    if (next !== value) draftDisplaySettings.value.regularOpacity = next;
+  }
+);
+
+watch(
+  () => draftDisplaySettings.value.workedOpacity,
+  value => {
+    const next = Math.min(1, Math.max(0, Number(value) || 0));
+    if (next !== value) draftDisplaySettings.value.workedOpacity = next;
+  }
+);
+
 onMounted(() => {
   dxStore.connectCluster();
   window.addEventListener('keydown', handleSpeedDialKeydown, { capture: true });
@@ -282,9 +386,11 @@ onBeforeUnmount(() => {
           class="spot-card"
           :class="{
             'is-mult': getSpotMeta(spot).isMult,
+            'is-worked': getSpotMeta(spot).worked,
+            'blink-edge': getSpotDisplay(spot).blink,
             'is-selected': selectedKey === index,
           }"
-          :style="{ opacity: getSpotMeta(spot).isMult ? 1 : 0.5 }"
+          :style="getSpotCardStyle(spot, index)"
           type="button"
           @click="
             selectedKey = index;
@@ -347,6 +453,79 @@ onBeforeUnmount(() => {
             <option value="mostReportedDx">Most reported DX station</option>
           </select>
         </label>
+        <div class="modal-section">
+          <div class="modal-section-title">Display rules</div>
+          <div class="modal-section-note">Applies to DX Cluster and Speed Dial.</div>
+          <label class="toggle-row">
+            <span>Multiplier background</span>
+            <div class="inline-controls">
+              <input v-model="draftDisplaySettings.multBg" type="color" />
+              <input
+                v-model.number="draftDisplaySettings.multBgOpacity"
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+              />
+            </div>
+          </label>
+          <label class="toggle-row">
+            <span>Multiplier opacity</span>
+            <input
+              v-model.number="draftDisplaySettings.multOpacity"
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+            />
+          </label>
+          <label class="toggle-row">
+            <span>Multiplier blink edge</span>
+            <input v-model="draftDisplaySettings.multBlink" type="checkbox" />
+          </label>
+          <label class="toggle-row">
+            <span>Regular background</span>
+            <div class="inline-controls">
+              <input v-model="draftDisplaySettings.regularBg" type="color" />
+              <input
+                v-model.number="draftDisplaySettings.regularBgOpacity"
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+              />
+            </div>
+          </label>
+          <label class="toggle-row">
+            <span>Regular opacity</span>
+            <input
+              v-model.number="draftDisplaySettings.regularOpacity"
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+            />
+          </label>
+          <label class="toggle-row">
+            <span>Worked opacity</span>
+            <input
+              v-model.number="draftDisplaySettings.workedOpacity"
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+            />
+          </label>
+          <label class="toggle-row">
+            <span>Hide worked after (min)</span>
+            <input
+              v-model.number="draftDisplaySettings.workedHideMinutes"
+              type="number"
+              min="1"
+              step="1"
+            />
+          </label>
+        </div>
         <label class="toggle-row is-disabled">
           <input type="checkbox" disabled />
           <span>Rotate antenna to station (hamlib)</span>
@@ -408,7 +587,7 @@ onBeforeUnmount(() => {
 }
 
 .spot-card {
-  background: #1c1c1c;
+  background: transparent;
   border: 1px solid #2e2e2e;
   border-radius: 8px;
   color: #ff6a4d;
@@ -421,7 +600,7 @@ onBeforeUnmount(() => {
   gap: 0.25rem;
 }
 
-.spot-card.is-mult {
+.spot-card.blink-edge {
   animation: contest-mult-blink 1.2s ease-in-out infinite;
 }
 
@@ -429,6 +608,10 @@ onBeforeUnmount(() => {
   background: rgba(34, 197, 94, 0.25);
   border-color: rgba(34, 197, 94, 0.8);
   color: #d1fae5;
+}
+
+.spot-card.is-worked {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .spot-card.is-selected .spot-call {
@@ -506,6 +689,33 @@ onBeforeUnmount(() => {
   background: rgba(255, 165, 0, 0.2);
   color: #ffb347;
   border-color: rgba(255, 165, 0, 0.45);
+}
+
+.modal-section {
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.modal-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.modal-section-note {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: -0.2rem;
+}
+
+.inline-controls {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
 }
 
 @keyframes contest-mult-blink {

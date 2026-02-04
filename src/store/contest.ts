@@ -29,6 +29,17 @@ interface ContestState {
     multipliers: string[];
     score: number;
   };
+  dxDisplaySettings: {
+    multBg: string;
+    multBgOpacity: number;
+    multOpacity: number;
+    multBlink: boolean;
+    regularBg: string;
+    regularBgOpacity: number;
+    regularOpacity: number;
+    workedOpacity: number;
+    workedHideMinutes: number;
+  };
   activeView: 'contest' | 'voiceKeyer' | 'review';
   setupPending: boolean;
   sessionElapsedMs: number;
@@ -118,6 +129,18 @@ function createDraft(): ContestDraft {
   };
 }
 
+const defaultDxDisplaySettings = {
+  multBg: '#ff8c00',
+  multBgOpacity: 0.1,
+  multOpacity: 1,
+  multBlink: true,
+  regularBg: '#7fb8ff',
+  regularBgOpacity: 0.1,
+  regularOpacity: 1,
+  workedOpacity: 0.3,
+  workedHideMinutes: 10,
+};
+
 export const useContestStore = defineStore('contest', {
   state: (): ContestState => ({
     activeSession: null,
@@ -133,6 +156,7 @@ export const useContestStore = defineStore('contest', {
       multipliers: [],
       score: 0,
     },
+    dxDisplaySettings: { ...defaultDxDisplaySettings },
     activeView: 'contest',
     setupPending: false,
     sessionElapsedMs: 0,
@@ -188,6 +212,9 @@ export const useContestStore = defineStore('contest', {
     },
     setActiveView(view: 'contest' | 'voiceKeyer' | 'review') {
       this.activeView = view;
+    },
+    setDxDisplaySettings(settings: ContestState['dxDisplaySettings']) {
+      this.dxDisplaySettings = { ...defaultDxDisplaySettings, ...settings };
     },
     setContestProfile(profileId: string) {
       const profile = contestProfiles.find(item => item.id === profileId);
@@ -274,6 +301,10 @@ export const useContestStore = defineStore('contest', {
       void this.persistActiveSession();
     },
     createSession(setup: ContestSetup, profileIdOverride?: string) {
+      const normalizedSetup: ContestSetup = {
+        ...setup,
+        multipliers: setup.multipliers ? [...setup.multipliers] : [],
+      };
       const now = new Date();
       const day = String(now.getDate()).padStart(2, '0');
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -288,17 +319,17 @@ export const useContestStore = defineStore('contest', {
           DXSATELLIT: 'dxsatellit',
           VHFDX: 'vhfdx',
           VHFSERIAL: 'vhfserial',
-        }[setup.logType] || 'dx';
+        }[normalizedSetup.logType] || 'dx';
       this.activeSession = {
         id: sessionId,
         profileId,
         startedAt: undefined,
         qsos: [],
         status: 'idle',
-        setup,
+        setup: normalizedSetup,
       };
       this.setContestProfile(profileId);
-      const startSerial = Number(setup.serialSentStart);
+      const startSerial = Number(normalizedSetup.serialSentStart);
       if (!Number.isNaN(startSerial) && startSerial > 0) {
         this.serialCounter = startSerial;
       }
@@ -313,8 +344,12 @@ export const useContestStore = defineStore('contest', {
     },
     updateSessionSetup(setup: ContestSetup) {
       if (!this.activeSession) return;
-      this.activeSession.setup = setup;
-      const startSerial = Number(setup.serialSentStart);
+      const normalizedSetup: ContestSetup = {
+        ...setup,
+        multipliers: setup.multipliers ? [...setup.multipliers] : [],
+      };
+      this.activeSession.setup = normalizedSetup;
+      const startSerial = Number(normalizedSetup.serialSentStart);
       if (!Number.isNaN(startSerial) && startSerial > 0 && this.activeSession.qsos.length === 0) {
         this.serialCounter = startSerial;
       }

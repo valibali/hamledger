@@ -123,7 +123,13 @@ const matchesTest = (pattern: string) => {
 };
 
 const handleSave = () => {
-  props.onSave({ ...form.value }, selectedProfileId.value);
+  props.onSave(
+    {
+      ...form.value,
+      multipliers: form.value.multipliers ? [...form.value.multipliers] : [],
+    },
+    selectedProfileId.value
+  );
 };
 
 const openRules = () => {

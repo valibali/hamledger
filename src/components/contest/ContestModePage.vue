@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
 import { useContestStore } from '../../store/contest';
 import { useQsoStore } from '../../store/qso';
 import { useRigStore } from '../../store/rig';
 import { useQrzStore } from '../../store/qrz';
+import { LMap, LTileLayer, LCircleMarker, LTooltip } from '@vue-leaflet/vue-leaflet';
+import 'leaflet/dist/leaflet.css';
 import ContestStatsSparkline from './ContestStatsSparkline.vue';
 import ContestDxClusterStrip from './ContestDxClusterStrip.vue';
 import GraylineMap from './GraylineMap.vue';
@@ -13,7 +15,9 @@ import { usePropClockWeather } from '../../composables/usePropClockWeather';
 import { usePropagationColors } from '../../composables/usePropagationColors';
 import { CallsignHelper } from '../../utils/callsign';
 import { configHelper } from '../../utils/configHelper';
-import type { ContestSetup, ContestSession, ContestSessionSnapshot } from '../../types/contest';
+import { MaidenheadLocator } from '../../utils/maidenhead';
+import { geocodeLocation } from '../../utils/geocoding';
+import type { ContestQso, ContestSetup, ContestSession, ContestSessionSnapshot } from '../../types/contest';
 import '../../types/electron';
 
 const contestStore = useContestStore();
@@ -38,6 +42,11 @@ const resumeSnapshot = ref<ContestSessionSnapshot | null>(null);
 const setupSource = ref<'new' | 'reconfig' | null>(null);
 const newSessionModalOpen = ref(false);
 const sessionsModalOpen = ref(false);
+const sessionStatsOpen = ref(false);
+const sessionStatsSession = ref<ContestSession | null>(null);
+const sessionStatsGeoCache = ref<Record<string, { lat: number; lon: number; label?: string } | null>>(
+  {}
+);
 
 const activeSession = computed(() => contestStore.activeSession);
 const draft = computed(() => contestStore.qsoDraft);
@@ -58,6 +67,135 @@ const qsoTimestamps = computed(() =>
   qsos.value.map(qso => new Date(qso.datetime).getTime()).sort((a, b) => a - b)
 );
 const sessionStart = computed(() => activeSession.value?.startedAt ?? '');
+
+const sessionStatsQsos = computed(() => {
+  if (!sessionStatsSession.value) return [];
+  return [...sessionStatsSession.value.qsos].sort(
+    (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
+  );
+});
+
+const sessionStatsSummary = computed(() => {
+  const session = sessionStatsSession.value;
+  if (!session) return null;
+  const totalQsos = session.qsos.length;
+  const score = session.qsos.reduce(
+    (sum, qso) => sum + (qso.points || 0) * (qso.multiplierFactor || 1),
+    0
+  );
+  const mults = new Set(
+    session.qsos
+      .map(qso => String(qso.multiplierFactor || 1))
+      .filter(value => value !== '1')
+  );
+  const start = session.startedAt ? new Date(session.startedAt).getTime() : null;
+  const end = session.endedAt
+    ? new Date(session.endedAt).getTime()
+    : session.qsos.length
+      ? new Date(session.qsos[session.qsos.length - 1].datetime).getTime()
+      : null;
+  const durationHours =
+    start && end && end > start ? (end - start) / (1000 * 60 * 60) : 0;
+  const avgRate = durationHours > 0 ? Math.round(totalQsos / durationHours) : 0;
+  return {
+    totalQsos,
+    score,
+    mults: mults.size,
+    avgRate,
+    start: session.startedAt || 'n/a',
+    end: session.endedAt || 'n/a',
+  };
+});
+
+const extractQsoGrid = (qso: ContestQso): string | null => {
+  const exchange = qso.exchange || {};
+  const candidates = [
+    exchange.grid,
+    exchange.exchangeRecv,
+    exchange.exchangeSent,
+    exchange.region,
+  ].filter(Boolean) as string[];
+  for (const candidate of candidates) {
+    if (MaidenheadLocator.isValidLocatorFormat(candidate)) {
+      return MaidenheadLocator.normalizeLocator(candidate);
+    }
+  }
+  return null;
+};
+
+const sessionMapPoints = computed(() => {
+  const session = sessionStatsSession.value;
+  if (!session) return [];
+  return session.qsos
+    .map(qso => {
+      const grid = extractQsoGrid(qso);
+      if (grid) {
+        const coords = MaidenheadLocator.gridToLatLon(grid);
+        return {
+          ...coords,
+          callsign: qso.callsign,
+          label: grid,
+          band: qso.band,
+          mode: qso.mode,
+        };
+      }
+      const cached = qrzStore.getCached(qso.callsign);
+      if (cached?.lat !== undefined && cached?.lon !== undefined && (cached.lat || cached.lon)) {
+        return {
+          lat: cached.lat,
+          lon: cached.lon,
+          callsign: qso.callsign,
+          label: cached.qth,
+          band: qso.band,
+          mode: qso.mode,
+        };
+      }
+      if (cached?.grid && MaidenheadLocator.isValidLocatorFormat(cached.grid)) {
+        const coords = MaidenheadLocator.gridToLatLon(cached.grid);
+        return {
+          ...coords,
+          callsign: qso.callsign,
+          label: cached.grid,
+          band: qso.band,
+          mode: qso.mode,
+        };
+      }
+      const key = qrzStore.normalize(qso.callsign);
+      const fallback = sessionStatsGeoCache.value[key];
+      if (fallback) {
+        return {
+          lat: fallback.lat,
+          lon: fallback.lon,
+          callsign: qso.callsign,
+          label: fallback.label,
+          band: qso.band,
+          mode: qso.mode,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<{
+    lat: number;
+    lon: number;
+    callsign: string;
+    label?: string;
+    band: string;
+    mode: string;
+  }>;
+});
+
+const sessionMapCenter = computed<[number, number]>(() => {
+  if (!sessionMapPoints.value.length) return [20, 0];
+  const sum = sessionMapPoints.value.reduce(
+    (acc, point) => {
+      acc.lat += point.lat;
+      acc.lon += point.lon;
+      return acc;
+    },
+    { lat: 0, lon: 0 }
+  );
+  return [sum.lat / sessionMapPoints.value.length, sum.lon / sessionMapPoints.value.length];
+});
 
 const rateFromLastN = (count: number) => {
   const list = qsos.value;
@@ -124,18 +262,17 @@ const bestHourRate = computed(() => bestRateForWindow(60));
 
 const statsModalOpen = ref(false);
 const statsCards = computed(() => [
-  { key: 'last10', label: 'Last 10 QSOs', value: last10QsoRate.value },
-  { key: 'last100', label: 'Last 100 QSOs', value: last100QsoRate.value },
-  { key: 'last60', label: 'Last 60 min', value: rateLastHour.value },
-  { key: 'thisHour', label: 'This hour', value: thisHourRate.value },
-  { key: 'best10', label: 'Best 10 min', value: best10MinRate.value },
-  { key: 'best60', label: 'Best hour', value: bestHourRate.value },
-  { key: 'avg20', label: 'Avg 20 min', value: movingAvg20.value },
-  { key: 'avg30', label: 'Avg 30 min', value: movingAvg30.value },
-  { key: 'avg60', label: 'Avg 60 min', value: movingAvg60.value },
-  { key: 'points', label: 'Points', value: contestStore.scoringState.points },
-  { key: 'mults', label: 'Multipliers', value: multiplierCount.value },
-  { key: 'score', label: 'Score', value: contestStore.stats.estimatedScore },
+  { key: 'last10', label: 'Last 10 QSOs', value: last10QsoRate.value, unit: 'QSO/h' },
+  { key: 'last100', label: 'Last 100 QSOs', value: last100QsoRate.value, unit: 'QSO/h' },
+  { key: 'last60', label: 'Last 60 min', value: rateLastHour.value, unit: 'QSO/h' },
+  { key: 'thisHour', label: 'This hour', value: thisHourRate.value, unit: 'QSO/h' },
+  { key: 'best10', label: 'Best 10 min', value: best10MinRate.value, unit: 'QSO/h' },
+  { key: 'best60', label: 'Best hour', value: bestHourRate.value, unit: 'QSO/h' },
+  { key: 'avg20', label: 'Avg 20 min', value: movingAvg20.value, unit: 'QSO/h' },
+  { key: 'avg30', label: 'Avg 30 min', value: movingAvg30.value, unit: 'QSO/h' },
+  { key: 'avg60', label: 'Avg 60 min', value: movingAvg60.value, unit: 'QSO/h' },
+  { key: 'mults', label: 'Multipliers', value: multiplierCount.value, unit: 'mult' },
+  { key: 'score', label: 'Score', value: contestStore.stats.estimatedScore, unit: 'pts' },
 ]);
 
 const statCardEnabled = ref(
@@ -566,13 +703,6 @@ const closeSessionsModal = () => {
   sessionsModalOpen.value = false;
 };
 
-const loadArchivedSession = (sessionId: string) => {
-  const session = contestStore.sessions.find(item => item.id === sessionId);
-  if (!session) return;
-  contestStore.loadArchivedSession(session);
-  sessionsModalOpen.value = false;
-};
-
 const exportSessionAdif = async (sessionId: string) => {
   const session = contestStore.sessions.find(item => item.id === sessionId);
   if (!session) return;
@@ -599,37 +729,17 @@ const exportSessionAdif = async (sessionId: string) => {
   }
 };
 
-const printSessionStats = (sessionId: string) => {
+const openSessionStats = (sessionId: string) => {
   const session = contestStore.sessions.find(item => item.id === sessionId);
   if (!session) return;
-  const totalQsos = session.qsos.length;
-  const points = session.qsos.reduce((sum, qso) => sum + (qso.points || 0), 0);
-  const score = session.qsos.reduce(
-    (sum, qso) => sum + (qso.points || 0) * (qso.multiplierFactor || 1),
-    0
-  );
-  const mults = new Set(
-    session.qsos
-      .map(qso => String(qso.multiplierFactor || 1))
-      .filter(value => value !== '1')
-  );
-  const win = window.open('', '_blank', 'width=600,height=700');
-  if (!win) return;
-  win.document.write(`
-    <html><head><title>Contest Session Stats</title></head><body>
-    <h2>${session.setup.logType}</h2>
-    <p>Session: ${session.id}</p>
-    <p>Start: ${session.startedAt || 'n/a'}</p>
-    <p>End: ${session.endedAt || 'n/a'}</p>
-    <p>QSOs: ${totalQsos}</p>
-    <p>Points: ${points}</p>
-    <p>Multipliers: ${mults.size}</p>
-    <p>Score: ${score}</p>
-    </body></html>
-  `);
-  win.document.close();
-  win.focus();
-  win.print();
+  sessionStatsSession.value = session;
+  sessionStatsOpen.value = true;
+  session.qsos.forEach(qso => void qrzStore.enqueueLookup(qso.callsign));
+};
+
+const closeSessionStats = () => {
+  sessionStatsOpen.value = false;
+  sessionStatsSession.value = null;
 };
 
 const requestCloseSession = () => {
@@ -699,6 +809,26 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown, true);
 });
 
+watchEffect(() => {
+  const session = sessionStatsSession.value;
+  if (!session) return;
+  session.qsos.forEach(qso => {
+    const key = qrzStore.normalize(qso.callsign);
+    if (!key || sessionStatsGeoCache.value[key] !== undefined) return;
+    const cached = qrzStore.getCached(qso.callsign);
+    if (!cached?.qth) return;
+    sessionStatsGeoCache.value[key] = null;
+    void geocodeLocation(cached.qth).then(result => {
+      if (!result) return;
+      sessionStatsGeoCache.value[key] = {
+        lat: result.lat,
+        lon: result.lon,
+        label: result.display_name,
+      };
+    });
+  });
+});
+
 watch(
   () => qsoStore.allQsos.length,
   () => {
@@ -737,27 +867,29 @@ watch(
         </div>
         <div class="session-controls">
           <button
-            class="session-btn"
+            class="session-btn session-btn-start"
             :disabled="contestStore.activeSession?.status === 'running'"
             @click="handleStartSession"
           >
             Start
           </button>
           <button
-            class="session-btn"
+            class="session-btn session-btn-pause"
             :disabled="contestStore.activeSession?.status !== 'running'"
             @click="contestStore.pauseSession"
           >
             Pause
           </button>
           <button
-            class="session-btn"
+            class="session-btn session-btn-stop"
             :disabled="!contestStore.activeSession || contestStore.activeSession.status === 'closed'"
             @click="requestCloseSession"
           >
             Stop
           </button>
-          <button class="session-btn" type="button" @click="openSessionsModal">Sessions</button>
+          <button class="session-btn session-btn-sessions" type="button" @click="openSessionsModal">
+            Sessions
+          </button>
         </div>
       </div>
       <div class="topbar-center">
@@ -1004,7 +1136,10 @@ watch(
         <div class="stats-grid compact">
           <div v-for="card in visibleStatCards" :key="card.key" class="stat">
             <span class="stat-label">{{ card.label }}</span>
-            <span class="stat-value">{{ card.value }}</span>
+            <span class="stat-value">
+              {{ card.value }}
+              <span v-if="card.unit" class="stat-unit">{{ card.unit }}</span>
+            </span>
           </div>
         </div>
         <ContestStatsSparkline
@@ -1137,15 +1272,99 @@ watch(
             <div class="session-subline">QSOs: {{ session.qsos.length }}</div>
           </div>
           <div class="session-actions">
-            <button class="panel-action" type="button" @click="loadArchivedSession(session.id)">
-              Load
-            </button>
             <button class="panel-action" type="button" @click="exportSessionAdif(session.id)">
               Export ADIF
             </button>
-            <button class="panel-action" type="button" @click="printSessionStats(session.id)">
-              Print Stats
+            <button class="panel-action" type="button" @click="openSessionStats(session.id)">
+              Session statistics
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="sessionStatsOpen" class="stats-modal-backdrop" @click="closeSessionStats">
+    <div class="stats-modal panel session-stats-modal" @click.stop>
+      <div class="modal-header">
+        <h3 class="panel-title">Session statistics</h3>
+        <button class="panel-action" type="button" @click="closeSessionStats">Close</button>
+      </div>
+      <div class="modal-body session-stats-body">
+        <div class="session-stats-summary">
+          <div class="stat">
+            <span class="stat-label">QSOs</span>
+            <span class="stat-value">{{ sessionStatsSummary?.totalQsos ?? 0 }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Score</span>
+            <span class="stat-value">{{ sessionStatsSummary?.score ?? 0 }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Multipliers</span>
+            <span class="stat-value">{{ sessionStatsSummary?.mults ?? 0 }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Avg rate</span>
+            <span class="stat-value">{{ sessionStatsSummary?.avgRate ?? 0 }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Start</span>
+            <span class="stat-value">{{ sessionStatsSummary?.start ?? 'n/a' }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">End</span>
+            <span class="stat-value">{{ sessionStatsSummary?.end ?? 'n/a' }}</span>
+          </div>
+        </div>
+        <div class="session-stats-map">
+          <LMap
+            :zoom="2"
+            :center="sessionMapCenter"
+            :use-global-leaflet="false"
+            class="leaflet-map"
+          >
+            <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <LCircleMarker
+              v-for="point in sessionMapPoints"
+              :key="`${point.callsign}-${point.lat}-${point.lon}`"
+              :lat-lng="[point.lat, point.lon]"
+              :radius="5"
+              :color="'#ffa500'"
+              :fill-color="'#ffa500'"
+              :fill-opacity="0.7"
+            >
+              <LTooltip>{{ point.callsign }} {{ point.band }} {{ point.mode }}</LTooltip>
+            </LCircleMarker>
+          </LMap>
+          <div v-if="!sessionMapPoints.length" class="map-empty">
+            No location data available yet.
+          </div>
+        </div>
+        <div class="session-stats-qsos">
+          <div class="session-qso-row header">
+            <span>Time</span>
+            <span>Call</span>
+            <span>Band</span>
+            <span>Mode</span>
+            <span>Exch</span>
+            <span>Score</span>
+          </div>
+          <div v-for="qso in sessionStatsQsos" :key="qso.id" class="session-qso-row">
+            <span>{{ qso.datetime }}</span>
+            <span class="session-qso-call">{{ qso.callsign }}</span>
+            <span>{{ qso.band }}</span>
+            <span>{{ qso.mode }}</span>
+            <span>
+              {{
+                qso.exchange.serialRecv ||
+                qso.exchange.exchangeRecv ||
+                qso.exchange.region ||
+                qso.exchange.grid ||
+                '--'
+              }}
+            </span>
+            <span>{{ (qso.points || 0) * (qso.multiplierFactor || 1) }}</span>
           </div>
         </div>
       </div>
@@ -1218,6 +1437,93 @@ watch(
   background: #1b1b1b;
   border-color: #2c2c2c;
   border-radius: 10px;
+}
+
+.session-stats-modal {
+  width: min(1200px, 95vw);
+  max-height: 90vh;
+}
+
+.session-stats-body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.6rem;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.session-stats-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.session-stats-summary .stat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.session-stats-map {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 260px;
+}
+
+.session-stats-map .leaflet-map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.session-stats-qsos {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.session-qso-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.6fr 0.6fr 0.8fr 0.6fr;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.session-qso-row.header {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.session-qso-row:last-child {
+  border-bottom: none;
+}
+
+.session-qso-call {
+  font-weight: 700;
+  color: #ffb347;
 }
 
 @media (max-width: 1280px) {
@@ -1341,6 +1647,30 @@ watch(
   border-radius: 6px;
   font-size: 0.75rem;
   cursor: pointer;
+}
+
+.session-btn-start {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #d1fae5;
+}
+
+.session-btn-pause {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fef3c7;
+}
+
+.session-btn-stop {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fee2e2;
+}
+
+.session-btn-sessions {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.6);
+  color: #e2e8f0;
 }
 
 .session-btn:disabled {
@@ -1700,6 +2030,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-height: 64px;
 }
 
 .stat-label {
@@ -1712,6 +2043,16 @@ watch(
   font-size: 1.2rem;
   font-weight: 700;
   color: #f5f5f5;
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+}
+
+.stat-unit {
+  font-size: 0.7rem;
+  color: #9a9a9a;
+  margin-left: 0.25rem;
+  font-weight: 500;
 }
 
 .panel-header {

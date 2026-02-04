@@ -68,4 +68,7 @@ export interface LayoutSpot extends DxSpot {
   customOpacity: number;
   worked: boolean;
   isMult?: boolean;
+  bgColor?: string;
+  blink?: boolean;
+  borderColor?: string;
 }
