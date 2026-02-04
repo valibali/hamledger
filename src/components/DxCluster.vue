@@ -442,10 +442,13 @@ export default defineComponent({
       this.rigStore.setMode(rigMode);
 
       // Set callsign in QSO form
-      this.qsoStore.updateQsoForm('callsign', spot.DXCall);
-
-      // Fetch station info for the callsign
-      this.qsoStore.fetchStationInfo(spot.DXCall);
+      if (this.contestMode) {
+        this.contestStore.applySpotToDraft(spot.DXCall);
+      } else {
+        this.qsoStore.updateQsoForm('callsign', spot.DXCall);
+        // Fetch station info for the callsign
+        this.qsoStore.fetchStationInfo(spot.DXCall);
+      }
     },
   },
 
@@ -524,6 +527,7 @@ export default defineComponent({
               :title="`${spot.DXCall} - ${formatFrequency(spot.Frequency)} - Spotters: ${spot.Spotters.join(', ')} - ${spot.Comment}`"
               @mouseenter="showMagnifier($event, spot.Frequency)"
               @mouseleave="hideMagnifier"
+              @mousedown.prevent.stop="handleSpotClick(spot)"
               @click="handleSpotClick(spot)"
             >
               {{ spot.DXCall }}
@@ -565,6 +569,7 @@ export default defineComponent({
               'contest-mult': contestMode && getContestMeta(spot).isMult,
               'contest-blink': contestMode && getContestDisplayState(spot).blink,
             }"
+            @mousedown.prevent.stop="handleSpotClick(spot)"
             @click="handleSpotClick(spot)"
           >
             <div class="spot-info">
@@ -877,10 +882,12 @@ export default defineComponent({
 }
 
 .spot-label:hover {
-  background: var(--bg-lighter);
+  background: rgba(255, 255, 255, 0.28) !important;
   z-index: 100 !important;
   max-width: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 12px rgba(255, 165, 0, 0.3);
+  transform: translateY(-50%);
+  filter: brightness(1.2);
 }
 
 .spot-label.column-0 {
@@ -906,7 +913,7 @@ export default defineComponent({
 }
 
 .spot-label.contest-blink {
-  animation: contest-mult-blink 1.2s ease-in-out infinite;
+  animation: contest-mult-blink 2s steps(2, end) infinite;
 }
 
 .spot-label.lotw {
@@ -924,13 +931,13 @@ export default defineComponent({
 
 @keyframes contest-mult-blink {
   0% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(255, 68, 68, 0.9);
+    border-color: rgba(255, 68, 68, 0.9);
   }
   100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -1014,6 +1021,10 @@ export default defineComponent({
 
 .magnifier-spot:hover {
   border: 1px solid var(--main-color);
+  background: rgba(255, 255, 255, 0.28) !important;
+  transform: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+  filter: brightness(1.15);
 }
 
 .magnifier-spot:last-child {
@@ -1035,7 +1046,7 @@ export default defineComponent({
 }
 
 .magnifier-spot.contest-blink {
-  animation: contest-mult-blink 1.2s ease-in-out infinite;
+  animation: contest-mult-blink 2s steps(2, end) infinite;
 }
 
 .magnifier-spot.lotw {

@@ -3,11 +3,20 @@ import { useQsoStore } from '../../store/qso';
 import { QsoEntry } from '../../types/qso';
 import { StationData } from '../../types/station';
 import QsoEditDialog from './QsoEditDialog.vue';
+import { resolveStationLocation } from '../../utils/stationLocation';
+import BaseModal from './BaseModal.vue';
+import { LMap, LTileLayer, LCircleMarker, LTooltip } from '@vue-leaflet/vue-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 export default {
   name: 'QsoDetailDialog',
   components: {
     QsoEditDialog,
+    BaseModal,
+    LMap,
+    LTileLayer,
+    LCircleMarker,
+    LTooltip,
   },
   props: {
     qso: {
@@ -37,7 +46,7 @@ export default {
         this.isLoading = true;
         this.mapLoaded = false;
         try {
-          await this.qsoStore.fetchStationInfo(this.qso.callsign);
+          await this.qsoStore.fetchStationInfo(this.qso.callsign, { preferred: this.qso });
           this.stationInfo = this.qsoStore.stationInfo;
         } catch (error) {
           console.warn('Failed to fetch station info, using offline data:', error);
@@ -52,7 +61,7 @@ export default {
       this.isLoading = true;
       this.mapLoaded = false;
       try {
-        await this.qsoStore.fetchStationInfo(this.qso.callsign);
+        await this.qsoStore.fetchStationInfo(this.qso.callsign, { preferred: this.qso });
         this.stationInfo = this.qsoStore.stationInfo;
       } catch (error) {
         console.warn('Failed to fetch station info, using offline data:', error);
@@ -70,24 +79,40 @@ export default {
     },
     async onEditComplete(updatedQso) {
       this.showEditMode = false;
-      // Emit the updated QSO to parent component
-      this.$emit('qso-updated', updatedQso);
-      // Refresh station info after edit
-      if (updatedQso.callsign) {
-        this.isLoading = true;
-        this.mapLoaded = false;
-        try {
-          await this.qsoStore.fetchStationInfo(updatedQso.callsign);
-          this.stationInfo = this.qsoStore.stationInfo;
-        } catch (error) {
-          console.warn('Failed to fetch station info, using offline data:', error);
-          this.stationInfo = this.getOfflineStationInfo();
+      if (updatedQso) {
+        // Emit the updated QSO to parent component
+        this.$emit('qso-updated', updatedQso);
+        // Refresh station info after edit
+        if (updatedQso.callsign) {
+          this.isLoading = true;
+          this.mapLoaded = false;
+          try {
+            await this.qsoStore.fetchStationInfo(updatedQso.callsign, { preferred: updatedQso });
+            this.stationInfo = this.qsoStore.stationInfo;
+          } catch (error) {
+            console.warn('Failed to fetch station info, using offline data:', error);
+            this.stationInfo = this.getOfflineStationInfo();
+          }
+          this.isLoading = false;
         }
-        this.isLoading = false;
       }
     },
-    onMapLoad() {
+    onMapReady() {
       this.mapLoaded = true;
+    },
+    getResolvedCountry() {
+      return resolveStationLocation({
+        callsign: this.qso.callsign,
+        qth: this.stationInfo?.baseData?.qth || this.qso.qth,
+        country: this.stationInfo?.baseData?.country || this.qso.country,
+      }).country || 'N/A';
+    },
+    getResolvedLocation() {
+      return resolveStationLocation({
+        callsign: this.qso.callsign,
+        qth: this.stationInfo?.baseData?.qth || this.qso.qth,
+        country: this.stationInfo?.baseData?.country || this.qso.country,
+      }).label || 'N/A';
     },
     getOfflineStationInfo() {
       // Create basic station info from QSO data when offline
@@ -113,14 +138,23 @@ export default {
 </script>
 
 <template>
-  <div v-if="show" class="dialog-overlay" @click="close">
-    <div class="dialog-content" @click.stop>
+  <BaseModal
+    :open="show"
+    title="QSO Details"
+    width="min(880px, 94vw)"
+    height="min(90vh, 900px)"
+    :close-on-esc="!showEditMode"
+    :close-on-backdrop="!showEditMode"
+    :on-close="close"
+  >
+    <template #header>
       <div class="dialog-header">
         <h2>QSO Details</h2>
-        <button class="edit-btn" @click="toggleEditMode">
+        <button class="panel-action" type="button" @click="toggleEditMode">
           {{ showEditMode ? 'View Details' : 'Edit QSO' }}
         </button>
       </div>
+    </template>
 
       <QsoEditDialog
         v-if="showEditMode"
@@ -131,11 +165,7 @@ export default {
       />
 
       <div v-else class="qso-details">
-        <div v-if="isLoading" class="loading-overlay">
-          <div class="loading-spinner"></div>
-          <p>Loading station data...</p>
-        </div>
-        <div v-else-if="!stationInfo || !stationInfo.baseData" class="offline-notice">
+        <div v-if="!stationInfo || !stationInfo.baseData" class="offline-notice">
           <p>⚠️ Station data unavailable (offline mode)</p>
         </div>
         <div class="main-info">
@@ -144,7 +174,7 @@ export default {
             <img
               v-if="stationInfo?.flag"
               :src="stationInfo.flag"
-              :alt="stationInfo?.baseData?.country"
+              :alt="getResolvedCountry()"
               class="country-flag"
             />
             <div class="station-name">{{ stationInfo?.baseData?.name }}</div>
@@ -196,7 +226,7 @@ export default {
             <div class="info-grid">
               <div class="info-item">
                 <label>Country</label>
-                <span>{{ stationInfo.baseData?.country || 'N/A' }}</span>
+                <span>{{ getResolvedCountry() }}</span>
               </div>
               <div class="info-item">
                 <label>Grid Square</label>
@@ -204,7 +234,7 @@ export default {
               </div>
               <div class="info-item">
                 <label>QTH</label>
-                <span>{{ stationInfo.baseData?.qth || 'N/A' }}</span>
+                <span>{{ getResolvedLocation() }}</span>
               </div>
               <div class="info-item">
                 <label>Local Time</label>
@@ -221,34 +251,33 @@ export default {
             </div>
           </div>
 
-          <div class="map-container" v-if="stationInfo.geodata?.lat">
-            <div v-if="!mapLoaded" class="map-loading">
+          <div class="map-container">
+            <div
+              v-if="isLoading || !stationInfo.geodata?.lat"
+              class="map-loading"
+            >
               <div class="loading-spinner"></div>
-              <p>Loading map...</p>
+              <p>Fetching location info...</p>
             </div>
-            <iframe
-              width="100%"
-              height="300"
-              frameborder="0"
-              scrolling="no"
-              marginheight="0"
-              marginwidth="0"
-              :src="
-                'https://www.openstreetmap.org/export/embed.html?bbox=' +
-                (stationInfo.geodata?.lon - 1) +
-                '%2C' +
-                (stationInfo.geodata?.lat - 1) +
-                '%2C' +
-                (stationInfo.geodata?.lon + 1) +
-                '%2C' +
-                (stationInfo.geodata?.lat + 1) +
-                '&layer=mapnik&marker=' +
-                stationInfo.geodata?.lat +
-                '%2C' +
-                stationInfo.geodata?.lon
-              "
-              @load="onMapLoad"
-            ></iframe>
+            <LMap
+              v-else
+              class="qso-detail-map"
+              :zoom="6"
+              :center="[stationInfo.geodata.lat, stationInfo.geodata.lon]"
+              :use-global-leaflet="false"
+              @ready="onMapReady"
+            >
+              <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <LCircleMarker
+                :lat-lng="[stationInfo.geodata.lat, stationInfo.geodata.lon]"
+                :radius="6"
+                :color="'#ffa500'"
+                :fill-color="'#ffa500'"
+                :fill-opacity="0.7"
+              >
+                <LTooltip>{{ stationInfo.baseData?.qth || 'QTH' }}</LTooltip>
+              </LCircleMarker>
+            </LMap>
           </div>
         </div>
 
@@ -265,58 +294,24 @@ export default {
         </div>
       </div>
 
-      <div class="dialog-actions">
-        <button class="close-btn" @click="close">Close</button>
-      </div>
-    </div>
-  </div>
+  </BaseModal>
 </template>
 
 <style scoped>
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog-content {
-  background: #333;
-  padding: 2rem;
-  border-radius: 5px;
-  width: 80%;
-  max-width: 1000px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.edit-btn {
-  background: var(--main-color);
-  color: #000;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-  font-weight: bold;
+  width: 100%;
 }
 
 .qso-details {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  max-height: 65vh;
+  overflow: auto;
+  padding-right: 0.4rem;
 }
 
 .main-info {
@@ -400,21 +395,6 @@ export default {
   white-space: pre-wrap;
 }
 
-.dialog-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.close-btn {
-  background: #555;
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-  font-weight: bold;
-}
 
 .loading-overlay {
   position: absolute;
@@ -452,13 +432,22 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 5;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  gap: 0.4rem;
 }
 
 .map-container {
   position: relative;
   border: 1px solid #555;
   border-radius: 3px;
+  min-height: 300px;
   overflow: hidden;
+}
+
+.qso-detail-map {
+  height: 300px;
+  width: 100%;
 }
 
 @keyframes spin {

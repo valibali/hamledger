@@ -4,20 +4,29 @@ import { useContestStore } from '../../store/contest';
 import { useQsoStore } from '../../store/qso';
 import { useRigStore } from '../../store/rig';
 import { useQrzStore } from '../../store/qrz';
-import { LMap, LTileLayer, LCircleMarker, LTooltip } from '@vue-leaflet/vue-leaflet';
-import 'leaflet/dist/leaflet.css';
-import ContestStatsSparkline from './ContestStatsSparkline.vue';
 import ContestDxClusterStrip from './ContestDxClusterStrip.vue';
 import GraylineMap from './GraylineMap.vue';
 import DxCluster from '../DxCluster.vue';
-import ContestSetupModal from './ContestSetupModal.vue';
+import ContestSetupModal from '../modals/ContestSetupModal.vue';
+import ContestSessionsModal from '../modals/ContestSessionsModal.vue';
+import ContestSessionStatsModal from '../modals/ContestSessionStatsModal.vue';
+import ContestResumeModal from '../modals/ContestResumeModal.vue';
+import ContestStopConfirmModal from '../modals/ContestStopConfirmModal.vue';
+import ContestStartSessionModal from '../modals/ContestStartSessionModal.vue';
+import ContestStatsCardsModal from '../modals/ContestStatsCardsModal.vue';
+import ContestStatsSparkline from './ContestStatsSparkline.vue';
+import QsoDetailDialog from '../modals/QsoDetailDialog.vue';
 import { usePropClockWeather } from '../../composables/usePropClockWeather';
 import { usePropagationColors } from '../../composables/usePropagationColors';
 import { CallsignHelper } from '../../utils/callsign';
 import { configHelper } from '../../utils/configHelper';
 import { MaidenheadLocator } from '../../utils/maidenhead';
 import { geocodeLocation } from '../../utils/geocoding';
+import { useQsoListFilters } from '../../composables/useQsoListFilters';
+import contestCatalogRaw from '../../data/contestCatalog.json';
+import { resolveStationLocation } from '../../utils/stationLocation';
 import type { ContestQso, ContestSetup, ContestSession, ContestSessionSnapshot } from '../../types/contest';
+import type { QsoEntry } from '../../types/qso';
 import '../../types/electron';
 
 const contestStore = useContestStore();
@@ -25,6 +34,12 @@ const rigStore = useRigStore();
 const qrzStore = useQrzStore();
 const qsoStore = useQsoStore();
 
+const contestCatalogMap = new Map(
+  (contestCatalogRaw as Array<{ id: string; name: string }>).map(entry => [
+    entry.id,
+    entry.name,
+  ])
+);
 const callsignInputRef = ref<HTMLInputElement | null>(null);
 const serialRecvInputRef = ref<HTMLInputElement | null>(null);
 const sessionClock = ref('00:00:00');
@@ -47,20 +62,41 @@ const sessionStatsSession = ref<ContestSession | null>(null);
 const sessionStatsGeoCache = ref<Record<string, { lat: number; lon: number; label?: string } | null>>(
   {}
 );
+const showRecentFilters = ref(false);
+const showSessionStatsFilters = ref(false);
+const selectedQsoDetail = ref<QsoEntry | null>(null);
+const showQsoDetail = ref(false);
 
 const activeSession = computed(() => contestStore.activeSession);
 const draft = computed(() => contestStore.qsoDraft);
 const { utcTime, propStore, weatherStore } = usePropClockWeather();
 const { kIndexColor, aIndexColor, sfiColor } = usePropagationColors();
 const isCatOnline = computed(() => rigStore.isConnected);
+const startButtonClass = computed(() => {
+  if (activeSession.value?.status === 'running') return 'session-btn-pause';
+  return 'session-btn-start';
+});
+const startButtonBlink = computed(() =>
+  activeSession.value?.status === 'idle' || activeSession.value?.status === 'paused'
+);
 
 const sessionLabel = computed(() => {
   return activeSession.value?.id ?? 'No active session';
 });
 
 const contestTitle = computed(() => {
-  return activeSession.value?.setup.logType || 'No contest selected';
+  return (
+    activeSession.value?.setup.contestName ||
+    activeSession.value?.setup.contestType ||
+    activeSession.value?.setup.logType ||
+    'No contest selected'
+  );
 });
+
+const contestProfileLabel = computed(() => {
+  return contestStore.contestProfile?.name || '';
+});
+const isSessionRunning = computed(() => activeSession.value?.status === 'running');
 
 const qsos = computed(() => activeSession.value?.qsos ?? []);
 const qsoTimestamps = computed(() =>
@@ -68,31 +104,51 @@ const qsoTimestamps = computed(() =>
 );
 const sessionStart = computed(() => activeSession.value?.startedAt ?? '');
 
-const sessionStatsQsos = computed(() => {
+const qsoSequenceMap = computed(() => {
+  const map = new Map<string, number>();
+  const list = activeSession.value?.qsos ?? [];
+  list.forEach((qso, idx) => {
+    const key =
+      qso.id ||
+      `${qso.callsign || 'qso'}-${qso.datetime || 'time'}-${qso.band || 'band'}-${qso.mode || 'mode'}`;
+    map.set(key, idx + 1);
+  });
+  return map;
+});
+
+const getQsoSequence = (qso: ContestQso) => {
+  if (!qso) return '--';
+  const key =
+    qso.id ||
+    `${qso.callsign || 'qso'}-${qso.datetime || 'time'}-${qso.band || 'band'}-${qso.mode || 'mode'}`;
+  return qsoSequenceMap.value.get(key) ?? '--';
+};
+
+const sessionStatsEntries = computed(() => {
   if (!sessionStatsSession.value) return [];
-  return [...sessionStatsSession.value.qsos].sort(
-    (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
-  );
+  const sessionId = sessionStatsSession.value.id;
+  return qsoStore.allQsos.filter(qso => qso.contestSessionId === sessionId);
 });
 
 const sessionStatsSummary = computed(() => {
   const session = sessionStatsSession.value;
   if (!session) return null;
-  const totalQsos = session.qsos.length;
-  const score = session.qsos.reduce(
-    (sum, qso) => sum + (qso.points || 0) * (qso.multiplierFactor || 1),
+  const entries = sessionStatsEntries.value;
+  const totalQsos = entries.length;
+  const score = entries.reduce(
+    (sum, qso) => sum + (qso.contestPoints || 0) * (qso.contestMultiplierFactor || 1),
     0
   );
   const mults = new Set(
-    session.qsos
-      .map(qso => String(qso.multiplierFactor || 1))
+    entries
+      .map(qso => String(qso.contestMultiplierFactor || 1))
       .filter(value => value !== '1')
   );
   const start = session.startedAt ? new Date(session.startedAt).getTime() : null;
   const end = session.endedAt
     ? new Date(session.endedAt).getTime()
-    : session.qsos.length
-      ? new Date(session.qsos[session.qsos.length - 1].datetime).getTime()
+    : entries.length
+      ? new Date(entries[entries.length - 1].datetime).getTime()
       : null;
   const durationHours =
     start && end && end > start ? (end - start) / (1000 * 60 * 60) : 0;
@@ -107,9 +163,18 @@ const sessionStatsSummary = computed(() => {
   };
 });
 
-const extractQsoGrid = (qso: ContestQso): string | null => {
-  const exchange = qso.exchange || {};
+const formatSessionDate = (value?: string | null) => {
+  if (!value || value === 'n/a') return 'n/a';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const iso = date.toISOString().replace('T', ' ').replace('Z', '');
+  return iso.slice(0, 19);
+};
+
+const extractQsoGrid = (qso: QsoEntry): string | null => {
+  const exchange = qso.contestExchange || {};
   const candidates = [
+    qso.grid,
     exchange.grid,
     exchange.exchangeRecv,
     exchange.exchangeSent,
@@ -126,7 +191,7 @@ const extractQsoGrid = (qso: ContestQso): string | null => {
 const sessionMapPoints = computed(() => {
   const session = sessionStatsSession.value;
   if (!session) return [];
-  return session.qsos
+  return sessionStatsEntries.value
     .map(qso => {
       const grid = extractQsoGrid(qso);
       if (grid) {
@@ -140,16 +205,6 @@ const sessionMapPoints = computed(() => {
         };
       }
       const cached = qrzStore.getCached(qso.callsign);
-      if (cached?.lat !== undefined && cached?.lon !== undefined && (cached.lat || cached.lon)) {
-        return {
-          lat: cached.lat,
-          lon: cached.lon,
-          callsign: qso.callsign,
-          label: cached.qth,
-          band: qso.band,
-          mode: qso.mode,
-        };
-      }
       if (cached?.grid && MaidenheadLocator.isValidLocatorFormat(cached.grid)) {
         const coords = MaidenheadLocator.gridToLatLon(cached.grid);
         return {
@@ -160,14 +215,29 @@ const sessionMapPoints = computed(() => {
           mode: qso.mode,
         };
       }
-      const key = qrzStore.normalize(qso.callsign);
-      const fallback = sessionStatsGeoCache.value[key];
+      if (cached?.lat !== undefined && cached?.lon !== undefined && (cached.lat || cached.lon)) {
+        return {
+          lat: cached.lat,
+          lon: cached.lon,
+          callsign: qso.callsign,
+          label: cached.qth || cached.country,
+          band: qso.band,
+          mode: qso.mode,
+        };
+      }
+      const { label } = resolveStationLocation({
+        callsign: qso.callsign,
+        qth: cached?.qth,
+        country: qso.country || cached?.country,
+      });
+      const cacheKey = label ? `label:${label.toLowerCase()}` : '';
+      const fallback = cacheKey ? sessionStatsGeoCache.value[cacheKey] : null;
       if (fallback) {
         return {
           lat: fallback.lat,
           lon: fallback.lon,
           callsign: qso.callsign,
-          label: fallback.label,
+          label: fallback.label || label,
           band: qso.band,
           mode: qso.mode,
         };
@@ -196,6 +266,106 @@ const sessionMapCenter = computed<[number, number]>(() => {
   );
   return [sum.lat / sessionMapPoints.value.length, sum.lon / sessionMapPoints.value.length];
 });
+
+const sessionStatsTimestamps = computed(() =>
+  sessionStatsEntries.value
+    .map(qso => new Date(qso.datetime).getTime())
+    .sort((a, b) => a - b)
+);
+
+const sessionStatsSequenceMap = computed(() => {
+  const map = new Map<string, number>();
+  const list = sessionStatsEntries.value;
+  list.forEach((qso, idx) => {
+    const key =
+      qso._id ||
+      `${qso.callsign || 'qso'}-${qso.datetime || 'time'}-${qso.band || 'band'}-${qso.mode || 'mode'}`;
+    map.set(key, idx + 1);
+  });
+  return map;
+});
+
+const getSessionSequenceFromEntry = (qso: QsoEntry) => {
+  const key =
+    qso._id ||
+    `${qso.callsign || 'qso'}-${qso.datetime || 'time'}-${qso.band || 'band'}-${qso.mode || 'mode'}`;
+  return sessionStatsSequenceMap.value.get(key) ?? '--';
+};
+
+const recentQsoList = useQsoListFilters<ContestQso>({
+  items: computed(() => contestStore.recentQsos),
+  getCallsign: qso => qso.callsign || '',
+  getBand: qso => qso.band,
+  getMode: qso => qso.mode,
+  getDateTime: qso => qso.datetime,
+  getSequence: qso => getQsoSequence(qso),
+  getSearchText: qso => [
+    qso.exchange?.serialRecv || '',
+    qso.exchange?.exchangeRecv || '',
+    qso.exchange?.region || '',
+    qso.exchange?.grid || '',
+  ],
+});
+
+const sessionStatsQsoList = useQsoListFilters<QsoEntry>({
+  items: computed(() => sessionStatsEntries.value),
+  getCallsign: qso => qso.callsign || '',
+  getBand: qso => qso.band,
+  getMode: qso => qso.mode,
+  getDateTime: qso => qso.datetime,
+  getSequence: qso => getSessionSequenceFromEntry(qso),
+  getSearchText: qso => [
+    qso.contestExchange?.serialRecv || '',
+    qso.contestExchange?.exchangeRecv || '',
+    qso.contestExchange?.region || '',
+    qso.contestExchange?.grid || '',
+  ],
+});
+
+const recentBands = computed(() => recentQsoList.bands.value);
+const recentModes = computed(() => recentQsoList.modes.value);
+const sessionBands = computed(() => sessionStatsQsoList.bands.value);
+const sessionModes = computed(() => sessionStatsQsoList.modes.value);
+
+const safeRecentQsos = computed(() =>
+  (recentQsoList.sortedItems.value as (ContestQso | undefined)[]).filter(
+    (qso): qso is ContestQso => Boolean(qso)
+  )
+);
+
+const safeSessionStatsQsos = computed(() =>
+  (sessionStatsQsoList.sortedItems.value as (QsoEntry | undefined)[]).filter(
+    (qso): qso is QsoEntry => Boolean(qso)
+  )
+);
+
+const toRgba = (color: string, alpha: number) => {
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    const full = hex.length === 3 ? hex.split('').map(v => v + v).join('') : hex;
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return color;
+};
+
+const recentQsoStyle = (qso?: ContestQso) => {
+  if (!qso) return {};
+  const settings = contestStore.dxDisplaySettings;
+  const isMult = (qso.multiplierFactor || 1) > 1;
+  if (isMult) {
+    return {
+      background: toRgba(settings.multBg, settings.multBgOpacity),
+      color: '#ff4d4d',
+    };
+  }
+  return {
+    background: toRgba(settings.regularBg, settings.regularBgOpacity),
+    color: '#ffffff',
+  };
+};
 
 const rateFromLastN = (count: number) => {
   const list = qsos.value;
@@ -279,6 +449,10 @@ const statCardEnabled = ref(
   Object.fromEntries(statsCards.value.map(card => [card.key, true]))
 );
 
+const toggleStatCard = (key: string, value: boolean) => {
+  statCardEnabled.value[key] = value;
+};
+
 const visibleStatCards = computed(() =>
   statsCards.value.filter(card => statCardEnabled.value[card.key])
 );
@@ -294,11 +468,13 @@ const aIndexTint = computed(() => aIndexColor(propStore.propData.aIndex));
 const sfiTint = computed(() => sfiColor(propStore.propData.sfi));
 
 const qrzInfo = (callsign: string) => {
+  if (!callsign) return null;
   const key = CallsignHelper.extractBaseCallsign(callsign).toUpperCase();
   return qrzStore.cache[key];
 };
 
 const qrzLoading = (callsign: string) => {
+  if (!callsign) return false;
   const key = CallsignHelper.extractBaseCallsign(callsign).toUpperCase();
   return qrzStore.inFlight[key] === true;
 };
@@ -388,8 +564,19 @@ const focusCallsign = () => {
   callsignInputRef.value.setSelectionRange(length, length);
 };
 
+const getElapsedMs = () => {
+  const base = contestStore.sessionElapsedMs || 0;
+  if (contestStore.activeSession?.status !== 'running') return base;
+  const startedAt = contestStore.activeSession.startedAt
+    ? new Date(contestStore.activeSession.startedAt).getTime()
+    : null;
+  const anchor = contestStore.sessionLastStartedAt ?? startedAt;
+  if (!anchor) return base;
+  return base + (Date.now() - anchor);
+};
+
 const formatSessionClock = () => {
-  const diff = contestStore.sessionElapsed;
+  const diff = getElapsedMs();
   const hours = Math.floor(diff / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
@@ -598,7 +785,11 @@ const handleCallsignKeydown = (event: KeyboardEvent) => {
 
 const handleLogQso = () => {
   if (!contestStore.isDraftValid) return;
-  if (!contestStore.activeSession || contestStore.activeSession.status !== 'running') return;
+  if (!contestStore.activeSession) return;
+  if (contestStore.activeSession.status !== 'running') {
+    contestStore.startSession();
+  }
+  if (contestStore.activeSession.status !== 'running') return;
   suggestionsOpen.value = false;
   contestStore.logQso();
   focusCallsign();
@@ -612,7 +803,6 @@ const handleSetupSave = (setup: ContestSetup, profileId: string) => {
     return;
   }
   contestStore.createSession(setup, profileId);
-  contestStore.startSession();
   setupSource.value = null;
 };
 
@@ -661,7 +851,8 @@ const startNewSession = () => {
 };
 
 const createDefaultSetup = (): ContestSetup => ({
-  logType: 'DX',
+  contestName: 'General contest',
+  contestType: 'DX',
   modeCategory: 'MIXED',
   operatorCategory: 'SINGLE-OP',
   assistedCategory: 'UNASSISTED',
@@ -676,7 +867,6 @@ const createDefaultSetup = (): ContestSetup => ({
 
 const startDefaultSession = () => {
   contestStore.createSession(createDefaultSetup());
-  contestStore.startSession();
   newSessionModalOpen.value = false;
 };
 
@@ -734,12 +924,117 @@ const openSessionStats = (sessionId: string) => {
   if (!session) return;
   sessionStatsSession.value = session;
   sessionStatsOpen.value = true;
-  session.qsos.forEach(qso => void qrzStore.enqueueLookup(qso.callsign));
+  sessionStatsEntries.value.forEach(qso => {
+    if (qso.grid || qso.country) return;
+    const cached = qrzStore.getCached(qso.callsign);
+    if (cached?.grid || cached?.country || cached?.qth) return;
+    void qrzStore.enqueueLookup(qso.callsign);
+  });
 };
 
 const closeSessionStats = () => {
   sessionStatsOpen.value = false;
   sessionStatsSession.value = null;
+};
+
+const sessionQsoCountMap = computed(() => {
+  const map = new Map<string, number>();
+  qsoStore.allQsos.forEach(qso => {
+    if (!qso.contestSessionId) return;
+    map.set(qso.contestSessionId, (map.get(qso.contestSessionId) ?? 0) + 1);
+  });
+  return map;
+});
+
+const sessionScoreMap = computed(() => {
+  const map = new Map<string, number>();
+  qsoStore.allQsos.forEach(qso => {
+    if (!qso.contestSessionId) return;
+    const points = (qso.contestPoints || 0) * (qso.contestMultiplierFactor || 1);
+    map.set(qso.contestSessionId, (map.get(qso.contestSessionId) ?? 0) + points);
+  });
+  return map;
+});
+
+const sessionAvgRateMap = computed(() => {
+  const map = new Map<string, number>();
+  const first: Record<string, number> = {};
+  const last: Record<string, number> = {};
+  const counts: Record<string, number> = {};
+  qsoStore.allQsos.forEach(qso => {
+    const sessionId = qso.contestSessionId;
+    if (!sessionId) return;
+    const time = new Date(qso.datetime).getTime();
+    if (!Number.isFinite(time)) return;
+    counts[sessionId] = (counts[sessionId] ?? 0) + 1;
+    if (first[sessionId] === undefined || time < first[sessionId]) {
+      first[sessionId] = time;
+    }
+    if (last[sessionId] === undefined || time > last[sessionId]) {
+      last[sessionId] = time;
+    }
+  });
+  Object.keys(counts).forEach(sessionId => {
+    const spanMs = Math.max(0, (last[sessionId] ?? 0) - (first[sessionId] ?? 0));
+    const hours = spanMs > 0 ? spanMs / (1000 * 60 * 60) : 0;
+    const avgRate = hours > 0 ? Math.round(counts[sessionId] / hours) : counts[sessionId];
+    map.set(sessionId, avgRate);
+  });
+  return map;
+});
+
+const getSessionQsoCount = (sessionId: string) => {
+  return sessionQsoCountMap.value.get(sessionId) ?? 0;
+};
+
+const getSessionScore = (sessionId: string) => {
+  return sessionScoreMap.value.get(sessionId) ?? 0;
+};
+
+const getSessionAvgRate = (sessionId: string) => {
+  return sessionAvgRateMap.value.get(sessionId) ?? 0;
+};
+
+const getSessionContestName = (session: ContestSession) => {
+  return (
+    session.setup.contestName ||
+    contestCatalogMap.get(session.setup.contestType || session.setup.logType || '') ||
+    contestStore.profiles.find(profile => profile.id === session.profileId)?.name ||
+    session.setup.contestType ||
+    session.setup.logType
+  );
+};
+
+const isSessionActive = (session: ContestSession) =>
+  session.status === 'running' || session.status === 'paused';
+
+const isSessionCompleted = (session: ContestSession) =>
+  session.status === 'closed' || Boolean(session.endedAt);
+
+const openQsoDetail = (qso: QsoEntry) => {
+  selectedQsoDetail.value = qso;
+  showQsoDetail.value = true;
+};
+
+const openQsoDetailByCall = (callsign: string) => {
+  const qso = sessionStatsEntries.value.find(entry => entry.callsign === callsign);
+  if (!qso) return;
+  openQsoDetail(qso);
+};
+
+const deleteSession = async (sessionId: string) => {
+  const isActive = contestStore.activeSession?.id === sessionId;
+  const ok = window.confirm(
+    isActive
+      ? 'This is the active session. Delete it and all its QSOs?'
+      : 'Delete this contest session and its QSOs?'
+  );
+  if (!ok) return;
+  await qsoStore.deleteQsosBySession(sessionId);
+  await contestStore.deleteSession(sessionId);
+  if (sessionStatsSession.value?.id === sessionId) {
+    closeSessionStats();
+  }
 };
 
 const requestCloseSession = () => {
@@ -750,6 +1045,18 @@ const requestCloseSession = () => {
 const confirmCloseSession = () => {
   stopConfirmOpen.value = false;
   contestStore.closeSession();
+};
+
+const normalizeSessionSetup = (session: ContestSession) => {
+  const contestType = session.setup.contestType || session.setup.logType || 'DX';
+  return {
+    ...session,
+    setup: {
+      ...session.setup,
+      contestType,
+      logType: undefined,
+    },
+  };
 };
 
 onMounted(async () => {
@@ -769,7 +1076,7 @@ onMounted(async () => {
     const settings = await window.electronAPI.loadSettings();
     const savedSessions = (settings as any)?.contest?.sessions as ContestSession[] | undefined;
     if (savedSessions) {
-      contestStore.setSessions(savedSessions);
+      contestStore.setSessions(savedSessions.map(normalizeSessionSetup));
     }
   } catch {
     // Ignore session load errors
@@ -784,7 +1091,10 @@ onMounted(async () => {
     const settings = await window.electronAPI.loadSettings();
     const snapshot = (settings as any)?.contest?.activeSession as ContestSessionSnapshot | null;
     if (!contestStore.activeSession && snapshot?.session && snapshot.session.status !== 'closed') {
-      resumeSnapshot.value = normalizeSnapshot(snapshot);
+      resumeSnapshot.value = normalizeSnapshot({
+        ...snapshot,
+        session: normalizeSessionSetup(snapshot.session),
+      });
       resumeModalOpen.value = true;
       contestStore.setSetupPending(false);
     } else if (!contestStore.activeSession) {
@@ -810,17 +1120,32 @@ onBeforeUnmount(() => {
 });
 
 watchEffect(() => {
-  const session = sessionStatsSession.value;
-  if (!session) return;
-  session.qsos.forEach(qso => {
-    const key = qrzStore.normalize(qso.callsign);
-    if (!key || sessionStatsGeoCache.value[key] !== undefined) return;
+  if (
+    contestStore.activeSession?.status === 'running' &&
+    !contestStore.sessionLastStartedAt
+  ) {
+    contestStore.startSession();
+  }
+});
+
+watchEffect(() => {
+  if (!sessionStatsOpen.value) return;
+  sessionStatsEntries.value.forEach(qso => {
+    const normalized = qrzStore.normalize(qso.callsign);
+    if (!normalized) return;
     const cached = qrzStore.getCached(qso.callsign);
-    if (!cached?.qth) return;
-    sessionStatsGeoCache.value[key] = null;
-    void geocodeLocation(cached.qth).then(result => {
+    const { label } = resolveStationLocation({
+      callsign: qso.callsign,
+      qth: cached?.qth,
+      country: qso.country || cached?.country,
+    });
+    if (!label) return;
+    const cacheKey = `label:${label.toLowerCase()}`;
+    if (sessionStatsGeoCache.value[cacheKey] !== undefined) return;
+    sessionStatsGeoCache.value[cacheKey] = null;
+    void geocodeLocation(label).then(result => {
       if (!result) return;
-      sessionStatsGeoCache.value[key] = {
+      sessionStatsGeoCache.value[cacheKey] = {
         lat: result.lat,
         lon: result.lon,
         label: result.display_name,
@@ -858,6 +1183,9 @@ watch(
         <div class="session-info">
           <span class="session-label">
             {{ contestTitle }}
+            <span v-if="contestProfileLabel" class="contest-profile-label">
+              ({{ contestProfileLabel }})
+            </span>
             <button class="setup-cog" type="button" title="Contest setup" @click="openSetupFromTopbar">
               ⚙
             </button>
@@ -867,18 +1195,20 @@ watch(
         </div>
         <div class="session-controls">
           <button
-            class="session-btn session-btn-start"
-            :disabled="contestStore.activeSession?.status === 'running'"
-            @click="handleStartSession"
+            class="session-btn session-btn-toggle"
+            :class="[startButtonClass, { 'session-btn-blink': startButtonBlink }]"
+            :disabled="contestStore.activeSession?.status === 'closed'"
+            @click="contestStore.activeSession?.status === 'running' ? contestStore.pauseSession() : handleStartSession()"
           >
-            Start
-          </button>
-          <button
-            class="session-btn session-btn-pause"
-            :disabled="contestStore.activeSession?.status !== 'running'"
-            @click="contestStore.pauseSession"
-          >
-            Pause
+            {{
+              !contestStore.activeSession
+                ? 'Start new'
+                : contestStore.activeSession.status === 'running'
+                  ? 'Pause'
+                  : contestStore.activeSession.status === 'paused'
+                    ? 'Resume'
+                    : 'Start'
+            }}
           </button>
           <button
             class="session-btn session-btn-stop"
@@ -894,7 +1224,7 @@ watch(
       </div>
       <div class="topbar-center">
         <div class="rig-info">
-          <span v-if="isCatOnline" class="cat-badge">CAT</span>
+          <span v-if="isCatOnline" class="cat-badge">CAT ONLINE</span>
           <span class="rig-frequency">
             <span class="freq-main">{{ frequencyMain }}</span
             ><span class="freq-dot">.</span><span class="freq-hz">{{ frequencyHz }}</span>
@@ -941,7 +1271,7 @@ watch(
       <div class="contest-layout">
         <div class="contest-left">
           <div class="contest-grid">
-          <section class="entry-panel panel">
+          <section class="entry-panel panel" :class="{ 'is-disabled': !isSessionRunning }">
         <div class="entry-header">
           <div>
             <h2 class="panel-title">QSO Entry</h2>
@@ -959,17 +1289,25 @@ watch(
                 v-if="showFocusToggle"
                 class="focus-toggle"
                 type="button"
+                :disabled="!isSessionRunning"
                 @click="focusLockDisabled = !focusLockDisabled"
               >
                 Focus: {{ focusLockDisabled ? 'Off' : 'On' }}
               </button>
-              <button class="log-btn" :disabled="!contestStore.isDraftValid" @click="handleLogQso">
+              <button
+                class="log-btn"
+                :disabled="!isSessionRunning || !contestStore.isDraftValid"
+                @click="handleLogQso"
+              >
                 Log (Enter)
               </button>
-              <button class="clear-btn" @click="contestStore.clearDraft">Clear (Esc)</button>
+              <button class="clear-btn" :disabled="!isSessionRunning" @click="contestStore.clearDraft">
+                Clear (Esc)
+              </button>
               <select
                 class="profile-select-inline"
                 :value="contestStore.contestProfile.id"
+                :disabled="!isSessionRunning"
                 @change="contestStore.setContestProfile(($event.target as HTMLSelectElement).value)"
               >
                 <option v-for="profile in contestStore.profiles" :key="profile.id" :value="profile.id">
@@ -987,6 +1325,7 @@ watch(
               ref="callsignInputRef"
               type="text"
               :value="draft.callsign"
+              :disabled="!isSessionRunning"
               @input="
                 contestStore.setDraftCallsign(($event.target as HTMLInputElement).value);
                 suggestionsOpen = true;
@@ -1022,13 +1361,14 @@ watch(
               <input
                 type="text"
                 :value="draft.rstSent"
+                :disabled="!isSessionRunning"
                 @input="contestStore.setDraftExchangeField('rstSent', ($event.target as HTMLInputElement).value)"
               />
             </div>
             <div class="entry-field">
               <label>Serial S</label>
               <div class="serial-field">
-                <input type="text" :value="draft.exchange.serialSent" readonly />
+                <input type="text" :value="draft.exchange.serialSent" readonly :disabled="!isSessionRunning" />
               </div>
             </div>
             <div class="entry-field">
@@ -1038,6 +1378,7 @@ watch(
                 :value="draft.exchange.exchangeSent"
                 :placeholder="contestStore.contestProfile.id === 'dxsatellit' || contestStore.contestProfile.id === 'vhfdx' || contestStore.contestProfile.id === 'vhfserial' ? 'Grid' : 'Loc/Region'"
                 readonly
+                :disabled="!isSessionRunning"
               />
             </div>
           </div>
@@ -1047,6 +1388,7 @@ watch(
               <input
                 type="text"
                 :value="draft.rstRecv"
+                :disabled="!isSessionRunning"
                 @input="contestStore.setDraftExchangeField('rstRecv', ($event.target as HTMLInputElement).value)"
               />
             </div>
@@ -1057,6 +1399,7 @@ watch(
                 :value="draft.exchange.serialRecv"
                 placeholder="001"
                 ref="serialRecvInputRef"
+                :disabled="!isSessionRunning"
                 @input="
                   contestStore.setDraftExchangeField(
                     'serialRecv',
@@ -1071,6 +1414,7 @@ watch(
                 type="text"
                 :value="draft.exchange.exchangeRecv"
                 :placeholder="contestStore.contestProfile.id === 'dxsatellit' || contestStore.contestProfile.id === 'vhfdx' || contestStore.contestProfile.id === 'vhfserial' ? 'Grid' : 'Loc/Region'"
+                :disabled="!isSessionRunning"
                 @input="
                   contestStore.setDraftExchangeField(
                     'exchangeRecv',
@@ -1083,38 +1427,125 @@ watch(
         </div>
       </section>
 
-          <section class="recent-panel panel">
+      <section class="recent-panel panel">
         <div class="panel-header">
-          <h2 class="panel-title">Recent QSOs</h2>
+          <h2 class="panel-title">Contest Log</h2>
           <span class="panel-sub">Last {{ contestStore.recentQsos.length }}</span>
-        </div>
-        <div class="recent-table">
-          <div class="recent-row header">
-            <span>Call</span>
-            <span>Band</span>
-            <span>Mode</span>
-            <span>Exch</span>
-            <span>Pts</span>
-            <span>QRZ</span>
-          </div>
-          <div
-            v-for="qso in contestStore.recentQsos"
-            :key="qso.id"
-            class="recent-row"
+          <button
+            class="panel-action filter-toggle"
+            type="button"
+            :aria-pressed="showRecentFilters"
+            @click="showRecentFilters = !showRecentFilters"
           >
+            ⛃
+          </button>
+        </div>
+          <div v-if="showRecentFilters" class="recent-filters">
+            <div class="filter-group">
+              <label>Search</label>
+              <input
+                v-model="recentQsoList.filters.searchText"
+                class="filter-input"
+                type="text"
+                placeholder="Call / exch"
+                :class="{ 'regex-error': recentQsoList.regexError }"
+              />
+            </div>
+            <div class="filter-group">
+              <label>Band</label>
+              <select v-model="recentQsoList.filters.selectedBand" class="filter-input">
+                <option value="">All</option>
+                <option v-for="band in recentBands" :key="band" :value="band">
+                  {{ band }}
+                </option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Mode</label>
+              <select v-model="recentQsoList.filters.selectedMode" class="filter-input">
+                <option value="">All</option>
+                <option v-for="mode in recentModes" :key="mode" :value="mode">
+                  {{ mode }}
+                </option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>From</label>
+              <input v-model="recentQsoList.filters.dateFrom" class="filter-input" type="date" />
+            </div>
+            <div class="filter-group">
+              <label>To</label>
+              <input v-model="recentQsoList.filters.dateTo" class="filter-input" type="date" />
+            </div>
+            <div class="filter-options">
+              <label>
+                <input type="checkbox" v-model="recentQsoList.filters.useWildcard" />
+                Wildcard
+              </label>
+              <label>
+                <input type="checkbox" v-model="recentQsoList.filters.useRegex" />
+                Regex
+              </label>
+              <label>
+                <input type="checkbox" v-model="recentQsoList.filters.caseSensitive" />
+                Case
+              </label>
+            </div>
+          </div>
+          <div class="recent-table">
+            <div class="recent-row header">
+              <span class="sortable" @click="recentQsoList.sortBy('sequence')">
+                #
+                <span v-if="recentQsoList.sortKey.value === 'sequence'">
+                  {{ recentQsoList.sortOrder.value === 'asc' ? '▲' : '▼' }}
+                </span>
+              </span>
+              <span class="sortable" @click="recentQsoList.sortBy('callsign')">
+                Call
+                <span v-if="recentQsoList.sortKey.value === 'callsign'">
+                  {{ recentQsoList.sortOrder.value === 'asc' ? '▲' : '▼' }}
+                </span>
+              </span>
+              <span class="sortable" @click="recentQsoList.sortBy('band')">
+                Band
+                <span v-if="recentQsoList.sortKey.value === 'band'">
+                  {{ recentQsoList.sortOrder.value === 'asc' ? '▲' : '▼' }}
+                </span>
+              </span>
+              <span class="sortable" @click="recentQsoList.sortBy('mode')">
+                Mode
+                <span v-if="recentQsoList.sortKey.value === 'mode'">
+                  {{ recentQsoList.sortOrder.value === 'asc' ? '▲' : '▼' }}
+                </span>
+              </span>
+              <span>Exch</span>
+              <span>OP</span>
+            </div>
+            <div
+              v-for="(qso, index) in safeRecentQsos"
+              :key="
+                qso?.id ||
+                `${qso?.callsign || 'qso'}-${qso?.datetime || 'time'}-${qso?.band || 'band'}-${
+                  qso?.mode || 'mode'
+                }`
+              "
+              class="recent-row"
+              :style="recentQsoStyle(qso)"
+              @click="openQsoDetail(qso)"
+            >
+              <span class="recent-num">{{ getQsoSequence(qso) }}</span>
             <span class="recent-call">{{ qso.callsign }}</span>
             <span>{{ qso.band }}</span>
             <span>{{ qso.mode }}</span>
             <span>
               {{
-                qso.exchange.serialRecv ||
-                qso.exchange.exchangeRecv ||
-                qso.exchange.region ||
-                qso.exchange.grid ||
+                qso.exchange?.serialRecv ||
+                qso.exchange?.exchangeRecv ||
+                qso.exchange?.region ||
+                qso.exchange?.grid ||
                 '--'
               }}
             </span>
-            <span>{{ (qso.points || 0) * (qso.multiplierFactor || 1) }}</span>
             <span class="qrz-cell">
               <span v-if="qrzLoading(qso.callsign)" class="spinner"></span>
               <span v-else>
@@ -1151,7 +1582,6 @@ watch(
           <section class="map-panel panel">
         <div class="panel-header">
           <h2 class="panel-title">Grayline Map</h2>
-          <span class="panel-sub">Always on screen</span>
         </div>
         <div class="map-shell">
           <GraylineMap />
@@ -1170,206 +1600,74 @@ watch(
     </section>
   </div>
 
-  <div v-if="statsModalOpen" class="stats-modal-backdrop" @click="statsModalOpen = false">
-    <div class="stats-modal panel" @click.stop>
-      <div class="modal-header">
-        <h3 class="panel-title">Rate & Score Cards</h3>
-        <button class="panel-action" type="button" @click="statsModalOpen = false">Close</button>
-      </div>
-      <div class="modal-body">
-        <label v-for="card in statsCards" :key="card.key" class="toggle-row">
-          <input v-model="statCardEnabled[card.key]" type="checkbox" />
-          <span>{{ card.label }}</span>
-        </label>
-      </div>
-    </div>
-  </div>
+  <ContestStatsCardsModal
+    :open="statsModalOpen"
+    :cards="statsCards"
+    :enabled="statCardEnabled"
+    :on-toggle="toggleStatCard"
+    :on-close="() => (statsModalOpen = false)"
+  />
 
-  <div v-if="resumeModalOpen" class="stats-modal-backdrop">
-    <div class="stats-modal panel" @click.stop>
-      <div class="modal-header">
-        <h3 class="panel-title">Resume contest session?</h3>
-      </div>
-      <div class="modal-body resume-body">
-        <div class="resume-row">
-          <span class="resume-key">Log type</span>
-          <span class="resume-val">{{ resumeSnapshot?.session.setup.logType }}</span>
-        </div>
-        <div class="resume-row">
-          <span class="resume-key">Status</span>
-          <span class="resume-val">{{ resumeSnapshot?.session.status }}</span>
-        </div>
-        <div class="resume-row">
-          <span class="resume-key">QSOs</span>
-          <span class="resume-val">{{ resumeSnapshot?.session.qsos.length }}</span>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="modal-secondary" type="button" @click="startNewSession">
-          Start New
-        </button>
-        <button class="modal-primary" type="button" @click="resumeSession">
-          Resume
-        </button>
-      </div>
-    </div>
-  </div>
+  <ContestResumeModal
+    :open="resumeModalOpen"
+    :snapshot="resumeSnapshot"
+    :on-close="() => (resumeModalOpen = false)"
+    :on-start-new="startNewSession"
+    :on-resume="resumeSession"
+  />
 
-  <div v-if="stopConfirmOpen" class="stats-modal-backdrop">
-    <div class="stats-modal panel" @click.stop>
-      <div class="modal-header">
-        <h3 class="panel-title">Close contest session?</h3>
-      </div>
-      <div class="modal-body">
-        Closing will end this session and remove it from the resume prompt.
-      </div>
-      <div class="modal-footer">
-        <button class="modal-secondary" type="button" @click="stopConfirmOpen = false">
-          Cancel
-        </button>
-        <button class="modal-primary" type="button" @click="confirmCloseSession">
-          Close Session
-        </button>
-      </div>
-    </div>
-  </div>
+  <ContestStopConfirmModal
+    :open="stopConfirmOpen"
+    :on-cancel="() => (stopConfirmOpen = false)"
+    :on-confirm="confirmCloseSession"
+  />
 
-  <div v-if="newSessionModalOpen" class="stats-modal-backdrop">
-    <div class="stats-modal panel" @click.stop>
-      <div class="modal-header">
-        <h3 class="panel-title">Start new contest session?</h3>
-      </div>
-      <div class="modal-body">
-        No active session was found. Would you like to configure a contest setup first?
-      </div>
-      <div class="modal-footer">
-        <button class="modal-secondary" type="button" @click="startDefaultSession">
-          Start Default
-        </button>
-        <button class="modal-primary" type="button" @click="openSetupFromNewSession">
-          Go to Setup
-        </button>
-      </div>
-    </div>
-  </div>
+  <ContestStartSessionModal
+    :open="newSessionModalOpen"
+    :on-cancel="() => (newSessionModalOpen = false)"
+    :on-start-default="startDefaultSession"
+    :on-go-to-setup="openSetupFromNewSession"
+  />
 
-  <div v-if="sessionsModalOpen" class="stats-modal-backdrop" @click="closeSessionsModal">
-    <div class="stats-modal panel sessions-modal" @click.stop>
-      <div class="modal-header">
-        <h3 class="panel-title">Contest Sessions</h3>
-        <button class="panel-action" type="button" @click="closeSessionsModal">Close</button>
-      </div>
-      <div class="modal-body sessions-body">
-        <div v-if="!contestStore.sessions.length" class="sessions-empty">
-          No archived sessions yet.
-        </div>
-        <div v-for="session in contestStore.sessions" :key="session.id" class="session-row">
-          <div class="session-meta">
-            <div class="session-name">{{ session.setup.logType }}</div>
-            <div class="session-subline">
-              {{ session.startedAt || 'n/a' }} → {{ session.endedAt || 'n/a' }}
-            </div>
-            <div class="session-subline">QSOs: {{ session.qsos.length }}</div>
-          </div>
-          <div class="session-actions">
-            <button class="panel-action" type="button" @click="exportSessionAdif(session.id)">
-              Export ADIF
-            </button>
-            <button class="panel-action" type="button" @click="openSessionStats(session.id)">
-              Session statistics
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <ContestSessionsModal
+    :open="sessionsModalOpen"
+    :sessions="contestStore.sessions"
+    :get-session-contest-name="getSessionContestName"
+    :format-session-date="formatSessionDate"
+    :get-session-qso-count="getSessionQsoCount"
+    :get-session-score="getSessionScore"
+    :get-session-avg-rate="getSessionAvgRate"
+    :is-session-active="isSessionActive"
+    :is-session-completed="isSessionCompleted"
+    :on-close="closeSessionsModal"
+    :on-export-adif="exportSessionAdif"
+    :on-open-stats="openSessionStats"
+    :on-delete="deleteSession"
+  />
 
-  <div v-if="sessionStatsOpen" class="stats-modal-backdrop" @click="closeSessionStats">
-    <div class="stats-modal panel session-stats-modal" @click.stop>
-      <div class="modal-header">
-        <h3 class="panel-title">Session statistics</h3>
-        <button class="panel-action" type="button" @click="closeSessionStats">Close</button>
-      </div>
-      <div class="modal-body session-stats-body">
-        <div class="session-stats-summary">
-          <div class="stat">
-            <span class="stat-label">QSOs</span>
-            <span class="stat-value">{{ sessionStatsSummary?.totalQsos ?? 0 }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Score</span>
-            <span class="stat-value">{{ sessionStatsSummary?.score ?? 0 }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Multipliers</span>
-            <span class="stat-value">{{ sessionStatsSummary?.mults ?? 0 }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Avg rate</span>
-            <span class="stat-value">{{ sessionStatsSummary?.avgRate ?? 0 }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Start</span>
-            <span class="stat-value">{{ sessionStatsSummary?.start ?? 'n/a' }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">End</span>
-            <span class="stat-value">{{ sessionStatsSummary?.end ?? 'n/a' }}</span>
-          </div>
-        </div>
-        <div class="session-stats-map">
-          <LMap
-            :zoom="2"
-            :center="sessionMapCenter"
-            :use-global-leaflet="false"
-            class="leaflet-map"
-          >
-            <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <LCircleMarker
-              v-for="point in sessionMapPoints"
-              :key="`${point.callsign}-${point.lat}-${point.lon}`"
-              :lat-lng="[point.lat, point.lon]"
-              :radius="5"
-              :color="'#ffa500'"
-              :fill-color="'#ffa500'"
-              :fill-opacity="0.7"
-            >
-              <LTooltip>{{ point.callsign }} {{ point.band }} {{ point.mode }}</LTooltip>
-            </LCircleMarker>
-          </LMap>
-          <div v-if="!sessionMapPoints.length" class="map-empty">
-            No location data available yet.
-          </div>
-        </div>
-        <div class="session-stats-qsos">
-          <div class="session-qso-row header">
-            <span>Time</span>
-            <span>Call</span>
-            <span>Band</span>
-            <span>Mode</span>
-            <span>Exch</span>
-            <span>Score</span>
-          </div>
-          <div v-for="qso in sessionStatsQsos" :key="qso.id" class="session-qso-row">
-            <span>{{ qso.datetime }}</span>
-            <span class="session-qso-call">{{ qso.callsign }}</span>
-            <span>{{ qso.band }}</span>
-            <span>{{ qso.mode }}</span>
-            <span>
-              {{
-                qso.exchange.serialRecv ||
-                qso.exchange.exchangeRecv ||
-                qso.exchange.region ||
-                qso.exchange.grid ||
-                '--'
-              }}
-            </span>
-            <span>{{ (qso.points || 0) * (qso.multiplierFactor || 1) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <ContestSessionStatsModal
+    :open="sessionStatsOpen"
+    :summary="sessionStatsSummary"
+    :timestamps="sessionStatsTimestamps"
+    :started-at="sessionStatsSummary?.start ?? ''"
+    :map-center="sessionMapCenter"
+    :map-points="sessionMapPoints"
+    :show-filters="showSessionStatsFilters"
+    :filters="sessionStatsQsoList.filters"
+    :regex-error="!!sessionStatsQsoList.regexError.value"
+    :bands="sessionBands"
+    :modes="sessionModes"
+    :qsos="safeSessionStatsQsos"
+    :sort-key="sessionStatsQsoList.sortKey.value"
+    :sort-order="sessionStatsQsoList.sortOrder.value"
+    :get-sequence="getSessionSequenceFromEntry"
+    :format-date="formatSessionDate"
+    :on-close="closeSessionStats"
+    :on-toggle-filters="() => (showSessionStatsFilters = !showSessionStatsFilters)"
+    :on-sort="sessionStatsQsoList.sortBy"
+    :on-qso-click="openQsoDetail"
+    :on-map-call-click="openQsoDetailByCall"
+  />
 
   <ContestSetupModal
     :open="contestStore.setupPending"
@@ -1379,6 +1677,13 @@ watch(
     :setup-mode="setupSource"
     :on-save="handleSetupSave"
     :on-cancel="handleSetupCancel"
+  />
+
+  <QsoDetailDialog
+    v-if="selectedQsoDetail"
+    :qso="selectedQsoDetail"
+    :show="showQsoDetail"
+    @close="showQsoDetail = false"
   />
 </template>
 
@@ -1439,92 +1744,6 @@ watch(
   border-radius: 10px;
 }
 
-.session-stats-modal {
-  width: min(1200px, 95vw);
-  max-height: 90vh;
-}
-
-.session-stats-body {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 0.6rem;
-  max-height: 80vh;
-  overflow: hidden;
-}
-
-.session-stats-summary {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.session-stats-summary .stat {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 0.4rem 0.6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.session-stats-map {
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  min-height: 260px;
-}
-
-.session-stats-map .leaflet-map {
-  width: 100%;
-  height: 100%;
-}
-
-.map-empty {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.session-stats-qsos {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  overflow: auto;
-  max-height: 260px;
-  display: flex;
-  flex-direction: column;
-}
-
-.session-qso-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 0.6fr 0.6fr 0.8fr 0.6fr;
-  gap: 0.4rem;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.session-qso-row.header {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.session-qso-row:last-child {
-  border-bottom: none;
-}
-
-.session-qso-call {
-  font-weight: 700;
-  color: #ffb347;
-}
 
 @media (max-width: 1280px) {
   .contest-layout {
@@ -1614,6 +1833,12 @@ watch(
   gap: 0.35rem;
 }
 
+.contest-profile-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}
+
 .setup-cog {
   background: transparent;
   border: none;
@@ -1659,6 +1884,22 @@ watch(
   background: rgba(245, 158, 11, 0.2);
   border-color: rgba(245, 158, 11, 0.6);
   color: #fef3c7;
+}
+
+.session-btn-blink {
+  animation: sessionStartPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes sessionStartPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
 }
 
 .session-btn-stop {
@@ -1802,6 +2043,11 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+}
+
+.entry-panel.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .entry-header {
@@ -1966,13 +2212,62 @@ watch(
   overflow-y: auto;
 }
 
+.recent-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  align-items: end;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.filter-toggle {
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.recent-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.recent-filters .filter-input {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #f2f2f2;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.75rem;
+}
+
+.recent-filters .filter-options {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.recent-filters .regex-error {
+  border-color: rgba(255, 96, 96, 0.7);
+}
+
 .recent-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.7fr 0.7fr 1fr 0.5fr 1.2fr;
+  grid-template-columns: 0.4fr 1.2fr 0.7fr 0.7fr 1fr 1.2fr;
   gap: 0.4rem;
   padding: 0.4rem 0.2rem;
   font-size: 0.85rem;
   border-bottom: 1px solid #242424;
+}
+
+.recent-row:not(.header) {
+  cursor: pointer;
+}
+
+.recent-row:not(.header):hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .recent-row.header {
@@ -1980,6 +2275,18 @@ watch(
   text-transform: uppercase;
   color: #9a9a9a;
   border-bottom: 1px solid #333;
+}
+
+.recent-row.header .sortable {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.recent-num {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .recent-call {
@@ -2074,75 +2381,21 @@ watch(
   cursor: pointer;
 }
 
-.stats-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
+.panel-action.danger {
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
+}
+
+.panel-action.icon {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 2200;
+  font-size: 0.8rem;
 }
 
-.stats-modal {
-  width: min(420px, 90vw);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.modal-header,
-.modal-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.modal-body {
-  justify-content: space-between;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.modal-primary {
-  border-radius: 8px;
-  border: 1px solid rgba(46, 204, 113, 0.7);
-  background: rgba(46, 204, 113, 0.18);
-  color: #9bf1c9;
-  padding: 0.45rem 0.9rem;
-  cursor: pointer;
-}
-
-.modal-secondary {
-  border-radius: 8px;
-  border: 1px solid #3a3a3a;
-  background: #2b2b2b;
-  color: #f2f2f2;
-  padding: 0.45rem 0.9rem;
-  cursor: pointer;
-}
-
-.resume-body {
-  flex-direction: column;
-  width: 100%;
-}
-
-.resume-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  color: #d6d6d6;
-}
-
-.resume-key {
-  color: #8c8c8c;
-}
 
 .resume-val {
   color: #f2f2f2;
@@ -2157,26 +2410,14 @@ watch(
   min-width: 45%;
 }
 
-.sessions-modal {
-  width: min(680px, 92vw);
-}
-
-.sessions-body {
-  flex-direction: column;
-  width: 100%;
-}
-
-.sessions-empty {
-  font-size: 0.85rem;
-  color: #b0b0b0;
-}
 
 .session-row {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0;
+  gap: 0.8rem;
+  padding: 0.35rem 0;
   border-bottom: 1px solid #2c2c2c;
+  align-items: center;
 }
 
 .session-row:last-child {
@@ -2184,27 +2425,41 @@ watch(
 }
 
 .session-meta {
+  min-width: 0;
+}
+
+.session-line {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.72rem;
+  color: #b9b9b9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .session-name {
-  font-size: 0.9rem;
   color: #f2e2a0;
   font-weight: 600;
+  font-size: 0.78rem;
 }
 
 .session-subline {
-  font-size: 0.75rem;
   color: #9a9a9a;
+}
+
+.session-dot {
+  color: #666;
 }
 
 .session-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
+
 
 .map-panel {
   grid-column: 2 / 3;

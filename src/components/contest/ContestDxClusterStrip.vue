@@ -380,6 +380,13 @@ onBeforeUnmount(() => {
       </button>
     </div>
     <div class="dx-strip-inner" :style="{ '--speed-dial-cols': maxCards }">
+      <div v-if="!rankedSpots.length" class="speed-dial-empty">
+        No stations —
+        <button class="speed-dial-empty-link" type="button" @click="openSettings">
+          open settings
+        </button>
+        to adjust the station filter.
+      </div>
       <div v-for="(spot, index) in rankedSpots" :key="`${spot.DXCall}-${spot.Frequency}`" class="spot">
         <div class="spot-key">Ctrl+{{ index === 9 ? 0 : index + 1 }}</div>
         <button
@@ -568,6 +575,32 @@ onBeforeUnmount(() => {
   align-items: stretch;
 }
 
+.speed-dial-empty {
+  grid-column: 1 / -1;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  text-align: center;
+  gap: 0.3rem;
+}
+
+.speed-dial-empty-link {
+  background: none;
+  border: none;
+  color: #9bd1ff;
+  font-size: 0.8rem;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.speed-dial-empty-link:hover {
+  color: #cfe6ff;
+}
+
 .spot {
   display: flex;
   flex-direction: column;
@@ -601,7 +634,7 @@ onBeforeUnmount(() => {
 }
 
 .spot-card.blink-edge {
-  animation: contest-mult-blink 1.2s ease-in-out infinite;
+  animation: contest-mult-blink 2s steps(2, end) infinite;
 }
 
 .spot-card.is-selected {
@@ -720,13 +753,13 @@ onBeforeUnmount(() => {
 
 @keyframes contest-mult-blink {
   0% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(255, 68, 68, 0.9);
+    border-color: rgba(255, 68, 68, 0.9);
   }
   100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
   }
 }
 

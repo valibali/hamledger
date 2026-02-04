@@ -1,153 +1,163 @@
-<script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import type { ContestProfile, ContestSetup } from '../../types/contest';
-import type { ContestCatalogEntry } from '../../types/contestCatalog';
-import contestCatalogRaw from '../../data/contestCatalog.json';
+<script lang="ts">
 import { TextMatcher } from '../../utils/textMatcher';
+import BaseModal from './BaseModal.vue';
+import contestCatalogRaw from '../../data/contestCatalog.json';
+import type { ContestCatalogEntry } from '../../types/contestCatalog';
+import type { ContestProfile, ContestSetup } from '../../types/contest';
 
-const contestCatalog = contestCatalogRaw as ContestCatalogEntry[];
-
-const props = defineProps<{
-  open: boolean;
-  profiles: ContestProfile[];
-  initialSetup?: ContestSetup | null;
-  initialProfileId?: string | null;
-  setupMode?: 'new' | 'reconfig' | null;
-  onSave: (setup: ContestSetup, profileId: string) => void;
-  onCancel: () => void;
-}>();
-
-const defaultContest = contestCatalog.find(entry => entry.id === 'DX') ?? contestCatalog[0];
-
-const form = ref<ContestSetup>({
-  logType: defaultContest.id,
-  modeCategory: 'MIXED',
-  operatorCategory: 'SINGLE-OP',
-  assistedCategory: 'UNASSISTED',
-  powerCategory: 'LOW',
-  bandCategory: 'ALL',
-  overlayCategory: 'NONE',
-  sentExchange: defaultContest.defaultSentExchange,
-  serialSentStart: '001',
-  multipliers: [],
-  startTime: new Date().toISOString(),
-});
-
-const selectedProfileId = ref('dxserial');
-
-const selectedContest = computed(() =>
-  contestCatalog.find(entry => entry.id === form.value.logType) ?? defaultContest
-);
-
-const suggestedLogTypeLabel = computed(() => {
-  switch (selectedContest.value.suggestedProfileId) {
-    case 'generic-serial':
-      return 'Serial';
-    case 'region':
-      return 'Region/State';
-    case 'grid':
-      return 'Grid';
-    default:
-      return 'DX';
-  }
-});
-
-watch(
-  () => form.value.logType,
-  () => {
-    form.value.sentExchange = selectedContest.value.defaultSentExchange;
-    selectedProfileId.value =
-      {
-        DX: 'dx',
-        DXPEDITION: 'dxpedition',
-        DXSERIAL: 'dxserial',
-        DXSATELLIT: 'dxsatellit',
-        VHFDX: 'vhfdx',
-        VHFSERIAL: 'vhfserial',
-      }[selectedContest.value.id] || 'dxserial';
-  }
-);
-
-watch(
-  () => props.open,
-  open => {
-    if (!open) return;
-    if (props.initialSetup) {
-      form.value = {
-        ...props.initialSetup,
-        multipliers: props.initialSetup.multipliers ?? [],
-      };
-    } else {
-      form.value.startTime = new Date().toISOString();
-    }
-    if (props.initialProfileId) {
-      selectedProfileId.value = props.initialProfileId;
-    }
-  }
-);
-
-const multipliersOpen = ref(false);
-const testCallsign = ref('');
-const newRulePattern = ref('');
-const newRuleValue = ref('');
-const addRuleErrors = ref({ pattern: false, value: false });
-
-const normalizePattern = (value: string) => value.toUpperCase();
-
-const addMultiplierRule = () => {
-  if (!form.value.multipliers) form.value.multipliers = [];
-  const pattern = normalizePattern(newRulePattern.value.trim());
-  const value = newRuleValue.value.trim();
-  addRuleErrors.value = { pattern: !pattern, value: !value };
-  if (!pattern || !value) return;
-  form.value.multipliers.push({
-    pattern,
-    value,
-  });
-  newRulePattern.value = '';
-  newRuleValue.value = '';
-  addRuleErrors.value = { pattern: false, value: false };
-};
-
-const removeMultiplierRule = (index: number) => {
-  form.value.multipliers.splice(index, 1);
-};
-
-const matchesTest = (pattern: string) => {
-  if (!testCallsign.value.trim()) return false;
-  return TextMatcher.matches(testCallsign.value.trim(), pattern, {
-    useRegex: false,
-    useWildcard: true,
-    caseSensitive: false,
-  });
-};
-
-const handleSave = () => {
-  props.onSave(
-    {
-      ...form.value,
-      multipliers: form.value.multipliers ? [...form.value.multipliers] : [],
+export default {
+  name: 'ContestSetupModal',
+  components: { BaseModal },
+  props: {
+    open: { type: Boolean, required: true },
+    profiles: { type: Array as () => ContestProfile[], required: true },
+    initialSetup: { type: Object as () => ContestSetup | null, default: null },
+    initialProfileId: { type: String, default: null },
+    setupMode: { type: String, default: null },
+    onSave: { type: Function, required: true },
+    onCancel: { type: Function, required: true },
+  },
+  data() {
+    const contestCatalog = contestCatalogRaw as ContestCatalogEntry[];
+    const defaultContest = contestCatalog.find(entry => entry.id === 'DX') ?? contestCatalog[0];
+    return {
+      contestCatalog,
+      defaultContest,
+      form: {
+        contestName: defaultContest.name,
+        contestType: defaultContest.id,
+        logType: undefined,
+        modeCategory: 'MIXED',
+        operatorCategory: 'SINGLE-OP',
+        assistedCategory: 'UNASSISTED',
+        powerCategory: 'LOW',
+        bandCategory: 'ALL',
+        overlayCategory: 'NONE',
+        sentExchange: defaultContest.defaultSentExchange,
+        serialSentStart: '001',
+        multipliers: [],
+        startTime: new Date().toISOString(),
+      } as ContestSetup,
+      selectedProfileId: 'dxserial',
+      autoContestName: defaultContest.name,
+      multipliersOpen: false,
+      testCallsign: '',
+      newRulePattern: '',
+      newRuleValue: '',
+      addRuleErrors: { pattern: false, value: false },
+    };
+  },
+  computed: {
+    selectedContest() {
+      return (
+        this.contestCatalog.find(entry => entry.id === this.form.contestType) ||
+        this.defaultContest
+      );
     },
-    selectedProfileId.value
-  );
-};
-
-const openRules = () => {
-  if (!selectedContest.value.rulesUrl) return;
-  window.electronAPI?.openExternal(selectedContest.value.rulesUrl);
+  },
+  watch: {
+    open(newVal: boolean) {
+      if (!newVal) return;
+      if (this.initialSetup) {
+        const contestType =
+          this.initialSetup.contestType ?? this.initialSetup.logType ?? this.defaultContest.id;
+        this.form = {
+          ...this.initialSetup,
+          contestType,
+          logType: undefined,
+          contestName: this.initialSetup.contestName ?? this.selectedContest.name,
+          multipliers: this.initialSetup.multipliers ?? [],
+        };
+        this.autoContestName = this.form.contestName || this.selectedContest.name;
+      } else {
+        this.autoContestName = this.selectedContest.name;
+        this.form.startTime = new Date().toISOString();
+      }
+      if (this.initialProfileId) {
+        this.selectedProfileId = this.initialProfileId;
+      }
+    },
+    'form.contestType'() {
+      const nextName = this.selectedContest.name;
+      if (!this.form.contestName || this.form.contestName === this.autoContestName) {
+        this.form.contestName = nextName;
+      }
+      this.autoContestName = nextName;
+      this.form.sentExchange = this.selectedContest.defaultSentExchange;
+      this.selectedProfileId =
+        {
+          DX: 'dx',
+          DXPEDITION: 'dxpedition',
+          DXSERIAL: 'dxserial',
+          DXSATELLIT: 'dxsatellit',
+          VHFDX: 'vhfdx',
+          VHFSERIAL: 'vhfserial',
+        }[this.selectedContest.id] || 'dxserial';
+    },
+  },
+  methods: {
+    normalizePattern(value: string) {
+      return value.toUpperCase();
+    },
+    addMultiplierRule() {
+      if (!this.form.multipliers) this.form.multipliers = [];
+      const pattern = this.normalizePattern(this.newRulePattern.trim());
+      const value = this.newRuleValue.trim();
+      this.addRuleErrors = { pattern: !pattern, value: !value };
+      if (!pattern || !value) return;
+      this.form.multipliers.push({ pattern, value });
+      this.newRulePattern = '';
+      this.newRuleValue = '';
+      this.addRuleErrors = { pattern: false, value: false };
+    },
+    removeMultiplierRule(index: number) {
+      this.form.multipliers.splice(index, 1);
+    },
+    matchesTest(pattern: string) {
+      if (!this.testCallsign.trim()) return false;
+      return TextMatcher.matches(this.testCallsign.trim(), pattern, {
+        useRegex: false,
+        useWildcard: true,
+        caseSensitive: false,
+      });
+    },
+    handleSave() {
+      this.onSave(
+        {
+          ...this.form,
+          multipliers: this.form.multipliers ? [...this.form.multipliers] : [],
+          contestType: this.form.contestType,
+          contestName: this.form.contestName || this.selectedContest.name,
+        },
+        this.selectedProfileId
+      );
+    },
+    openRules() {
+      if (!this.selectedContest.rulesUrl) return;
+      window.electronAPI?.openExternal(this.selectedContest.rulesUrl);
+    },
+    handleCancel() {
+      this.onCancel();
+    },
+  },
 };
 </script>
 
 <template>
-  <div v-if="open" class="contest-setup-backdrop">
-    <div class="contest-setup panel">
-      <div class="modal-header">
-        <h3 class="panel-title">Setup for Contest</h3>
-      </div>
-      <div class="modal-body">
+  <BaseModal
+    :open="open"
+    title="Setup for Contest"
+    width="min(560px, 92vw)"
+    :on-close="handleCancel"
+  >
+    <div class="modal-body">
+        <label class="field field-primary">
+          <span>Contest name</span>
+          <input v-model="form.contestName" type="text" placeholder="e.g. My Field Day" />
+        </label>
         <label class="field">
-          <span>Log type</span>
-          <select v-model="form.logType">
+          <span>Contest type</span>
+          <select v-model="form.contestType">
             <option v-for="contest in contestCatalog" :key="contest.id" :value="contest.id">
               {{ contest.name }}
             </option>
@@ -156,7 +166,7 @@ const openRules = () => {
         <label class="field">
           <span>Profile:</span>
           <select v-model="selectedProfileId">
-            <option v-for="profile in props.profiles" :key="profile.id" :value="profile.id">
+            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
               {{ profile.name }}
             </option>
           </select>
@@ -216,7 +226,7 @@ const openRules = () => {
         </label>
         <label class="field">
           <span>Sent exchange</span>
-          <input v-model="form.sentExchange" type="text" />
+          <input v-model="form.sentExchange" type="text" placeholder="e.g.: BP" />
         </label>
         <label class="field">
           <span>Serial S start</span>
@@ -232,9 +242,6 @@ const openRules = () => {
           <div class="summary-text">
             {{ selectedContest.rulesSummary || selectedContest.description || 'No summary available.' }}
           </div>
-          <div class="rules-suggestion">
-            Suggested log type: {{ suggestedLogTypeLabel }}
-          </div>
           <div class="rules-note">
             Always verify the official rules first:
             <span class="rules-url">{{ selectedContest.rulesUrl || 'No rules URL' }}</span>
@@ -248,20 +255,20 @@ const openRules = () => {
             </button>
           </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button class="modal-secondary" type="button" @click="props.onCancel">Cancel</button>
-        <button class="modal-primary" type="button" @click="handleSave">Save &amp; Load</button>
-      </div>
     </div>
-  </div>
+    <template #footer>
+      <button class="modal-secondary" type="button" @click="handleCancel">Cancel</button>
+      <button class="modal-primary" type="button" @click="handleSave">Save</button>
+    </template>
+  </BaseModal>
 
-  <div v-if="multipliersOpen" class="contest-setup-backdrop">
-    <div class="contest-setup panel multipliers-modal">
-      <div class="modal-header">
-        <h3 class="panel-title">Multipliers</h3>
-      </div>
-      <div class="modal-body multipliers-body">
+  <BaseModal
+    :open="multipliersOpen"
+    title="Multipliers"
+    width="min(720px, 92vw)"
+    :on-close="() => { multipliersOpen = false; }"
+  >
+    <div class="modal-body multipliers-body">
         <div class="multiplier-controls">
           <label>
             <span>Callsign pattern</span>
@@ -310,57 +317,31 @@ const openRules = () => {
             </button>
           </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <label class="multiplier-test">
-          <span>Test callsign</span>
-          <input v-model="testCallsign" type="text" placeholder="e.g. HA5XYZ" />
-        </label>
-        <button
-          class="modal-primary"
-          type="button"
-          @click="
-            () => {
-              multipliersOpen = false;
-              if (props.setupMode === 'reconfig') {
-                props.onSave({ ...form.value }, selectedProfileId.value);
-              }
-            }
-          "
-        >
-          Done
-        </button>
-      </div>
     </div>
-  </div>
+    <template #footer>
+      <label class="multiplier-test">
+        <span>Test callsign</span>
+        <input v-model="testCallsign" type="text" placeholder="e.g. HA5XYZ" />
+      </label>
+      <button
+        class="modal-primary"
+        type="button"
+        @click="
+          () => {
+            multipliersOpen = false;
+            if (setupMode === 'reconfig') {
+              onSave({ ...form }, selectedProfileId);
+            }
+          }
+        "
+      >
+        Done
+      </button>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
-.contest-setup-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2300;
-}
-
-.contest-setup {
-  width: min(560px, 92vw);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.modal-header,
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .modal-footer .multiplier-test {
   margin-right: auto;
   display: flex;
@@ -403,6 +384,15 @@ const openRules = () => {
   padding: 0.35rem 0.5rem;
 }
 
+.field-primary span {
+  color: #fbbf24;
+}
+
+.field-primary input {
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.2);
+}
+
 .rules-summary {
   grid-column: 1 / -1;
 }
@@ -421,12 +411,6 @@ const openRules = () => {
   margin-top: 0.4rem;
   font-size: 0.75rem;
   color: #c9a86a;
-}
-
-.rules-suggestion {
-  margin-top: 0.4rem;
-  font-size: 0.75rem;
-  color: #9ec3ff;
 }
 
 .rules-url {
@@ -520,6 +504,8 @@ const openRules = () => {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 0.6rem;
 }
 
 .remove-rule {

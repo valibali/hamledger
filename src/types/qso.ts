@@ -13,6 +13,14 @@ export interface QsoEntry {
   notes?: string;
   qslStatus?: string;
   qrzLogId?: string;
+  contestSessionId?: string;
+  contestLogType?: string;
+  contestProfileId?: string;
+  contestExchange?: Record<string, string>;
+  contestPoints?: number;
+  contestMultiplierFactor?: number;
+  contestIsMult?: boolean;
+  contestMultValue?: string | number;
   
   // Award-related fields (computed on save)
   dxccEntity?: number;     // DXCC entity code

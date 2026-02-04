@@ -3,9 +3,11 @@ import { useQsoStore } from '../../store/qso';
 import { useRigStore } from '../../store/rig';
 import { BAND_RANGES } from '../../utils/bands';
 import { QsoEntry } from '../../types/qso';
+import BaseModal from './BaseModal.vue';
 
 export default {
   name: 'QsoEditDialog',
+  components: { BaseModal },
   props: {
     qso: {
       type: Object as () => QsoEntry,
@@ -160,10 +162,14 @@ export default {
 </script>
 
 <template>
-  <div v-if="show" class="dialog-overlay" @click="close">
-    <div class="dialog-content" @click.stop>
-      <h2>Edit QSO</h2>
-
+  <BaseModal
+    :open="show"
+    title="Edit QSO"
+    width="min(820px, 92vw)"
+    height="min(90vh, 880px)"
+    :on-close="close"
+  >
+    <div class="qso-edit-body">
       <div class="form-grid">
         <div class="form-group">
           <label for="callsign">Callsign</label>
@@ -231,40 +237,28 @@ export default {
           <textarea id="notes" v-model="editedQso.notes" rows="3"></textarea>
         </div>
       </div>
-
-      <div class="dialog-actions">
-        <button class="delete-btn" @click="deleteQso">Delete QSO</button>
-        <div class="action-group">
-          <button class="cancel-btn" @click="close">Cancel</button>
-          <button class="save-btn" @click="saveChanges">Save Changes</button>
+    </div>
+    <template #footer>
+      <div class="qso-edit-footer">
+        <button class="panel-action danger" type="button" @click="deleteQso">Delete QSO</button>
+        <div class="qso-edit-actions">
+          <button class="panel-action" type="button" @click="close">Cancel</button>
+          <button class="panel-action panel-action-confirm" type="button" @click="saveChanges">
+            Save Changes
+          </button>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+.qso-edit-body {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog-content {
-  background: #333;
-  padding: 2rem;
-  border-radius: 5px;
-  min-width: 500px;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto;
+  max-height: 65vh;
 }
 
 .form-grid {
@@ -303,45 +297,15 @@ export default {
   resize: vertical;
 }
 
-.dialog-actions {
+.qso-edit-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  width: 100%;
 }
 
-.action-group {
+.qso-edit-actions {
   display: flex;
-  gap: 1rem;
-}
-
-.cancel-btn,
-.save-btn,
-.delete-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.cancel-btn {
-  background: #555;
-  color: #fff;
-}
-
-.save-btn {
-  background: var(--main-color);
-  color: #000;
-}
-
-.delete-btn {
-  background: #e74c3c;
-  color: #fff;
-}
-
-.delete-btn:hover {
-  background: #c0392b;
+  gap: 0.5rem;
 }
 </style>

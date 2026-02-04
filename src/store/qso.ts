@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { useRigStore } from './rig';
 import { useAwardsStore } from './awards';
+import { useQrzStore } from './qrz';
 import { formatAdif } from '../utils/adif';
 import { StationData, BaseStationData, GeoData } from '../types/station';
 import { qrzService } from '../services/QRZService';
@@ -142,6 +143,101 @@ export const useQsoStore = defineStore('qso', {
         notes: '',
         qslStatus: 'N',
       };
+    },
+    async addContestQso(contestQso: {
+      callsign: string;
+      band: string;
+      mode: string;
+      datetime: string;
+      rstSent?: string;
+      rstRecv?: string;
+      exchange?: Record<string, string>;
+      points?: number;
+      multiplierFactor?: number;
+      isMult?: boolean;
+      multValue?: string | number;
+    }, sessionId: string, logType?: string, profileId?: string) {
+      const rigStore = useRigStore();
+      const qrzStore = useQrzStore();
+      const newQso: QsoEntry = {
+        callsign: contestQso.callsign.toUpperCase(),
+        band: contestQso.band,
+        freqRx: rigStore.rigState.frequency / 1000000,
+        mode: contestQso.mode,
+        datetime: contestQso.datetime,
+        rstr: contestQso.rstRecv || '59',
+        rstt: contestQso.rstSent || '59',
+        remark: '',
+        notes: '',
+        qslStatus: 'N',
+        contestSessionId: sessionId,
+        contestLogType: logType,
+        contestProfileId: profileId,
+        contestExchange: contestQso.exchange || {},
+        contestPoints: contestQso.points,
+        contestMultiplierFactor: contestQso.multiplierFactor,
+        contestIsMult: contestQso.isMult,
+        contestMultValue: contestQso.multValue,
+      };
+
+      if (newQso.contestExchange) {
+        const parts = [
+          newQso.contestExchange.serialRecv ? `RR ${newQso.contestExchange.serialRecv}` : null,
+          newQso.contestExchange.exchangeRecv ? `EXR ${newQso.contestExchange.exchangeRecv}` : null,
+          newQso.contestExchange.serialSent ? `RS ${newQso.contestExchange.serialSent}` : null,
+          newQso.contestExchange.exchangeSent ? `EXS ${newQso.contestExchange.exchangeSent}` : null,
+        ].filter(Boolean);
+        newQso.remark = parts.length ? parts.join(' | ') : '--';
+      }
+
+      const enrichedQso = awardService.enrichQsoWithDxcc(newQso);
+
+      if (newQso.contestExchange?.grid && !enrichedQso.grid) {
+        enrichedQso.grid = newQso.contestExchange.grid;
+      }
+
+      const cached = qrzStore.getCached(newQso.callsign);
+      if (cached?.grid && !enrichedQso.grid) {
+        enrichedQso.grid = cached.grid;
+      }
+      if (cached?.country && !enrichedQso.country) {
+        enrichedQso.country = cached.country;
+      }
+      if (cached?.state && !enrichedQso.state) {
+        enrichedQso.state = cached.state;
+      }
+      if (!enrichedQso.country) {
+        const countryCode = CallsignHelper.getCountryCodeForCallsign(newQso.callsign);
+        if (countryCode) {
+          const countryName = countries.getName(countryCode.toUpperCase(), 'en') || 'Unknown';
+          enrichedQso.country = countryName;
+        }
+      }
+
+      try {
+        const response = await window.electronAPI.addQso({
+          ...enrichedQso,
+          _id: new Date().toISOString(),
+        });
+
+        if (response.ok) {
+          this.currentSession.push(enrichedQso);
+          this.allQsos.push(enrichedQso);
+          const awardsStore = useAwardsStore();
+          awardsStore.processNewQso(enrichedQso);
+        }
+      } catch (error) {
+        console.error('Failed to save contest QSO:', error);
+      }
+    },
+    async deleteQsosBySession(sessionId: string): Promise<void> {
+      const ids = this.allQsos
+        .filter(qso => qso.contestSessionId === sessionId)
+        .map(qso => qso._id || qso.id)
+        .filter((id): id is string => Boolean(id));
+      for (const id of ids) {
+        await this.deleteQso(id);
+      }
     },
     updateQsoForm(field: keyof typeof this.qsoForm, value: string) {
       this.qsoForm[field] = value;
@@ -310,22 +406,26 @@ export const useQsoStore = defineStore('qso', {
         second: '2-digit',
       });
     },
-    async fetchStationInfo(callsign: string): Promise<void | Error> {
+    async fetchStationInfo(
+      callsign: string,
+      options: { preferred?: Partial<QsoEntry>; forceQrz?: boolean } = {}
+    ): Promise<void | Error> {
       // Always reset QRZ error state at the beginning
       this.stationInfo.qrzError = false;
       
       try {
+        const preferred = options.preferred ?? null;
         // Reset station info first to avoid showing stale data
         this.stationInfo = {
           baseData: {
             call: callsign,
-            name: '',
-            country: '',
+            name: preferred?.name || '',
+            country: preferred?.country || '',
             lat: undefined,
             lon: undefined,
-            grid: '',
-            qth: '',
-            state: '',
+            grid: preferred?.grid || '',
+            qth: preferred?.qth || '',
+            state: preferred?.state || '',
           },
           geodata: {},
           flag: '',
@@ -342,7 +442,9 @@ export const useQsoStore = defineStore('qso', {
         const countryName = countries.getName(countryCode.toUpperCase(), 'en') || 'Unknown';
 
         // Set country and flag (handling portable prefixes)
-        this.stationInfo.baseData.country = countryName;
+        if (!this.stationInfo.baseData.country) {
+          this.stationInfo.baseData.country = countryName;
+        }
         this.stationInfo.flag = await CallsignHelper.getFlagUrl(callsign);
 
         // Check for portable suffix to determine if we should show distance or suffix meaning
@@ -350,7 +452,19 @@ export const useQsoStore = defineStore('qso', {
         this.stationInfo.portableSuffix = portableSuffix;
 
         // Try to get additional info from QRZ only if callsign looks complete
-        if (callsign.length >= 3 && CallsignHelper.isValidCallsign(callsign)) {
+        const qthValue = this.stationInfo.baseData.qth?.trim() || '';
+        const countryValue = this.stationInfo.baseData.country?.trim() || '';
+        const qthIsOnlyCountry =
+          qthValue &&
+          countryValue &&
+          qthValue.toLowerCase() === countryValue.toLowerCase();
+        const hasUsefulQth = qthValue && !qthIsOnlyCountry && qthValue.length >= 3;
+        const needsLocation =
+          !this.stationInfo.baseData.grid &&
+          (!hasUsefulQth || !countryValue);
+        const shouldQueryQrz = options.forceQrz || needsLocation;
+
+        if (shouldQueryQrz && callsign.length >= 3 && CallsignHelper.isValidCallsign(callsign)) {
           // First try with the full callsign (including portable prefixes/suffixes)
           let qrzData = await qrzService.lookupStationByCallsign(callsign);
 
@@ -371,16 +485,50 @@ export const useQsoStore = defineStore('qso', {
           } else {
             // Successful lookup - ensure error state is cleared
             this.stationInfo.qrzError = false;
-            this.stationInfo.baseData.name = qrzData.name;
-            this.stationInfo.baseData.grid = qrzData.grid;
-            this.stationInfo.baseData.qth = qrzData.qth;
-            this.stationInfo.baseData.state = qrzData.state;
+            if (!this.stationInfo.baseData.name) {
+              this.stationInfo.baseData.name = qrzData.name;
+            }
+            if (!this.stationInfo.baseData.grid) {
+              this.stationInfo.baseData.grid = qrzData.grid;
+            }
+            if (!this.stationInfo.baseData.qth) {
+              this.stationInfo.baseData.qth = qrzData.qth;
+            }
+            if (!this.stationInfo.baseData.state) {
+              this.stationInfo.baseData.state = qrzData.state;
+            }
+            // Reset geodata so we re-resolve with the freshest QRZ data.
+            this.stationInfo.geodata = {};
           }
         }
 
         // Try to get coordinates in order of preference:
-        // 1. From grid square if available
-        if (this.stationInfo.baseData.grid) {
+        // 1. From QTH + country (more reliable for ambiguous cities)
+        if (this.stationInfo.baseData.qth) {
+          const qth = this.stationInfo.baseData.qth;
+          const country = this.stationInfo.baseData.country?.trim();
+          const queryWithCountry = country ? `${qth}, ${country}` : qth;
+          const countryCodeHint =
+            (country ? countries.getAlpha2Code(country, 'en')?.toLowerCase() : undefined) ||
+            CallsignHelper.getCountryCodeForCallsign(callsign)?.toLowerCase() ||
+            undefined;
+          let geoData = await geocodeLocation(queryWithCountry, {
+            countryCode: countryCodeHint,
+          });
+          if (!geoData && queryWithCountry !== qth) {
+            geoData = await geocodeLocation(qth, { countryCode: countryCodeHint });
+          }
+          if (geoData) {
+            this.stationInfo.geodata = {
+              lat: geoData.lat,
+              lon: geoData.lon,
+              display_name: geoData.display_name || queryWithCountry,
+            };
+          }
+        }
+
+        // 2. From grid square if QTH-based lookup failed
+        if (!this.stationInfo.geodata.lat && this.stationInfo.baseData.grid) {
           try {
             const coords = MaidenheadLocator.gridToLatLon(this.stationInfo.baseData.grid);
             this.stationInfo.geodata = {
@@ -390,18 +538,6 @@ export const useQsoStore = defineStore('qso', {
             };
           } catch (error) {
             console.error('Error converting grid to coordinates:', error);
-          }
-        }
-
-        // 2. From QTH if available and grid failed
-        if (!this.stationInfo.geodata.lat && this.stationInfo.baseData.qth) {
-          const geoData = await geocodeLocation(this.stationInfo.baseData.qth);
-          if (geoData) {
-            this.stationInfo.geodata = {
-              lat: geoData.lat,
-              lon: geoData.lon,
-              display_name: geoData.display_name,
-            };
           }
         }
 

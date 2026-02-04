@@ -3,7 +3,7 @@ import { useQsoStore } from '../store/qso';
 import { getCountryCodeForCallsign } from '../utils/callsign';
 import { DateHelper } from '../utils/dateHelper';
 import { TextMatcher } from '../utils/textMatcher';
-import QsoDetailDialog from './qso/QsoDetailDialog.vue';
+import QsoDetailDialog from './modals/QsoDetailDialog.vue';
 
 export default {
   components: {

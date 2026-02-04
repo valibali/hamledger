@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { toRaw } from 'vue';
 import { CallsignHelper } from '../utils/callsign';
 import { useRigStore } from './rig';
+import { useQsoStore } from './qso';
 import { defaultContestRules } from '../services/contestRules';
 import { isCallsignWorked } from '../services/workedMultService';
 import type {
@@ -168,10 +169,14 @@ export const useContestStore = defineStore('contest', {
       return contestProfiles;
     },
     sessionElapsed(state): number {
-      if (state.activeSession?.status === 'running' && state.sessionLastStartedAt) {
-        return state.sessionElapsedMs + (Date.now() - state.sessionLastStartedAt);
+      if (state.activeSession?.status !== 'running') {
+        return state.sessionElapsedMs;
       }
-      return state.sessionElapsedMs;
+      const anchor =
+        state.sessionLastStartedAt ??
+        (state.activeSession.startedAt ? new Date(state.activeSession.startedAt).getTime() : null);
+      if (!anchor) return state.sessionElapsedMs;
+      return state.sessionElapsedMs + (Date.now() - anchor);
     },
     isDraftValid(state): boolean {
       if (!state.qsoDraft.callsign) return false;
@@ -209,6 +214,13 @@ export const useContestStore = defineStore('contest', {
   actions: {
     setSessions(sessions: ContestSession[]) {
       this.sessions = sessions;
+    },
+    async deleteSession(sessionId: string) {
+      this.sessions = this.sessions.filter(session => session.id !== sessionId);
+      if (this.activeSession?.id === sessionId) {
+        this.activeSession = null;
+      }
+      await this.persistActiveSession();
     },
     setActiveView(view: 'contest' | 'voiceKeyer' | 'review') {
       this.activeView = view;
@@ -301,15 +313,21 @@ export const useContestStore = defineStore('contest', {
       void this.persistActiveSession();
     },
     createSession(setup: ContestSetup, profileIdOverride?: string) {
+      const contestType = setup.contestType || setup.logType || 'DX';
       const normalizedSetup: ContestSetup = {
         ...setup,
+        contestType,
+        logType: undefined,
         multipliers: setup.multipliers ? [...setup.multipliers] : [],
       };
       const now = new Date();
       const day = String(now.getDate()).padStart(2, '0');
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const year = String(now.getFullYear());
-      const sessionId = `contest-${day}${month}${year}`;
+      const hour = String(now.getHours()).padStart(2, '0');
+      const minute = String(now.getMinutes()).padStart(2, '0');
+      const second = String(now.getSeconds()).padStart(2, '0');
+      const sessionId = `contest-${day}${month}${year}-${hour}${minute}${second}`;
       const profileId =
         profileIdOverride ||
         {
@@ -319,7 +337,7 @@ export const useContestStore = defineStore('contest', {
           DXSATELLIT: 'dxsatellit',
           VHFDX: 'vhfdx',
           VHFSERIAL: 'vhfserial',
-        }[normalizedSetup.logType] || 'dx';
+        }[normalizedSetup.contestType] || 'dx';
       this.activeSession = {
         id: sessionId,
         profileId,
@@ -344,8 +362,11 @@ export const useContestStore = defineStore('contest', {
     },
     updateSessionSetup(setup: ContestSetup) {
       if (!this.activeSession) return;
+      const contestType = setup.contestType || setup.logType || 'DX';
       const normalizedSetup: ContestSetup = {
         ...setup,
+        contestType,
+        logType: undefined,
         multipliers: setup.multipliers ? [...setup.multipliers] : [],
       };
       this.activeSession.setup = normalizedSetup;
@@ -358,7 +379,13 @@ export const useContestStore = defineStore('contest', {
     },
     startSession() {
       if (!this.activeSession) return;
-      if (this.activeSession.status === 'running') return;
+      if (this.activeSession.status === 'running') {
+        if (this.sessionLastStartedAt == null) {
+          this.sessionLastStartedAt = Date.now();
+          void this.persistActiveSession();
+        }
+        return;
+      }
       if (!this.activeSession.startedAt) {
         this.activeSession.startedAt = new Date().toISOString();
       }
@@ -457,6 +484,7 @@ export const useContestStore = defineStore('contest', {
       if (!this.isDraftValid) return;
 
       const rigStore = useRigStore();
+      const qsoStore = useQsoStore();
       const now = new Date();
       const serialSent = this.qsoDraft.exchange.serialSent
         ? Number(this.qsoDraft.exchange.serialSent)
@@ -520,6 +548,12 @@ export const useContestStore = defineStore('contest', {
 
       const qrzStore = useQrzStore();
       qrzStore.enqueueLookup(qso.callsign);
+      void qsoStore.addContestQso(
+        qso,
+        this.activeSession.id,
+        this.activeSession.setup.contestType || this.activeSession.setup.logType,
+        this.activeSession.profileId
+      );
       void this.persistActiveSession();
     },
     refreshStats() {

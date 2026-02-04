@@ -80,7 +80,9 @@ export interface ContestDraft {
 }
 
 export interface ContestSetup {
-  logType: string;
+  contestName?: string;
+  contestType: string;
+  logType?: string;
   modeCategory: string;
   operatorCategory: string;
   assistedCategory: string;

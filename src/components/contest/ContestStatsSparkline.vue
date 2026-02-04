@@ -6,6 +6,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const nowTick = ref(Date.now());
 let timerHandle: number | undefined;
 let resizeObserver: ResizeObserver | undefined;
+let resizeRaf: number | undefined;
 const cssSize = ref({ width: 0, height: 0 });
 
 const sessionStartMs = computed(() => {
@@ -63,12 +64,20 @@ const resizeCanvas = () => {
   const parent = canvas.parentElement as HTMLElement | null;
   if (!parent) return;
   const rect = parent.getBoundingClientRect();
-  cssSize.value = { width: rect.width, height: rect.height };
+  const nextWidth = Math.max(1, Math.floor(rect.width));
+  const nextHeight = Math.max(1, Math.floor(rect.height));
+  if (
+    Math.abs(cssSize.value.width - nextWidth) < 1 &&
+    Math.abs(cssSize.value.height - nextHeight) < 1
+  ) {
+    return;
+  }
+  cssSize.value = { width: nextWidth, height: nextHeight };
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-  canvas.style.width = `${rect.width}px`;
-  canvas.style.height = `${rect.height}px`;
+  canvas.width = Math.max(1, Math.floor(nextWidth * dpr));
+  canvas.height = Math.max(1, Math.floor(nextHeight * dpr));
+  canvas.style.width = `${nextWidth}px`;
+  canvas.style.height = `${nextHeight}px`;
 };
 
 const draw = () => {
@@ -141,8 +150,12 @@ onMounted(() => {
   draw();
   if (canvasRef.value) {
     resizeObserver = new ResizeObserver(() => {
-      resizeCanvas();
-      draw();
+      if (resizeRaf) return;
+      resizeRaf = window.requestAnimationFrame(() => {
+        resizeRaf = undefined;
+        resizeCanvas();
+        draw();
+      });
     });
     resizeObserver.observe(canvasRef.value.parentElement as Element);
   }
@@ -155,6 +168,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (timerHandle) {
     window.clearInterval(timerHandle);
+  }
+  if (resizeRaf) {
+    window.cancelAnimationFrame(resizeRaf);
   }
   resizeObserver?.disconnect();
 });
@@ -190,6 +206,7 @@ watch(nowTick, draw);
   gap: 0.2rem;
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 .sparkline-area {
@@ -221,6 +238,7 @@ watch(nowTick, draw);
   gap: 0.8rem;
   font-size: 0.7rem;
   color: #bdbdbd;
+  flex: 0 0 auto;
 }
 
 .legend-item {
@@ -247,10 +265,13 @@ watch(nowTick, draw);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 0;
+  flex: 0 0 auto;
+  height: 16px;
 }
 
 .axis-label {
   text-align: center;
+  white-space: nowrap;
 }
 
 </style>
