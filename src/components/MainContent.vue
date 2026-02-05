@@ -8,6 +8,7 @@ import ConfigView from './ConfigView.vue';
 import DxCluster from './DxCluster.vue';
 import Awards from './Awards.vue';
 import ContestModeShell from './contest/ContestModeShell.vue';
+import VoiceKeyerPage from './contest/VoiceKeyerPage.vue';
 import { configHelper } from '../utils/configHelper';
 
 export default {
@@ -21,6 +22,7 @@ export default {
     DxCluster,
     Awards,
     ContestModeShell,
+    VoiceKeyerPage,
   },
   setup() {
     const currentView = ref('qso');
@@ -55,6 +57,7 @@ export default {
       </div>
     </template>
     <ContestModeShell v-else-if="currentView === 'contest'" />
+    <VoiceKeyerPage v-else-if="currentView === 'voiceKeyer'" />
     <LogBook v-else-if="currentView === 'logbook'" />
     <Awards v-else-if="currentView === 'awards'" />
     <ConfigView v-else-if="currentView === 'settings'" />

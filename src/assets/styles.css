@@ -92,7 +92,8 @@ input:hover {
   background: #555;
 }
 
-.panel {
+.panel,
+.base-panel {
   background: var(--panel-bg, #333);
   border: var(--panel-border, 1px solid var(--border-color));
   border-radius: var(--panel-radius, 5px);
@@ -113,7 +114,8 @@ input:hover {
   --panel-border: 1px solid var(--border-color);
   --panel-radius: 5px;
   --panel-pad: 1rem;
-  --page-pad: var(--panel-pad);
+  --spacing-md: var(--panel-pad);
+  --page-pad: var(--spacing-md);
   --panel-title-color: var(--main-color);
   --panel-title-size: var(--font-size-md);
   --panel-title-spacing: 0.5px;
@@ -126,7 +128,8 @@ input:hover {
   --panel-border: 1px solid #2c2c2c;
   --panel-radius: 10px;
   --panel-pad: 0.65rem;
-  --page-pad: var(--panel-pad);
+  --spacing-md: var(--panel-pad);
+  --page-pad: var(--spacing-md);
   --panel-title-color: #ffa500;
   --panel-title-size: 1.05rem;
   --panel-title-spacing: 0.04em;
