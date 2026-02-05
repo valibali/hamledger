@@ -66,11 +66,45 @@ export default {
     sortOrder: { type: String, required: true },
     onClose: { type: Function, required: true },
     onToggleFilters: { type: Function, required: true },
+    onFiltersChange: { type: Function, required: true },
     onSort: { type: Function, required: true },
     getSequence: { type: Function, required: true },
     formatDate: { type: Function, required: true },
     onQsoClick: { type: Function, required: true },
     onMapCallClick: { type: Function, required: true },
+  },
+  data() {
+    return {
+      localFilters: this.cloneFilters(this.filters),
+    };
+  },
+  watch: {
+    filters: {
+      deep: true,
+      handler(newFilters) {
+        this.localFilters = this.cloneFilters(newFilters);
+      },
+    },
+    localFilters: {
+      deep: true,
+      handler(newFilters) {
+        this.onFiltersChange(this.cloneFilters(newFilters));
+      },
+    },
+  },
+  methods: {
+    cloneFilters(filters: {
+      searchText: string;
+      selectedBand: string;
+      selectedMode: string;
+      dateFrom: string;
+      dateTo: string;
+      useWildcard: boolean;
+      useRegex: boolean;
+      caseSensitive: boolean;
+    }) {
+      return { ...filters };
+    },
   },
 };
 </script>
@@ -149,7 +183,7 @@ export default {
             <div class="filter-group">
               <label>Search</label>
               <input
-                v-model="filters.searchText"
+                v-model="localFilters.searchText"
                 class="filter-input"
                 type="text"
                 placeholder="Call / exch"
@@ -158,37 +192,37 @@ export default {
             </div>
             <div class="filter-group">
               <label>Band</label>
-              <select v-model="filters.selectedBand" class="filter-input">
+              <select v-model="localFilters.selectedBand" class="filter-input">
                 <option value="">All</option>
                 <option v-for="band in bands" :key="band" :value="band">{{ band }}</option>
               </select>
             </div>
             <div class="filter-group">
               <label>Mode</label>
-              <select v-model="filters.selectedMode" class="filter-input">
+              <select v-model="localFilters.selectedMode" class="filter-input">
                 <option value="">All</option>
                 <option v-for="mode in modes" :key="mode" :value="mode">{{ mode }}</option>
               </select>
             </div>
             <div class="filter-group">
               <label>From</label>
-              <input v-model="filters.dateFrom" class="filter-input" type="date" />
+              <input v-model="localFilters.dateFrom" class="filter-input" type="date" />
             </div>
             <div class="filter-group">
               <label>To</label>
-              <input v-model="filters.dateTo" class="filter-input" type="date" />
+              <input v-model="localFilters.dateTo" class="filter-input" type="date" />
             </div>
             <div class="filter-options">
               <label>
-                <input type="checkbox" v-model="filters.useWildcard" />
+                <input type="checkbox" v-model="localFilters.useWildcard" />
                 Wildcard
               </label>
               <label>
-                <input type="checkbox" v-model="filters.useRegex" />
+                <input type="checkbox" v-model="localFilters.useRegex" />
                 Regex
               </label>
               <label>
-                <input type="checkbox" v-model="filters.caseSensitive" />
+                <input type="checkbox" v-model="localFilters.caseSensitive" />
                 Case
               </label>
             </div>

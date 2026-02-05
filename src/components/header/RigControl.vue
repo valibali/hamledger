@@ -118,13 +118,17 @@ export default {
     },
   },
   methods: {
+    unwrapRef<T>(maybeRef: T | { value: T }): T {
+      if (maybeRef && typeof maybeRef === 'object' && 'value' in (maybeRef as object)) {
+        return (maybeRef as { value: T }).value;
+      }
+      return maybeRef as T;
+    },
     getConnectionForm() {
-      return (
-        (this.rigctldForm.connectionForm as any).value ?? this.rigctldForm.connectionForm
-      );
+      return this.unwrapRef(this.rigctldForm.connectionForm);
     },
     getRigModelsList() {
-      return (this.rigctldModels.rigModels as any).value ?? this.rigctldModels.rigModels ?? [];
+      return this.unwrapRef(this.rigctldModels.rigModels) ?? [];
     },
     async loadRigConfig() {
       await this.rigctldForm.loadRigConfig();

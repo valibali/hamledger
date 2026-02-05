@@ -81,8 +81,14 @@ export default {
     },
     selectStartupView(view: string) {
       this.showModeSelector = false;
-      (this.$refs.mainContent as any)?.handleViewChange(view);
-      (this.$refs.sideBar as any)?.setView?.(view);
+      const mainContent = this.$refs.mainContent as
+        | { handleViewChange: (nextView: string) => void }
+        | undefined;
+      const sideBar = this.$refs.sideBar as
+        | { setView?: (nextView: string) => void }
+        | undefined;
+      mainContent?.handleViewChange(view);
+      sideBar?.setView?.(view);
     },
   },
 };

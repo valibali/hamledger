@@ -60,11 +60,11 @@ export default defineComponent({
   mounted() {
     window.addEventListener('keydown', this.handleKeydown, { capture: true });
     this.loadState();
-    window.addEventListener('voice-keyer-updated', this.loadState as EventListener);
+    window.addEventListener('voice-keyer-updated', this.loadState as (event: Event) => void);
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.handleKeydown, true);
-    window.removeEventListener('voice-keyer-updated', this.loadState as EventListener);
+    window.removeEventListener('voice-keyer-updated', this.loadState as (event: Event) => void);
   },
   methods: {
     async loadState() {

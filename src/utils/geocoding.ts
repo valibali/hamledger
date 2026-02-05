@@ -6,6 +6,15 @@ interface GeocodingResult {
   display_name: string;
 }
 
+interface NominatimResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+  address?: {
+    country_code?: string;
+  };
+}
+
 export async function geocodeLocation(
   qth: string,
   options: { countryCode?: string } = {}
@@ -32,13 +41,13 @@ export async function geocodeLocation(
       }
     );
 
-    const data = await response.json();
+    const data = (await response.json()) as NominatimResult[];
 
     if (data && data.length > 0) {
       if (options.countryCode) {
         const match = data.find(
-          (item: any) =>
-            item?.address?.country_code?.toLowerCase() === options.countryCode?.toLowerCase()
+          item =>
+            item.address?.country_code?.toLowerCase() === options.countryCode?.toLowerCase()
         );
         if (match) {
           return {

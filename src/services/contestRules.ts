@@ -12,7 +12,9 @@ export interface ContestRules {
 }
 
 export const defaultContestRules: ContestRules = {
-  computePoints(_qso, _session) {
+  computePoints(qso, session) {
+    void qso;
+    void session;
     return 1;
   },
   computeMultipliers(qso, session) {

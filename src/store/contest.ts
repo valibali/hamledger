@@ -591,7 +591,6 @@ export const useContestStore = defineStore('contest', {
       this.scoringState.points = estimatedPoints;
       this.scoringState.multipliers = Array.from(multiplierSet);
       this.scoringState.score = scoreSum;
-      const multipliersCount = multiplierSet.size;
 
       this.stats = {
         totalQsos: total,

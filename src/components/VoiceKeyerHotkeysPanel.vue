@@ -23,10 +23,10 @@ export default {
   },
   mounted() {
     this.loadHotkeys();
-    window.addEventListener('voice-keyer-updated', this.loadHotkeys as EventListener);
+    window.addEventListener('voice-keyer-updated', this.loadHotkeys as (event: Event) => void);
   },
   beforeUnmount() {
-    window.removeEventListener('voice-keyer-updated', this.loadHotkeys as EventListener);
+    window.removeEventListener('voice-keyer-updated', this.loadHotkeys as (event: Event) => void);
   },
   methods: {
     async loadHotkeys() {

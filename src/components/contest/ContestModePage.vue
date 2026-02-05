@@ -899,14 +899,14 @@ const closeSessionsModal = () => {
 const exportSessionAdif = async (sessionId: string) => {
   const session = contestStore.sessions.find(item => item.id === sessionId);
   if (!session) return;
-  const qsos = session.qsos.map(qso => ({
-    callsign: qso.callsign,
-    band: qso.band,
+  const qsos: QsoEntry[] = session.qsos.map(qso => ({
+    callsign: qso.callsign || '',
+    band: qso.band || '',
     freqRx: 0,
-    mode: qso.mode,
+    mode: qso.mode || '',
     rstr: qso.rstRecv,
     rstt: qso.rstSent,
-    datetime: qso.datetime,
+    datetime: qso.datetime || new Date().toISOString(),
     remark: [
       qso.exchange.serialRecv ? `RR ${qso.exchange.serialRecv}` : null,
       qso.exchange.exchangeRecv ? `EXR ${qso.exchange.exchangeRecv}` : null,
@@ -916,7 +916,7 @@ const exportSessionAdif = async (sessionId: string) => {
       .filter(Boolean)
       .join(' | '),
   }));
-  const result = await qsoStore.exportAdif(qsos as any);
+  const result = await qsoStore.exportAdif(qsos);
   if (!result.success) {
     alert(result.error || 'ADIF export failed');
   }
@@ -1076,8 +1076,10 @@ onMounted(async () => {
   }
 
   try {
-    const settings = await window.electronAPI.loadSettings();
-    const savedSessions = (settings as any)?.contest?.sessions as ContestSession[] | undefined;
+    const settings = (await window.electronAPI.loadSettings()) as {
+      contest?: { sessions?: ContestSession[] };
+    };
+    const savedSessions = settings?.contest?.sessions;
     if (savedSessions) {
       contestStore.setSessions(savedSessions.map(normalizeSessionSetup));
     }
@@ -1091,8 +1093,10 @@ onMounted(async () => {
   showFocusToggle.value = configHelper.getSetting(['contest'], 'showFocusToggle') === true;
 
   try {
-    const settings = await window.electronAPI.loadSettings();
-    const snapshot = (settings as any)?.contest?.activeSession as ContestSessionSnapshot | null;
+    const settings = (await window.electronAPI.loadSettings()) as {
+      contest?: { activeSession?: ContestSessionSnapshot | null };
+    };
+    const snapshot = settings?.contest?.activeSession ?? null;
     if (!contestStore.activeSession && snapshot?.session && snapshot.session.status !== 'closed') {
       resumeSnapshot.value = normalizeSnapshot({
         ...snapshot,
@@ -1536,7 +1540,7 @@ watch(
               <span>OP</span>
             </div>
             <div
-              v-for="(qso, index) in safeRecentQsos"
+              v-for="qso in safeRecentQsos"
               :key="
                 qso?.id ||
                 `${qso?.callsign || 'qso'}-${qso?.datetime || 'time'}-${qso?.band || 'band'}-${
@@ -1681,6 +1685,7 @@ watch(
     :format-date="formatSessionDate"
     :on-close="closeSessionStats"
     :on-toggle-filters="() => (showSessionStatsFilters = !showSessionStatsFilters)"
+    :on-filters-change="nextFilters => Object.assign(sessionStatsQsoList.filters, nextFilters)"
     :on-sort="sessionStatsQsoList.sortBy"
     :on-qso-click="openQsoDetail"
     :on-map-call-click="openQsoDetailByCall"
