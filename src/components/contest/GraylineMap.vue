@@ -1,6 +1,6 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { LMap, LTileLayer, LPolyline, LPolygon } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LPolyline, LPolygon, LCircleMarker } from '@vue-leaflet/vue-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { configHelper } from '../../utils/configHelper';
 import { MaidenheadLocator } from '../../utils/maidenhead';
@@ -14,6 +14,7 @@ export default defineComponent({
     LTileLayer,
     LPolyline,
     LPolygon,
+    LCircleMarker,
   },
 
   data() {
@@ -145,6 +146,7 @@ export default defineComponent({
   <div class="grayline-map">
     <LMap :zoom="zoom" :center="mapCenter" :use-global-leaflet="false" class="leaflet-map">
       <LTileLayer
+        :no-wrap="true"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"
       />
@@ -162,6 +164,15 @@ export default defineComponent({
         :color="'#ff9f1a'"
         :weight="1.5"
         :opacity="0.9"
+      />
+      <LCircleMarker
+        v-if="mapCenter && (mapCenter[0] !== 0 || mapCenter[1] !== 0)"
+        :lat-lng="mapCenter"
+        :radius="5"
+        :color="'#4ade80'"
+        :weight="1"
+        :fill-color="'#22c55e'"
+        :fill-opacity="0.85"
       />
     </LMap>
     <div class="grayline-label">Grayline (UTC)</div>
@@ -196,5 +207,9 @@ export default defineComponent({
 
 :deep(.leaflet-container) {
   background: #0d0f14;
+}
+
+:deep(.leaflet-tile-container) {
+  background: #a9c6d9;
 }
 </style>

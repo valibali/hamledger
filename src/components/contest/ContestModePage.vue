@@ -25,6 +25,7 @@ import { geocodeLocation } from '../../utils/geocoding';
 import { useQsoListFilters } from '../../composables/useQsoListFilters';
 import contestCatalogRaw from '../../data/contestCatalog.json';
 import { resolveStationLocation } from '../../utils/stationLocation';
+import { useRigctldConnectionDialog } from '../../composables/useRigctldConnectionDialog';
 import type { ContestQso, ContestSetup, ContestSession, ContestSessionSnapshot } from '../../types/contest';
 import type { QsoEntry } from '../../types/qso';
 import '../../types/electron';
@@ -33,6 +34,7 @@ const contestStore = useContestStore();
 const rigStore = useRigStore();
 const qrzStore = useQrzStore();
 const qsoStore = useQsoStore();
+const { open: openRigctldDialog } = useRigctldConnectionDialog();
 
 const contestCatalogMap = new Map(
   (contestCatalogRaw as Array<{ id: string; name: string }>).map(entry => [
@@ -1224,7 +1226,15 @@ watch(
       </div>
       <div class="topbar-center">
         <div class="rig-info">
-          <span v-if="isCatOnline" class="cat-badge">CAT ONLINE</span>
+          <button
+            class="cat-badge cat-badge-button"
+            :class="{ 'cat-badge-offline': !isCatOnline }"
+            type="button"
+            title="CAT settings"
+            @click="openRigctldDialog"
+          >
+            {{ isCatOnline ? 'CAT ONLINE' : 'CAT OFFLINE' }}
+          </button>
           <span class="rig-frequency">
             <span class="freq-main">{{ frequencyMain }}</span
             ><span class="freq-dot">.</span><span class="freq-hz">{{ frequencyHz }}</span>
@@ -1316,6 +1326,9 @@ watch(
               </select>
             </div>
           </div>
+        </div>
+        <div v-if="!isSessionRunning" class="entry-disabled-note">
+          Start the session to enable QSO entry.
         </div>
 
         <div class="entry-grid">
@@ -1923,7 +1936,7 @@ watch(
   display: flex;
   gap: 0.5rem;
   font-weight: 700;
-  align-items: baseline;
+  align-items: center;
 }
 
 .rig-frequency {
@@ -1960,6 +1973,15 @@ watch(
   font-size: 0.85rem;
 }
 
+.rig-mode {
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .vfo-badge {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
@@ -1980,6 +2002,26 @@ watch(
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+}
+
+.cat-badge-button {
+  cursor: pointer;
+}
+
+.cat-badge-button:hover {
+  background: rgba(46, 204, 113, 0.28);
+  border-color: rgba(46, 204, 113, 0.85);
+}
+
+.cat-badge-offline {
+  border-color: rgba(148, 163, 184, 0.6);
+  background: rgba(148, 163, 184, 0.18);
+  color: #e2e8f0;
+}
+
+.cat-badge-offline:hover {
+  background: rgba(148, 163, 184, 0.28);
+  border-color: rgba(148, 163, 184, 0.9);
 }
 
 .rig-status.tx {
@@ -2060,6 +2102,15 @@ watch(
 .entry-hint {
   font-size: 0.85rem;
   color: #bdbdbd;
+}
+
+.entry-disabled-note {
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--border-radius);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
 }
 
 .entry-status {
