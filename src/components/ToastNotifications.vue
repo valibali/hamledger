@@ -12,6 +12,7 @@ export default {
       notificationsStore: useNotificationsStore(),
       displayedToasts: [] as Achievement[],
       displayedNotifications: [] as NotificationToast[],
+      notificationTimers: {} as Record<string, number>,
       maxToasts: 3,
     };
   },
@@ -37,6 +38,15 @@ export default {
         for (const toast of newOnes) {
           this.showNotification(toast);
         }
+        for (const toast of newToasts) {
+          this.syncNotification(toast);
+        }
+        const stale = this.displayedNotifications.filter(
+          toast => !newToasts.find(item => item.id === toast.id)
+        );
+        for (const toast of stale) {
+          this.dismissNotification(toast.id);
+        }
       },
       deep: true,
     },
@@ -61,14 +71,33 @@ export default {
       if (this.displayedNotifications.length > this.maxToasts) {
         this.displayedNotifications.shift();
       }
-      setTimeout(() => {
-        this.dismissNotification(toast.id);
+      if (toast.status !== 'pending') {
+        this.scheduleDismiss(toast.id);
+      }
+    },
+    syncNotification(toast: NotificationToast) {
+      const existing = this.displayedNotifications.find(item => item.id === toast.id);
+      if (existing) {
+        Object.assign(existing, toast);
+      }
+      if (toast.status !== 'pending' && !this.notificationTimers[toast.id]) {
+        this.scheduleDismiss(toast.id);
+      }
+    },
+    scheduleDismiss(id: string) {
+      if (this.notificationTimers[id]) return;
+      this.notificationTimers[id] = window.setTimeout(() => {
+        this.dismissNotification(id);
       }, 4000);
     },
     dismissNotification(id: string) {
       const index = this.displayedNotifications.findIndex(t => t.id === id);
       if (index > -1) {
         this.displayedNotifications.splice(index, 1);
+      }
+      if (this.notificationTimers[id]) {
+        window.clearTimeout(this.notificationTimers[id]);
+        delete this.notificationTimers[id];
       }
       this.notificationsStore.dismissToast(id);
     },
@@ -115,7 +144,7 @@ export default {
       <div
         v-for="toast in displayedNotifications"
         :key="toast.id"
-        :class="['toast', `toast-${toast.type}`]"
+        :class="['toast', `toast-${toast.type}`, { pending: toast.status === 'pending' }]"
         @click="dismissNotification(toast.id)"
       >
         <span class="toast-icon">{{ getIcon(toast.type) }}</span>
@@ -123,6 +152,7 @@ export default {
           <span class="toast-title">{{ toast.title }}</span>
           <span class="toast-description">{{ toast.description }}</span>
         </div>
+        <span v-if="toast.status === 'pending'" class="toast-pending">Pending</span>
         <button class="toast-close" @click.stop="dismissNotification(toast.id)">×</button>
       </div>
     </transition-group>
@@ -155,6 +185,7 @@ export default {
   pointer-events: auto;
   cursor: pointer;
   animation: slideIn 0.3s ease-out;
+  position: relative;
 }
 
 .toast:hover {
@@ -251,3 +282,16 @@ export default {
   opacity: 0;
 }
 </style>
+.toast.pending {
+  opacity: 0.5;
+}
+
+.toast-pending {
+  position: absolute;
+  top: 0.4rem;
+  right: 2.2rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f3b240;
+}

@@ -2,7 +2,7 @@
 import { defineComponent } from 'vue';
 import { setPTT } from '../services/catService';
 import { configHelper } from '../utils/configHelper';
-import { useNotificationsStore } from '../store/notifications';
+import { voiceKeyerQueue } from '../utils/voiceKeyerQueue';
 
 type VoiceClip = {
   id: string;
@@ -54,7 +54,6 @@ export default defineComponent({
         postDelayMs: 80,
       } as VoiceKeyerState,
       isPlaying: false,
-      notificationsStore: useNotificationsStore(),
     };
   },
   mounted() {
@@ -94,27 +93,23 @@ export default defineComponent({
       const key = event.key.toUpperCase();
       if (!/^F\d{1,2}$/.test(key)) return;
       event.preventDefault();
-      if (this.isPlaying) return;
-
       const voiceMessage = this.state.voiceMessages.find(m => m.assignedKey === key);
       if (voiceMessage) {
-        await this.playVoiceMessage(voiceMessage);
+        voiceKeyerQueue.enqueue(async () => {
+          await this.playVoiceMessage(voiceMessage);
+        }, { key, mode: 'Voice' });
         return;
       }
 
       const cwMessage = this.state.cwMessages.find(m => m.assignedKey === key);
       if (cwMessage) {
-        await this.sendCwMessage(cwMessage);
+        voiceKeyerQueue.enqueue(async () => {
+          await this.sendCwMessage(cwMessage);
+        }, { key, mode: 'CW' });
       }
     },
     async playVoiceMessage(message: VoiceMessage) {
-      if (this.isPlaying) return;
       this.isPlaying = true;
-      this.notificationsStore.pushToast({
-        type: 'keyer',
-        title: 'Voice Keyer',
-        description: `Playing ${message.name}`,
-      });
       try {
         await setPTT(true);
         await new Promise(resolve => setTimeout(resolve, this.state.preDelayMs || 0));
@@ -139,11 +134,6 @@ export default defineComponent({
       }
     },
     async sendCwMessage(message: CwMessage) {
-      this.notificationsStore.pushToast({
-        type: 'keyer',
-        title: 'CW Keyer',
-        description: `Sending ${message.name}`,
-      });
       const text = message.sequence
         .map(id => this.state.cwClips.find(clip => clip.id === id)?.text || '')
         .filter(Boolean)

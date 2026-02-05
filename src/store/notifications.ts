@@ -5,6 +5,7 @@ export interface NotificationToast {
   type: 'keyer' | 'info' | 'success' | 'warning' | 'error';
   title: string;
   description: string;
+  status?: 'pending' | 'active';
 }
 
 export const useNotificationsStore = defineStore('notifications', {
@@ -19,6 +20,12 @@ export const useNotificationsStore = defineStore('notifications', {
       };
       this.toasts.push(entry);
       return entry.id;
+    },
+    updateToast(id: string, patch: Partial<NotificationToast>) {
+      const index = this.toasts.findIndex(t => t.id === id);
+      if (index > -1) {
+        this.toasts[index] = { ...this.toasts[index], ...patch };
+      }
     },
     dismissToast(id: string) {
       const index = this.toasts.findIndex(t => t.id === id);

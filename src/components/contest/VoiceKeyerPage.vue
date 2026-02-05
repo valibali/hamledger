@@ -2,11 +2,12 @@
 import { defineComponent } from 'vue';
 import { setPTT } from '../../services/catService';
 import { configHelper } from '../../utils/configHelper';
-import { useNotificationsStore } from '../../store/notifications';
+import { voiceKeyerQueue } from '../../utils/voiceKeyerQueue';
 import BasePanel from '../panels/BasePanel.vue';
 import VoiceClipModal from '../modals/VoiceClipModal.vue';
 import CwClipModal from '../modals/CwClipModal.vue';
 import CwKeyerSettingsModal from '../modals/CwKeyerSettingsModal.vue';
+import VoiceAlphabetModal from '../modals/VoiceAlphabetModal.vue';
 interface VoiceClip {
   id: string;
   name: string;
@@ -37,6 +38,19 @@ interface CwMessage {
   isNew?: boolean;
 }
 
+interface VoiceAlphabetEntry {
+  key: string;
+  phonetic: string;
+  clipId?: string;
+}
+
+interface VoiceAlphabet {
+  id: string;
+  name: string;
+  entries: VoiceAlphabetEntry[];
+  collapsed?: boolean;
+}
+
 interface SerialPortInfo {
   path: string;
   manufacturer?: string;
@@ -54,6 +68,42 @@ interface CwKeyerConfig {
 
 const STORAGE_KEY = 'voiceKeyer:cwConfig';
 const DEFAULT_BAUD = 1200;
+const ALPHABET_SUFFIXES = ['/', '/P', '/M', '/MM', '/AM'] as const;
+const NATO_PHONETIC: Record<string, string> = {
+  A: 'Alfa',
+  B: 'Bravo',
+  C: 'Charlie',
+  D: 'Delta',
+  E: 'Echo',
+  F: 'Foxtrot',
+  G: 'Golf',
+  H: 'Hotel',
+  I: 'India',
+  J: 'Juliett',
+  K: 'Kilo',
+  L: 'Lima',
+  M: 'Mike',
+  N: 'November',
+  O: 'Oscar',
+  P: 'Papa',
+  Q: 'Quebec',
+  R: 'Romeo',
+  S: 'Sierra',
+  T: 'Tango',
+  U: 'Uniform',
+  V: 'Victor',
+  W: 'Whiskey',
+  X: 'X-ray',
+  Y: 'Yankee',
+  Z: 'Zulu',
+};
+const SUFFIX_PHONETIC: Record<string, string> = {
+  '/': 'Stroke',
+  '/P': 'Portable',
+  '/M': 'Mobile',
+  '/MM': 'Maritime',
+  '/AM': 'Airmobile',
+};
 
 export default defineComponent({
   name: 'VoiceKeyerPage',
@@ -62,6 +112,7 @@ export default defineComponent({
     VoiceClipModal,
     CwClipModal,
     CwKeyerSettingsModal,
+    VoiceAlphabetModal,
   },
 
   data() {
@@ -71,6 +122,9 @@ export default defineComponent({
       voiceClips: [] as VoiceClip[],
       voiceMessages: [] as VoiceMessage[],
       selectedVoiceMessageId: null as string | null,
+      voiceAlphabets: [] as VoiceAlphabet[],
+      alphabetModalOpen: false,
+      activeAlphabetId: null as string | null,
 
       cwClips: [] as CwClip[],
       cwMessages: [] as CwMessage[],
@@ -94,7 +148,13 @@ export default defineComponent({
       playbackTotalMs: 0,
       playbackInterval: null as number | null,
       playbackClipOffsetMs: 0,
-      notificationsStore: useNotificationsStore(),
+      playbackClipId: null as string | null,
+
+      recordingTarget: {
+        type: null as null | 'clip' | 'alphabet',
+        alphabetId: '' as string,
+        entryKey: '' as string,
+      },
 
       clipLabel: '',
       cwClipLabel: '',
@@ -164,6 +224,24 @@ export default defineComponent({
       return this.cwMessages.find(m => m.id === this.selectedCwMessageId);
     },
 
+    activeAlphabet(): VoiceAlphabet | undefined {
+      return this.voiceAlphabets.find(item => item.id === this.activeAlphabetId);
+    },
+    alphabetClipIds(): Set<string> {
+      const ids = new Set<string>();
+      this.voiceAlphabets.forEach(alphabet => {
+        alphabet.entries.forEach(entry => {
+          if (entry.clipId) ids.add(entry.clipId);
+        });
+      });
+      return ids;
+    },
+    displayVoiceClips(): VoiceClip[] {
+      if (!this.voiceAlphabets.length) return this.voiceClips;
+      const alphabetIds = this.alphabetClipIds;
+      return this.voiceClips.filter(clip => !alphabetIds.has(clip.id));
+    },
+
     txStatusLabel(): string {
       if (this.isVoiceTransmitting || this.isCwTransmitting) return 'TX ACTIVE';
       return 'READY';
@@ -201,6 +279,94 @@ export default defineComponent({
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    },
+
+    buildDefaultAlphabetEntries(): VoiceAlphabetEntry[] {
+      const letters = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+      const digits = Array.from({ length: 10 }, (_, i) => String(i));
+      const letterEntries = letters.map(letter => ({
+        key: letter,
+        phonetic: NATO_PHONETIC[letter] || letter,
+      }));
+      const digitEntries = digits.map(digit => ({
+        key: digit,
+        phonetic: digit,
+      }));
+      const suffixEntries = ALPHABET_SUFFIXES.map(key => ({
+        key,
+        phonetic: SUFFIX_PHONETIC[key] || key,
+      }));
+      return [...letterEntries, ...digitEntries, ...suffixEntries];
+    },
+
+    createAlphabet(name?: string) {
+      const alphabet: VoiceAlphabet = {
+        id: `alphabet-${Date.now()}`,
+        name: name || `Alphabet ${this.voiceAlphabets.length + 1}`,
+        entries: this.buildDefaultAlphabetEntries(),
+        collapsed: false,
+      };
+      this.voiceAlphabets.push(alphabet);
+      this.saveVoiceKeyerState();
+      return alphabet;
+    },
+
+    openAlphabetModal(alphabetId?: string) {
+      let alphabet = alphabetId
+        ? this.voiceAlphabets.find(item => item.id === alphabetId)
+        : undefined;
+      if (!alphabet) {
+        alphabet = this.createAlphabet();
+      }
+      this.activeAlphabetId = alphabet.id;
+      this.alphabetModalOpen = true;
+    },
+
+    closeAlphabetModal() {
+      this.alphabetModalOpen = false;
+      this.activeAlphabetId = null;
+    },
+
+    updateAlphabetName(value: string) {
+      const alphabet = this.activeAlphabet;
+      if (!alphabet) return;
+      alphabet.name = value;
+      this.saveVoiceKeyerState();
+    },
+
+    updateAlphabetPhonetic(entryKey: string, value: string) {
+      const alphabet = this.activeAlphabet;
+      if (!alphabet) return;
+      const entry = alphabet.entries.find(item => item.key === entryKey);
+      if (!entry) return;
+      entry.phonetic = value;
+      this.saveVoiceKeyerState();
+    },
+
+    toggleAlphabetCollapse(alphabetId: string) {
+      const alphabet = this.voiceAlphabets.find(item => item.id === alphabetId);
+      if (!alphabet) return;
+      alphabet.collapsed = !alphabet.collapsed;
+      this.saveVoiceKeyerState();
+    },
+
+    deleteAlphabet(alphabetId: string) {
+      if (!window.confirm('Delete this alphabet and its recordings?')) return;
+      const alphabet = this.voiceAlphabets.find(item => item.id === alphabetId);
+      const clipIds = alphabet ? alphabet.entries.map(entry => entry.clipId).filter(Boolean) : [];
+      this.voiceAlphabets = this.voiceAlphabets.filter(item => item.id !== alphabetId);
+      if (clipIds.length) {
+        this.voiceClips = this.voiceClips.filter(clip => !clipIds.includes(clip.id));
+        this.voiceMessages = this.voiceMessages.map(message => ({
+          ...message,
+          sequence: message.sequence.filter(id => !clipIds.includes(id)),
+        }));
+      }
+      if (this.activeAlphabetId === alphabetId) {
+        this.activeAlphabetId = null;
+        this.alphabetModalOpen = false;
+      }
+      this.saveVoiceKeyerState();
     },
 
     async startRecording() {
@@ -265,8 +431,21 @@ export default defineComponent({
       const url = URL.createObjectURL(blob);
       const durationMs = Math.round((samples.length / this.sampleRate) * 1000);
 
-      const name = this.clipLabel.trim() || `Clip ${this.voiceClips.length + 1}`;
-      this.clipLabel = '';
+      const recordingType = this.recordingTarget.type || 'clip';
+
+      let name = '';
+      let targetClipId: string | null = null;
+      if (recordingType === 'alphabet') {
+        const alphabet = this.voiceAlphabets.find(item => item.id === this.recordingTarget.alphabetId);
+        const entry = alphabet?.entries.find(item => item.key === this.recordingTarget.entryKey);
+        name = entry?.phonetic?.trim() || entry?.key || 'Alphabet Clip';
+        if (alphabet && entry) {
+          targetClipId = this.getAlphabetClipId(alphabet.id, entry.key);
+        }
+      } else {
+        name = this.clipLabel.trim() || `Clip ${this.voiceClips.length + 1}`;
+        targetClipId = this.editingVoiceClipId || null;
+      }
 
       let filePath: string | undefined;
       try {
@@ -281,33 +460,64 @@ export default defineComponent({
         console.error('Failed to save voice clip:', error);
       }
 
-      if (this.editingVoiceClipId) {
-        const index = this.voiceClips.findIndex(clip => clip.id === this.editingVoiceClipId);
-        if (index >= 0) {
-          this.voiceClips[index] = {
-            id: this.editingVoiceClipId,
+      if (recordingType === 'alphabet') {
+        if (targetClipId) {
+          const existingIndex = this.voiceClips.findIndex(clip => clip.id === targetClipId);
+          const clipRecord = {
+            id: targetClipId,
             name,
             url,
             filePath,
             durationMs,
           };
+          if (existingIndex >= 0) {
+            this.voiceClips.splice(existingIndex, 1, clipRecord);
+          } else {
+            this.voiceClips.push(clipRecord);
+          }
+          const alphabet = this.voiceAlphabets.find(item => item.id === this.recordingTarget.alphabetId);
+          const entry = alphabet?.entries.find(item => item.key === this.recordingTarget.entryKey);
+          if (entry) {
+            entry.clipId = targetClipId;
+          }
         }
       } else {
-        this.voiceClips.push({
-          id: `${Date.now()}-${name}`,
-          name,
-          url,
-          filePath,
-          durationMs,
-        });
+        if (targetClipId) {
+          const index = this.voiceClips.findIndex(clip => clip.id === targetClipId);
+          if (index >= 0) {
+            this.voiceClips[index] = {
+              id: targetClipId,
+              name,
+              url,
+              filePath,
+              durationMs,
+            };
+          }
+        } else {
+          this.voiceClips.push({
+            id: `${Date.now()}-${name}`,
+            name,
+            url,
+            filePath,
+            durationMs,
+          });
+        }
+        this.clipLabel = '';
+        this.editingVoiceClipId = null;
+        this.voiceClipModalOpen = false;
       }
-      this.editingVoiceClipId = null;
-      this.voiceClipModalOpen = false;
+      this.recordingTarget = { type: null, alphabetId: '', entryKey: '' };
       this.saveVoiceKeyerState();
     },
     removeVoiceClip(clipId: string) {
       if (!window.confirm('Delete this voice clip?')) return;
       this.voiceClips = this.voiceClips.filter(clip => clip.id !== clipId);
+      this.voiceAlphabets = this.voiceAlphabets.map(alphabet => ({
+        ...alphabet,
+        entries: alphabet.entries.map(entry =>
+          entry.clipId === clipId ? { ...entry, clipId: undefined } : entry
+        ),
+      }));
       this.voiceMessages = this.voiceMessages.map(message => ({
         ...message,
         sequence: message.sequence.filter(id => id !== clipId),
@@ -344,6 +554,37 @@ export default defineComponent({
       }
       this.accumulatedMs += Date.now() - this.startedAt;
       this.isPaused = true;
+    },
+
+    startClipRecording() {
+      this.recordingTarget = { type: 'clip', alphabetId: '', entryKey: '' };
+      this.startRecording();
+    },
+
+    startAlphabetRecording(alphabetId: string, entryKey: string) {
+      if (this.isRecording) return;
+      this.recordingTarget = { type: 'alphabet', alphabetId, entryKey };
+      this.startRecording();
+    },
+
+    stopAlphabetRecording(alphabetId: string, entryKey: string) {
+      if (!this.isRecording) return;
+      if (
+        this.recordingTarget.type !== 'alphabet' ||
+        this.recordingTarget.alphabetId !== alphabetId ||
+        this.recordingTarget.entryKey !== entryKey
+      ) {
+        return;
+      }
+      this.stopRecording();
+    },
+    handleAlphabetRecordStart(entryKey: string) {
+      if (!this.activeAlphabetId) return;
+      this.startAlphabetRecording(this.activeAlphabetId, entryKey);
+    },
+    handleAlphabetRecordStop(entryKey: string) {
+      if (!this.activeAlphabetId) return;
+      this.stopAlphabetRecording(this.activeAlphabetId, entryKey);
     },
 
     restartRecording() {
@@ -431,10 +672,22 @@ export default defineComponent({
       );
       this.saveVoiceKeyerState();
     },
+    updateVoiceMessageName(messageId: string, value: string) {
+      this.voiceMessages = this.voiceMessages.map(message =>
+        message.id === messageId ? { ...message, name: value } : message
+      );
+      this.saveVoiceKeyerState();
+    },
 
     assignCwKey(messageId: string, key: string | undefined) {
       this.cwMessages = this.cwMessages.map(message =>
         message.id === messageId ? { ...message, assignedKey: key || undefined } : message
+      );
+      this.saveVoiceKeyerState();
+    },
+    updateCwMessageName(messageId: string, value: string) {
+      this.cwMessages = this.cwMessages.map(message =>
+        message.id === messageId ? { ...message, name: value } : message
       );
       this.saveVoiceKeyerState();
     },
@@ -729,56 +982,67 @@ export default defineComponent({
       return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
     },
 
+    getAlphabetClipId(alphabetId: string, entryKey: string) {
+      const normalized = entryKey.replaceAll('/', 'SLASH').replaceAll(' ', '');
+      return `alphabet-${alphabetId}-${normalized}`;
+    },
+
+    getClipLabel(clipId: string) {
+      for (const alphabet of this.voiceAlphabets) {
+        const entry = alphabet.entries.find(item => item.clipId === clipId);
+        if (entry) return entry.key;
+      }
+      return this.voiceClips.find(item => item.id === clipId)?.name || 'Clip';
+    },
+
     async playVoiceMessage(message: VoiceMessage) {
-      if (this.isVoiceTransmitting) return;
       if (!message.sequence.length) return;
-
-      this.isVoiceTransmitting = true;
-      this.notificationsStore.pushToast({
-        type: 'keyer',
-        title: 'Voice Keyer',
-        description: `Playing ${message.name}`,
-      });
-      this.voicePlaybackPaused = false;
-      this.voicePlaybackStopRequested = false;
-      this.playbackMessageId = message.id;
-      this.playbackTotalMs = this.getVoiceMessageLength(message);
-      this.playbackElapsedMs = 0;
-      this.playbackClipOffsetMs = 0;
-      try {
-        await setPTT(true);
-        await new Promise(resolve => setTimeout(resolve, this.preDelayMs));
-
-        for (const clipId of message.sequence) {
-          if (this.voicePlaybackStopRequested) break;
-          while (this.voicePlaybackPaused) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-          const clip = this.voiceClips.find(item => item.id === clipId);
-          if (!clip) continue;
-          this.playbackClipOffsetMs = this.playbackElapsedMs;
-          await this.playClip(clip);
-          this.playbackClipOffsetMs = this.playbackElapsedMs;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, this.postDelayMs));
-      } catch (error) {
-        console.error('Voice keyer playback error:', error);
-      } finally {
-        await setPTT(false);
-        this.isVoiceTransmitting = false;
+      voiceKeyerQueue.enqueue(async () => {
+        if (this.isVoiceTransmitting || this.isCwTransmitting) return;
+        this.isVoiceTransmitting = true;
         this.voicePlaybackPaused = false;
         this.voicePlaybackStopRequested = false;
-        this.activeAudio = null;
-        this.playbackMessageId = null;
+        this.playbackMessageId = message.id;
+        this.playbackTotalMs = this.getVoiceMessageLength(message);
         this.playbackElapsedMs = 0;
-        this.playbackTotalMs = 0;
         this.playbackClipOffsetMs = 0;
-        if (this.playbackInterval) {
-          window.clearInterval(this.playbackInterval);
-          this.playbackInterval = null;
+        try {
+          await setPTT(true);
+          await new Promise(resolve => setTimeout(resolve, this.preDelayMs));
+
+          for (const clipId of message.sequence) {
+            if (this.voicePlaybackStopRequested) break;
+            while (this.voicePlaybackPaused) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            const clip = this.voiceClips.find(item => item.id === clipId);
+            if (!clip) continue;
+            this.playbackClipId = clipId;
+            this.playbackClipOffsetMs = this.playbackElapsedMs;
+            await this.playClip(clip);
+            this.playbackClipOffsetMs = this.playbackElapsedMs;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, this.postDelayMs));
+        } catch (error) {
+          console.error('Voice keyer playback error:', error);
+        } finally {
+          await setPTT(false);
+          this.isVoiceTransmitting = false;
+          this.voicePlaybackPaused = false;
+          this.voicePlaybackStopRequested = false;
+          this.activeAudio = null;
+          this.playbackMessageId = null;
+          this.playbackElapsedMs = 0;
+          this.playbackTotalMs = 0;
+          this.playbackClipOffsetMs = 0;
+          this.playbackClipId = null;
+          if (this.playbackInterval) {
+            window.clearInterval(this.playbackInterval);
+            this.playbackInterval = null;
+          }
         }
-      }
+      }, message.assignedKey ? { key: message.assignedKey, mode: 'Voice' } : undefined);
     },
     pauseVoiceMessage() {
       if (!this.isVoiceTransmitting) return;
@@ -801,6 +1065,7 @@ export default defineComponent({
       setPTT(false).catch(() => undefined);
       this.isVoiceTransmitting = false;
       this.playbackMessageId = null;
+      this.playbackClipId = null;
       if (this.playbackInterval) {
         window.clearInterval(this.playbackInterval);
         this.playbackInterval = null;
@@ -820,29 +1085,32 @@ export default defineComponent({
     },
 
     async sendCwMessage(message: CwMessage) {
-      if (this.isCwTransmitting) return;
       if (!message.sequence.length) return;
+      voiceKeyerQueue.enqueue(async () => {
+        if (this.isVoiceTransmitting || this.isCwTransmitting) return;
+        const text = message.sequence
+          .map(id => this.cwClips.find(clip => clip.id === id)?.text || '')
+          .filter(Boolean)
+          .join(' ');
 
-      const text = message.sequence
-        .map(id => this.cwClips.find(clip => clip.id === id)?.text || '')
-        .filter(Boolean)
-        .join(' ');
+        if (!text.trim()) return;
 
-      if (!text.trim()) return;
-
-      this.notificationsStore.pushToast({
-        type: 'keyer',
-        title: 'CW Keyer',
-        description: `Sending ${message.name}`,
-      });
-      this.isCwTransmitting = true;
-      try {
-        await this.sendCwText(text);
-      } catch (error) {
-        console.error('CW keyer error:', error);
-      } finally {
-        this.isCwTransmitting = false;
-      }
+        this.isCwTransmitting = true;
+        try {
+          for (const clipId of message.sequence) {
+            const clip = this.cwClips.find(item => item.id === clipId);
+            if (!clip) continue;
+            this.playbackClipId = clipId;
+            await this.sendCwText(clip.text);
+            await new Promise(resolve => setTimeout(resolve, 80));
+          }
+        } catch (error) {
+          console.error('CW keyer error:', error);
+        } finally {
+          this.isCwTransmitting = false;
+          this.playbackClipId = null;
+        }
+      }, message.assignedKey ? { key: message.assignedKey, mode: 'CW' } : undefined);
     },
 
     async sendCwText(text: string) {
@@ -1024,6 +1292,7 @@ export default defineComponent({
         const parsed = JSON.parse(rawState) as {
           voiceClips?: VoiceClip[];
           voiceMessages?: VoiceMessage[];
+          voiceAlphabets?: VoiceAlphabet[];
           cwClips?: CwClip[];
           cwMessages?: CwMessage[];
         };
@@ -1035,6 +1304,7 @@ export default defineComponent({
           }));
         }
         if (Array.isArray(parsed.voiceMessages)) this.voiceMessages = parsed.voiceMessages;
+        if (Array.isArray(parsed.voiceAlphabets)) this.voiceAlphabets = parsed.voiceAlphabets;
         if (Array.isArray(parsed.cwClips)) this.cwClips = parsed.cwClips;
         if (Array.isArray(parsed.cwMessages)) this.cwMessages = parsed.cwMessages;
       } catch (error) {
@@ -1056,6 +1326,16 @@ export default defineComponent({
             name: message.name,
             sequence: [...message.sequence],
             assignedKey: message.assignedKey,
+          })),
+          voiceAlphabets: this.voiceAlphabets.map(alphabet => ({
+            id: alphabet.id,
+            name: alphabet.name,
+            collapsed: alphabet.collapsed,
+            entries: alphabet.entries.map(entry => ({
+              key: entry.key,
+              phonetic: entry.phonetic,
+              clipId: entry.clipId,
+            })),
           })),
           cwClips: this.cwClips.map(clip => ({
             id: clip.id,
@@ -1144,31 +1424,109 @@ export default defineComponent({
         <template #header>
           <div class="panel-header-row">
             <h3 class="panel-title">Voice Clips</h3>
-            <button class="add-clip-btn" type="button" @click="openVoiceClipModal">+ Add Clip</button>
+            <div class="panel-header-actions">
+              <button class="add-clip-btn" type="button" @click="openAlphabetModal">+ Add Alphabet</button>
+              <button class="add-clip-btn" type="button" @click="openVoiceClipModal">+ Add Clip</button>
+            </div>
           </div>
         </template>
-        <div class="clip-list">
-          <div
-            v-for="clip in voiceClips"
-            :key="clip.id"
-            class="clip clip-card"
-            draggable="true"
-            @dragstart="event => onVoiceDragStart(event, clip.id)"
-          >
-            <div class="clip-card-header">
-              <span class="clip-name">{{ clip.name }}</span>
-              <div class="clip-actions">
-                <span class="clip-duration">{{ clip.durationMs }} ms</span>
-                <button class="clip-action-btn" type="button" @click.stop="editVoiceClip(clip)">
-                  ✎
-                </button>
-                <button class="clip-action-btn danger" type="button" @click.stop="removeVoiceClip(clip.id)">
-                  🗑
-                </button>
+        <div class="clip-scroll panel-scroll">
+          <div class="clip-list">
+            <div v-for="alphabet in voiceAlphabets" :key="alphabet.id" class="alphabet-card">
+              <div class="alphabet-card-header">
+                <div class="alphabet-title">
+                  <span>{{ alphabet.name }}</span>
+                </div>
+                <div class="alphabet-actions">
+                  <button
+                    class="panel-action icon"
+                    type="button"
+                    @click.stop="toggleAlphabetCollapse(alphabet.id)"
+                    :aria-label="alphabet.collapsed ? 'Expand alphabet' : 'Collapse alphabet'"
+                  >
+                    {{ alphabet.collapsed ? '▾' : '▴' }}
+                  </button>
+                  <button class="panel-action icon" type="button" @click.stop="openAlphabetModal(alphabet.id)">
+                    ✎
+                  </button>
+                  <button class="panel-action icon danger" type="button" @click.stop="deleteAlphabet(alphabet.id)">
+                    🗑
+                  </button>
+                </div>
+              </div>
+              <div v-if="!alphabet.collapsed" class="alphabet-entries">
+                <div class="alphabet-entries-section">
+                  <div class="alphabet-entries-title">Letters</div>
+                <div class="alphabet-entries-grid">
+                  <div
+                    v-for="entry in alphabet.entries.filter(item => /^[A-Z]$/.test(item.key))"
+                    :key="`${alphabet.id}-${entry.key}`"
+                    class="alphabet-entry"
+                    :class="{ recorded: entry.clipId }"
+                    :draggable="!!entry.clipId"
+                    @dragstart="event => entry.clipId && onVoiceDragStart(event, entry.clipId)"
+                  >
+                      <div class="alphabet-entry-key">{{ entry.key }}</div>
+                      <div class="alphabet-entry-phonetic">{{ entry.phonetic }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="alphabet-entries-section">
+                  <div class="alphabet-entries-title">Numbers</div>
+                <div class="alphabet-entries-grid">
+                  <div
+                    v-for="entry in alphabet.entries.filter(item => /^[0-9]$/.test(item.key))"
+                    :key="`${alphabet.id}-${entry.key}`"
+                    class="alphabet-entry"
+                    :class="{ recorded: entry.clipId }"
+                    :draggable="!!entry.clipId"
+                    @dragstart="event => entry.clipId && onVoiceDragStart(event, entry.clipId)"
+                  >
+                      <div class="alphabet-entry-key">{{ entry.key }}</div>
+                      <div class="alphabet-entry-phonetic">{{ entry.phonetic }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="alphabet-entries-section">
+                  <div class="alphabet-entries-title">Suffixes</div>
+                <div class="alphabet-entries-grid">
+                  <div
+                    v-for="entry in alphabet.entries.filter(item => item.key.startsWith('/'))"
+                    :key="`${alphabet.id}-${entry.key}`"
+                    class="alphabet-entry"
+                    :class="{ recorded: entry.clipId }"
+                    :draggable="!!entry.clipId"
+                    @dragstart="event => entry.clipId && onVoiceDragStart(event, entry.clipId)"
+                  >
+                      <div class="alphabet-entry-key">{{ entry.key }}</div>
+                      <div class="alphabet-entry-phonetic">{{ entry.phonetic }}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="clip-card-body">
-              <div class="voice-waveform" />
+            <div
+              v-for="clip in displayVoiceClips"
+              :key="clip.id"
+              class="clip clip-card"
+              draggable="true"
+              @dragstart="event => onVoiceDragStart(event, clip.id)"
+            >
+              <div class="clip-card-header">
+                <span class="clip-name">{{ clip.name }}</span>
+                <div class="clip-actions">
+                  <span class="clip-duration">{{ clip.durationMs }} ms</span>
+                  <button class="clip-action-btn" type="button" @click.stop="editVoiceClip(clip)">
+                    ✎
+                  </button>
+                  <button class="clip-action-btn danger" type="button" @click.stop="removeVoiceClip(clip.id)">
+                    🗑
+                  </button>
+                </div>
+              </div>
+              <div class="clip-card-body">
+                <div class="voice-waveform" />
+              </div>
             </div>
           </div>
         </div>
@@ -1200,7 +1558,17 @@ export default defineComponent({
             </div>
             <div class="message-content">
               <div class="message-header-row">
-                <span class="message-title">{{ message.name }}</span>
+                <input
+                  class="message-title-input"
+                  type="text"
+                  :value="message.name"
+                  placeholder="Message name"
+                  @mousedown.stop
+                  @input="event => updateVoiceMessageName(message.id, (event.target as HTMLInputElement).value)"
+                />
+                <span v-if="message.assignedKey" class="message-key-chip">
+                  {{ message.assignedKey }}
+                </span>
                 <div class="message-actions-right">
                   <span class="message-length">
                     <span v-if="playbackMessageId === message.id">
@@ -1241,11 +1609,12 @@ export default defineComponent({
                     <div
                       class="sequence-block"
                       draggable="true"
+                      :class="{ playing: playbackMessageId === message.id && playbackClipId === clipId }"
                       @dragstart="onSequenceDragStart($event, 'voice', message.id, index, clipId)"
                       @dragend="resetDragState"
                       @click.stop="removeVoiceFromSequence(clipId, index)"
                     >
-                      {{ voiceClips.find(c => c.id === clipId)?.name || 'Clip' }}
+                      {{ getClipLabel(clipId) }}
                     </div>
                   </template>
                 </div>
@@ -1279,15 +1648,6 @@ export default defineComponent({
             @dragover="onDragOver"
           >
             <div class="message-empty">Drag here a clip to create a new message</div>
-          </div>
-        </div>
-      </BasePanel>
-      <BasePanel class="hotkeys-panel" title="Hotkeys">
-        <div v-if="!voiceAssignedHotkeys.length" class="message-empty">No hotkeys assigned.</div>
-        <div v-else class="hotkey-list">
-          <div v-for="item in voiceAssignedHotkeys" :key="item.key" class="hotkey-card">
-            <span class="hotkey-key">{{ item.key }}</span>
-            <span class="hotkey-name">{{ item.name }}</span>
           </div>
         </div>
       </BasePanel>
@@ -1364,7 +1724,17 @@ export default defineComponent({
             </div>
             <div class="message-content">
               <div class="message-header-row">
-                <span class="message-title">{{ message.name }}</span>
+                <input
+                  class="message-title-input"
+                  type="text"
+                  :value="message.name"
+                  placeholder="Message name"
+                  @mousedown.stop
+                  @input="event => updateCwMessageName(message.id, (event.target as HTMLInputElement).value)"
+                />
+                <span v-if="message.assignedKey" class="message-key-chip">
+                  {{ message.assignedKey }}
+                </span>
                 <div class="message-actions-right">
                   <button class="panel-action icon danger" type="button" @click.stop="deleteCwMessage(message.id)">
                     🗑
@@ -1397,6 +1767,7 @@ export default defineComponent({
                     <div
                       class="sequence-block"
                       draggable="true"
+                      :class="{ playing: playbackMessageId === message.id && playbackClipId === clipId }"
                       @dragstart="onSequenceDragStart($event, 'cw', message.id, index, clipId)"
                       @dragend="resetDragState"
                       @click.stop="removeCwFromSequence(clipId, index)"
@@ -1429,15 +1800,6 @@ export default defineComponent({
           </div>
         </div>
       </BasePanel>
-      <BasePanel class="hotkeys-panel" title="Hotkeys">
-        <div v-if="!cwAssignedHotkeys.length" class="message-empty">No hotkeys assigned.</div>
-        <div v-else class="hotkey-list">
-          <div v-for="item in cwAssignedHotkeys" :key="item.key" class="hotkey-card">
-            <span class="hotkey-key">{{ item.key }}</span>
-            <span class="hotkey-name">{{ item.name }}</span>
-          </div>
-        </div>
-      </BasePanel>
     </div>
 
     <CwKeyerSettingsModal
@@ -1449,6 +1811,19 @@ export default defineComponent({
       :on-toggle-connection="cwConfig.connected ? disconnectCwKeyer : connectCwKeyer"
       @update-config="updateCwConfig"
     />
+    <VoiceAlphabetModal
+      :open="alphabetModalOpen"
+      :alphabet="activeAlphabet"
+      :is-recording="isRecording"
+      :recording-entry-key="recordingTarget.entryKey"
+      :recording-alphabet-id="recordingTarget.alphabetId"
+      :on-close="closeAlphabetModal"
+      :on-save="closeAlphabetModal"
+      :on-update-name="updateAlphabetName"
+      :on-update-phonetic="updateAlphabetPhonetic"
+      :on-start-record="handleAlphabetRecordStart"
+      :on-stop-record="handleAlphabetRecordStop"
+    />
     <VoiceClipModal
       :open="voiceClipModalOpen"
       :label="clipLabel"
@@ -1457,7 +1832,7 @@ export default defineComponent({
       :elapsed-label="voiceElapsedLabel"
       :on-close="closeVoiceClipModal"
       :on-save="saveVoiceClipModal"
-      :on-start="startRecording"
+      :on-start="startClipRecording"
       :on-stop="stopRecording"
       :on-pause="togglePause"
       :on-restart="restartRecording"
@@ -1554,9 +1929,11 @@ export default defineComponent({
 
 .voice-grid {
   display: grid;
-  grid-template-columns: 360px 1fr 220px;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: minmax(0, 1fr);
   gap: 1rem;
   flex: 1;
+  min-height: 0;
 }
 
 .clip-panel,
@@ -1564,6 +1941,11 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.message-panel {
+  flex: 1;
+  min-height: 0;
 }
 
 .panel-header-row {
@@ -1576,6 +1958,12 @@ export default defineComponent({
   padding-right: 2rem;
 }
 
+.panel-header-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
 .panel-header-row .panel-action.icon {
   position: absolute;
   top: 0.1rem;
@@ -1584,6 +1972,18 @@ export default defineComponent({
 
 .clip-panel {
   position: relative;
+}
+
+.clip-panel,
+.clip-list {
+  min-height: 0;
+}
+
+.clip-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
 }
 
 .cw-status {
@@ -1644,7 +2044,111 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.clip-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+}
+
+.alphabet-card {
+  background: #202020;
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.alphabet-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  background: #1f1f1f;
+  border-bottom: 1px solid #2b2b2b;
+}
+
+.alphabet-title {
+  font-weight: 600;
+  color: #e6e6e6;
+}
+
+.alphabet-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.alphabet-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #1f1f1f;
+}
+
+.alphabet-entries-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.alphabet-entries-section + .alphabet-entries-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.5rem;
+}
+
+.alphabet-entries-title {
+  font-size: 0.7rem;
+  color: #bdbdbd;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.alphabet-entries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.4rem;
+}
+
+.alphabet-entry {
+  border: 1px solid #2f2f2f;
+  border-radius: 6px;
+  padding: 0.35rem 0.25rem;
+  background: #242424;
+  text-align: center;
+  font-size: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: #cfcfcf;
+  user-select: none;
+}
+
+.alphabet-entry.recorded {
+  border-color: rgba(255, 165, 0, 0.45);
+  background: rgba(255, 165, 0, 0.08);
+  color: #f8d08a;
+  cursor: grab;
+}
+
+.alphabet-entry:hover {
+  border-color: rgba(243, 178, 64, 0.7);
+}
+
+.alphabet-entry-key {
+  font-weight: 700;
+  color: inherit;
+}
+
+.alphabet-entry-phonetic {
+  font-size: 0.65rem;
+  color: inherit;
 }
 
 .clip {
@@ -1743,6 +2247,7 @@ export default defineComponent({
   flex-direction: column;
   gap: 0.75rem;
   overflow-y: auto;
+  flex: 1;
   min-height: 0;
 }
 
@@ -1844,9 +2349,39 @@ export default defineComponent({
   gap: 0.5rem;
 }
 
-.message-title {
-  font-weight: 600;
+.message-title-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
   color: #e6e6e6;
+  font-weight: 600;
+  padding: 0.1rem 0.2rem;
+  border-radius: 4px;
+  cursor: text;
+}
+
+.message-title-input:hover {
+  border-color: #2f2f2f;
+}
+
+.message-title-input:focus {
+  border-color: #3b3b3b;
+  outline: none;
+  background: #222;
+}
+
+.message-key-chip {
+  margin-left: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 165, 0, 0.6);
+  background: rgba(255, 165, 0, 0.15);
+  color: #ffa500;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .message-actions-right {
@@ -1933,6 +2468,12 @@ export default defineComponent({
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.sequence-block.playing {
+  border-color: rgba(255, 165, 0, 0.8);
+  background: rgba(255, 165, 0, 0.18);
+  color: #ffd38c;
 }
 
 .sequence-block:hover {

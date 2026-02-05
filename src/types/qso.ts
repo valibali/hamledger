@@ -21,6 +21,8 @@ export interface QsoEntry {
   contestMultiplierFactor?: number;
   contestIsMult?: boolean;
   contestMultValue?: string | number;
+  name?: string;
+  qth?: string;
   
   // Award-related fields (computed on save)
   dxccEntity?: number;     // DXCC entity code

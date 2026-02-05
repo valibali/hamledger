@@ -31,11 +31,17 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  --panel-scroll-gutter: 0.45rem;
 }
 
 .base-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.base-panel :deep(.panel-scroll) {
+  padding-right: var(--panel-scroll-gutter);
+  margin-right: calc(var(--panel-scroll-gutter) * -1);
 }
 </style>
