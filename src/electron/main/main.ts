@@ -1042,6 +1042,16 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle('voiceKeyer:loadClip', async (_event, filePath: string) => {
+  try {
+    const data = fs.readFileSync(filePath);
+    return { success: true, data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) };
+  } catch (error) {
+    console.error('Failed to load voice clip:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
 // Check if rigctld is running (quick check for startup detection)
 ipcMain.handle('rigctld:checkRunning', async () => {
   try {

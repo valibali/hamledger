@@ -3,6 +3,7 @@ import { ConfigField } from '../types/config';
 import { configHelper } from '../utils/configHelper';
 import { getSelectableBands, DEFAULT_HF_BAND_SHORT_NAMES, VHF_UHF_BAND_SHORT_NAMES, MICROWAVE_BAND_SHORT_NAMES } from '../utils/bands';
 import { useRigStore } from '../store/rig';
+import { useDxClusterStore } from '../store/dxCluster';
 import type { RigctldDiagnostics } from '../types/rig';
 
 export default {
@@ -10,10 +11,17 @@ export default {
   data() {
     return {
       rigStore: useRigStore(),
+      dxClusterStore: useDxClusterStore(),
       selectedCategory: 'Station',
       searchQuery: '',
       configFields: [] as ConfigField[],
       passwordVisibility: {} as { [key: string]: boolean },
+      audioInputs: [] as Array<{ id: string; label: string }>,
+      audioOutputs: [] as Array<{ id: string; label: string }>,
+      audioInputId: '',
+      audioOutputId: '',
+      audioLoading: false,
+      audioError: '',
       hamlibStatus: {
         isInstalling: false,
         downloadProgress: 0,
@@ -46,15 +54,23 @@ export default {
   computed: {
     categories() {
       const cats = configHelper.getCategorizedFields(this.configFields);
-      return cats.map(category => ({
-        ...category,
-        name: this.getCategoryDisplayName(category.name),
-      }));
+      return cats
+        .filter(category => category.name !== 'logging')
+        .map(category => ({
+          ...category,
+          name: this.getCategoryDisplayName(category.name),
+        }));
     },
     filteredFields() {
       if (!this.searchQuery) {
         const category = this.categories.find(cat => cat.name === this.selectedCategory);
-        return category?.fields || [];
+        const fields = category?.fields || [];
+        if (this.isAudioCategory) {
+          return fields.filter(
+            field => field.key !== 'inputDeviceId' && field.key !== 'outputDeviceId'
+          );
+        }
+        return fields;
       }
       return this.configFields.filter(field => {
         const searchStr = this.searchQuery.toLowerCase();
@@ -93,6 +109,9 @@ export default {
       );
       return rigModelField ? rigModelField.value === 1 : false;
     },
+    isAudioCategory() {
+      return this.selectedCategory === 'Audio';
+    },
     isCatControlCategory() {
       return this.selectedCategory === 'CAT Control';
     },
@@ -102,7 +121,14 @@ export default {
   },
   async mounted() {
     await configHelper.initSettings();
-    this.configFields = configHelper.flattenConfig();
+    this.configFields = configHelper
+      .flattenConfig()
+      .filter(field => field.path[0] !== 'voiceKeyer');
+    this.audioInputId =
+      (configHelper.getSetting(['audio'], 'inputDeviceId') as string) || '';
+    this.audioOutputId =
+      (configHelper.getSetting(['audio'], 'outputDeviceId') as string) || '';
+    await this.loadAudioDevices();
 
     // Automatically check system requirements when component mounts
     if (this.isLinux) {
@@ -123,6 +149,7 @@ export default {
         ui: 'UI',
         logging: 'Logging',
         wsjtx: 'WSJT-X',
+        audio: 'Audio',
       };
       return (
         displayNames[categoryName] || categoryName.charAt(0).toUpperCase() + categoryName.slice(1)
@@ -133,6 +160,48 @@ export default {
     },
     getFieldLabel(field: ConfigField): string {
       return configHelper.getFieldLabel(field);
+    },
+    async loadAudioDevices() {
+      this.audioError = '';
+      this.audioLoading = true;
+      try {
+        if (!navigator.mediaDevices?.enumerateDevices) {
+          this.audioError = 'Audio device enumeration not supported.';
+          this.audioInputs = [];
+          this.audioOutputs = [];
+          return;
+        }
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices.filter(device => device.kind === 'audioinput');
+        const outputs = devices.filter(device => device.kind === 'audiooutput');
+        this.audioInputs = inputs.map((device, index) => ({
+          id: device.deviceId,
+          label: device.label || `Input ${index + 1}`,
+        }));
+        this.audioOutputs = outputs.map((device, index) => ({
+          id: device.deviceId,
+          label: device.label || `Output ${index + 1}`,
+        }));
+      } catch (error) {
+        console.error('Failed to load audio devices:', error);
+        this.audioError = 'Failed to load audio devices.';
+        this.audioInputs = [];
+        this.audioOutputs = [];
+      } finally {
+        this.audioLoading = false;
+      }
+    },
+    async saveAudioDevice(key: 'inputDeviceId' | 'outputDeviceId', value: string) {
+      await configHelper.updateSetting(['audio'], key, value);
+      const fieldIndex = this.configFields.findIndex(
+        f => f.path[0] === 'audio' && f.key === key
+      );
+      if (fieldIndex !== -1) {
+        this.configFields[fieldIndex] = {
+          ...this.configFields[fieldIndex],
+          value,
+        };
+      }
     },
     async handleChange(field: ConfigField, event: Event) {
       const target = event.target as HTMLInputElement;
@@ -217,6 +286,7 @@ export default {
           value: currentBands,
         };
       }
+      this.dxClusterStore.syncAvailableBands();
     },
     async selectAllHFBands(field: ConfigField) {
       const hfBands = [...DEFAULT_HF_BAND_SHORT_NAMES];
@@ -232,6 +302,7 @@ export default {
           value: hfBands,
         };
       }
+      this.dxClusterStore.syncAvailableBands();
     },
     async selectAllVHFUHFBands(field: ConfigField) {
       const vhfUhfBands = [...VHF_UHF_BAND_SHORT_NAMES];
@@ -252,6 +323,7 @@ export default {
           value: newBands,
         };
       }
+      this.dxClusterStore.syncAvailableBands();
     },
     async selectAllMicrowaveBands(field: ConfigField) {
       const microwaveBands = [...MICROWAVE_BAND_SHORT_NAMES];
@@ -272,6 +344,7 @@ export default {
           value: newBands,
         };
       }
+      this.dxClusterStore.syncAvailableBands();
     },
     async clearAllBands(field: ConfigField) {
       await configHelper.updateSetting(field.path, field.key, []);
@@ -286,6 +359,7 @@ export default {
           value: [],
         };
       }
+      this.dxClusterStore.syncAvailableBands();
     },
     togglePasswordVisibility(fieldId: string) {
       this.passwordVisibility[fieldId] = !this.passwordVisibility[fieldId];
@@ -755,6 +829,46 @@ export default {
             </div>
           </div>
 
+          <div v-if="isAudioCategory" class="audio-device-panel panel">
+            <div class="panel-header audio-header">
+              <h4 class="panel-title">Audio Devices</h4>
+              <button class="btn btn-small" type="button" @click="loadAudioDevices">
+                Refresh
+              </button>
+            </div>
+            <p v-if="audioError" class="warning-text">{{ audioError }}</p>
+            <div class="audio-grid">
+              <div class="audio-field config-field">
+                <label for="audio-input">Input device</label>
+                <select
+                  id="audio-input"
+                  v-model="audioInputId"
+                  @change="saveAudioDevice('inputDeviceId', audioInputId)"
+                  :disabled="audioLoading"
+                >
+                  <option value="">System default</option>
+                  <option v-for="device in audioInputs" :key="device.id" :value="device.id">
+                    {{ device.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="audio-field config-field">
+                <label for="audio-output">Output device</label>
+                <select
+                  id="audio-output"
+                  v-model="audioOutputId"
+                  @change="saveAudioDevice('outputDeviceId', audioOutputId)"
+                  :disabled="audioLoading"
+                >
+                  <option value="">System default</option>
+                  <option v-for="device in audioOutputs" :key="device.id" :value="device.id">
+                    {{ device.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div
             class="config-fields"
             :class="{ disabled: hasCategoryEnabler && !currentCategoryEnabled }"
@@ -1197,6 +1311,26 @@ export default {
 .category-item.active {
   background: var(--main-color);
   color: #000;
+}
+
+.audio-device-panel {
+  margin-bottom: 1rem;
+}
+
+.audio-header {
+  align-items: center;
+}
+
+.audio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.audio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .config-main {

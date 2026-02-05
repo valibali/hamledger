@@ -81,16 +81,22 @@ export const useRigStore = defineStore('rig', {
   getters: {
     isConnected: state => state.connection.connected,
     currentFrequency: state => {
+      if (!Number.isFinite(state.rigState.frequency)) {
+        return '0.000000';
+      }
       const freqMHz = state.rigState.frequency / 1000000;
       // Format to 6 decimal places for Hz precision
       return freqMHz.toFixed(6);
     },
     currentFrequencyParts: state => {
+      if (!Number.isFinite(state.rigState.frequency)) {
+        return { main: '0.000', hz: '000' };
+      }
       const freqMHz = state.rigState.frequency / 1000000;
       const fullFreq = freqMHz.toFixed(6);
       const parts = fullFreq.split('.');
       const wholePart = parts[0];
-      const decimalPart = parts[1];
+      const decimalPart = parts[1] || '000000';
       
       // Split decimal part: first 3 digits (kHz) and last 3 digits (Hz)
       const kHzPart = decimalPart.substring(0, 3);
@@ -118,12 +124,12 @@ export const useRigStore = defineStore('rig', {
       return freqMHz.toFixed(6);
     },
     splitFrequencyParts: state => {
-      if (!state.rigState.splitFreq) return undefined;
+      if (!Number.isFinite(state.rigState.splitFreq)) return undefined;
       const freqMHz = state.rigState.splitFreq / 1000000;
       const fullFreq = freqMHz.toFixed(6);
       const parts = fullFreq.split('.');
       const wholePart = parts[0];
-      const decimalPart = parts[1];
+      const decimalPart = parts[1] || '000000';
       
       // Split decimal part: first 3 digits (kHz) and last 3 digits (Hz)
       const kHzPart = decimalPart.substring(0, 3);

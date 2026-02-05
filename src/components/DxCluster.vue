@@ -453,6 +453,7 @@ export default defineComponent({
   },
 
   mounted() {
+    this.dxStore.syncAvailableBands();
     this.dxStore.startAutoRefresh();
   },
 

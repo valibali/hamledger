@@ -303,6 +303,22 @@
           "default": true
         }
       }
+    },
+    "audio": {
+      "type": "object",
+      "description": "Audio device settings",
+      "properties": {
+        "inputDeviceId": {
+          "type": "string",
+          "description": "Preferred audio input device id",
+          "default": ""
+        },
+        "outputDeviceId": {
+          "type": "string",
+          "description": "Preferred audio output device id",
+          "default": ""
+        }
+      }
     }
   }
 }

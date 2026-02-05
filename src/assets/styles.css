@@ -113,7 +113,7 @@ input:hover {
   --panel-bg: #333;
   --panel-border: 1px solid var(--border-color);
   --panel-radius: 5px;
-  --panel-pad: 1rem;
+  --panel-pad: 0.65rem;
   --spacing-md: var(--panel-pad);
   --page-pad: var(--spacing-md);
   --panel-title-color: var(--main-color);

@@ -6,6 +6,7 @@ import LogArea from './LogArea.vue';
 import LogBook from './LogBook.vue';
 import ConfigView from './ConfigView.vue';
 import DxCluster from './DxCluster.vue';
+import VoiceKeyerHotkeysPanel from './VoiceKeyerHotkeysPanel.vue';
 import Awards from './Awards.vue';
 import ContestModeShell from './contest/ContestModeShell.vue';
 import VoiceKeyerPage from './contest/VoiceKeyerPage.vue';
@@ -20,6 +21,7 @@ export default {
     LogBook,
     ConfigView,
     DxCluster,
+    VoiceKeyerHotkeysPanel,
     Awards,
     ContestModeShell,
     VoiceKeyerPage,
@@ -55,6 +57,9 @@ export default {
           <DxCluster />
         </div>
       </div>
+      <section class="hotkeys-strip">
+        <VoiceKeyerHotkeysPanel />
+      </section>
     </template>
     <ContestModeShell v-else-if="currentView === 'contest'" />
     <VoiceKeyerPage v-else-if="currentView === 'voiceKeyer'" />
@@ -81,7 +86,8 @@ export default {
 }
 
 .qso-layout {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   width: auto;
   display: flex;
   gap: var(--spacing-md, 1rem);
@@ -97,5 +103,19 @@ export default {
 .right-column {
   width: 300px;
   min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 1rem);
+  min-height: 0;
+}
+
+.right-column :deep(.dx-cluster) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.hotkeys-strip {
+  margin-top: var(--spacing-md, 1rem);
+  width: 100%;
 }
 </style>

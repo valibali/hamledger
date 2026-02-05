@@ -22,6 +22,6 @@ export default {
 .qso-panel {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--spacing-md, 1rem);
 }
 </style>

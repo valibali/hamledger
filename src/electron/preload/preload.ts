@@ -79,4 +79,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   saveVoiceClip: (payload: { name: string; data: ArrayBuffer }) =>
     ipcRenderer.invoke('voiceKeyer:saveClip', payload),
+  loadVoiceClip: (filePath: string) => ipcRenderer.invoke('voiceKeyer:loadClip', filePath),
 });

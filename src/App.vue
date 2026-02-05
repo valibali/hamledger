@@ -3,6 +3,7 @@ import SideBar from './components/SideBar.vue';
 import MainContent from './components/MainContent.vue';
 import SetupWizard from './components/SetupWizard.vue';
 import ToastNotifications from './components/ToastNotifications.vue';
+import VoiceKeyerHotkeys from './components/VoiceKeyerHotkeys.vue';
 import { useQsoStore } from './store/qso';
 import { useAwardsStore } from './store/awards';
 import { configHelper } from './utils/configHelper';
@@ -14,6 +15,7 @@ export default {
     MainContent,
     SetupWizard,
     ToastNotifications,
+    VoiceKeyerHotkeys,
   },
   data() {
     return {
@@ -98,6 +100,7 @@ export default {
       <SetupWizard v-if="showSetupWizard" @complete="onSetupComplete" />
       <!-- Toast notifications for achievements -->
       <ToastNotifications v-if="!showSetupWizard" />
+      <VoiceKeyerHotkeys v-if="!showSetupWizard" />
       <div v-if="showModeSelector" class="startup-modal">
         <div class="startup-card">
           <h2>Start Mode</h2>

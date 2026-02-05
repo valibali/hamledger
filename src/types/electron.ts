@@ -182,6 +182,7 @@ declare global {
         name: string;
         data: ArrayBuffer | Uint8Array;
       }) => Promise<{ success: boolean; path?: string; error?: string }>;
+      loadVoiceClip: (filePath: string) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>;
     };
   }
 }

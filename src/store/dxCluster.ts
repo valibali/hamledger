@@ -5,13 +5,15 @@ import type {
   FrequencyRange,
   FilterArrayKey,
 } from '../types/dxCluster';
-import { getBandFrequencyRange, getSelectableBandNames } from '../utils/bands';
+import { getBandFrequencyRange, getSelectableBandNames, shortNameToFullName } from '../utils/bands';
+import { configHelper } from '../utils/configHelper';
 
 interface DxClusterState {
   spots: DxSpot[];
   loading: boolean;
   error: string | null;
   lastFetchTime: Date | null;
+  availableBandList: string[];
   filters: DxClusterFilters;
 }
 
@@ -21,6 +23,7 @@ export const useDxClusterStore = defineStore('dxCluster', {
     loading: false,
     error: null,
     lastFetchTime: null,
+    availableBandList: getSelectableBandNames(),
     filters: {
       selectedCdx: ['EU', 'NA', 'SA', 'AS', 'AF', 'OC', 'AN'],
       selectedCde: ['EU', 'NA', 'SA', 'AS', 'AF', 'OC', 'AN'],
@@ -53,11 +56,31 @@ export const useDxClusterStore = defineStore('dxCluster', {
     },
 
     availableBands(): string[] {
-      return getSelectableBandNames();
+      return this.availableBandList;
     },
   },
 
   actions: {
+    async syncAvailableBands(): Promise<void> {
+      try {
+        await configHelper.initSettings();
+        const selected = configHelper.getSetting(['station'], 'selectedBands') as
+          | string[]
+          | undefined;
+        const mapped = (selected || [])
+          .map(short => shortNameToFullName(short))
+          .filter((band): band is string => Boolean(band));
+        this.availableBandList = mapped.length > 0 ? mapped : getSelectableBandNames();
+      } catch (error) {
+        console.warn('DX Cluster band list fallback:', error);
+        this.availableBandList = getSelectableBandNames();
+      }
+
+      if (!this.availableBandList.includes(this.filters.selectedBand)) {
+        this.filters.selectedBand = this.availableBandList[0] || this.filters.selectedBand;
+      }
+    },
+
     connectCluster(): void {
       this.startAutoRefresh();
     },

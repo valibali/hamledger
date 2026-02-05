@@ -2,6 +2,7 @@
 import { defineComponent } from 'vue';
 import { setPTT } from '../../services/catService';
 import { configHelper } from '../../utils/configHelper';
+import { useNotificationsStore } from '../../store/notifications';
 import BasePanel from '../panels/BasePanel.vue';
 import VoiceClipModal from '../modals/VoiceClipModal.vue';
 import CwClipModal from '../modals/CwClipModal.vue';
@@ -88,6 +89,12 @@ export default defineComponent({
         placeholderX: 0,
         placeholderWidth: 88,
       },
+      playbackMessageId: null as string | null,
+      playbackElapsedMs: 0,
+      playbackTotalMs: 0,
+      playbackInterval: null as number | null,
+      playbackClipOffsetMs: 0,
+      notificationsStore: useNotificationsStore(),
 
       clipLabel: '',
       cwClipLabel: '',
@@ -110,6 +117,7 @@ export default defineComponent({
       recorderNode: null as AudioWorkletNode | null,
       audioChunks: [] as Float32Array[],
       sampleRate: 44100,
+      activeAudio: null as HTMLAudioElement | null,
 
       cwConfig: {
         port: '',
@@ -128,6 +136,24 @@ export default defineComponent({
   computed: {
     availableKeys(): string[] {
       return Array.from({ length: 12 }, (_, i) => `F${i + 1}`);
+    },
+    voiceAssignedHotkeys() {
+      return this.voiceMessages
+        .filter(message => message.assignedKey)
+        .map(message => ({
+          key: message.assignedKey as string,
+          name: message.name,
+        }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+    },
+    cwAssignedHotkeys() {
+      return this.cwMessages
+        .filter(message => message.assignedKey)
+        .map(message => ({
+          key: message.assignedKey as string,
+          name: message.name,
+        }))
+        .sort((a, b) => a.key.localeCompare(b.key));
     },
 
     activeVoiceMessage(): VoiceMessage | undefined {
@@ -639,11 +665,68 @@ export default defineComponent({
 
     async playClip(clip: VoiceClip) {
       return new Promise<void>((resolve, reject) => {
-        const audio = new Audio(clip.url);
-        audio.onended = () => resolve();
-        audio.onerror = () => reject(new Error('Audio playback failed'));
-        audio.play().catch(reject);
+        const playFromUrl = (url: string) => {
+          const audio = new Audio(url);
+          this.activeAudio = audio;
+          const stopCheck = window.setInterval(() => {
+            if (this.voicePlaybackStopRequested) {
+              window.clearInterval(stopCheck);
+              audio.pause();
+              audio.currentTime = 0;
+              resolve();
+            }
+          }, 100);
+          if (this.playbackInterval) {
+            window.clearInterval(this.playbackInterval);
+          }
+          this.playbackInterval = window.setInterval(() => {
+            if (!this.activeAudio) return;
+            this.playbackElapsedMs = Math.min(
+              this.playbackTotalMs,
+              this.playbackClipOffsetMs + this.activeAudio.currentTime * 1000
+            );
+          }, 120);
+          audio.onended = () => resolve();
+          audio.onerror = () => reject(new Error(`Audio playback failed: ${url}`));
+          audio.play().catch(reject);
+        };
+
+        if (clip.url && clip.url.startsWith('blob:')) {
+          playFromUrl(clip.url);
+          return;
+        }
+
+        if (!clip.filePath) {
+          reject(new Error('Audio playback failed: missing file path'));
+          return;
+        }
+
+        window.electronAPI
+          .loadVoiceClip(clip.filePath)
+          .then(result => {
+            if (!result?.success || !result.data) {
+              reject(new Error(`Audio playback failed: ${result?.error || 'missing data'}`));
+              return;
+            }
+            const blob = new Blob([result.data], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            clip.url = url;
+            playFromUrl(url);
+          })
+          .catch(error => reject(error));
       });
+    },
+    getVoiceMessageLength(message: VoiceMessage) {
+      return message.sequence
+        .map(id => this.voiceClips.find(clip => clip.id === id)?.durationMs || 0)
+        .reduce((sum, value) => sum + value, 0);
+    },
+    formatDurationMs(ms: number) {
+      const totalSeconds = Math.round(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      if (minutes === 0) return `${seconds}s`;
+      return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
     },
 
     async playVoiceMessage(message: VoiceMessage) {
@@ -651,8 +734,17 @@ export default defineComponent({
       if (!message.sequence.length) return;
 
       this.isVoiceTransmitting = true;
+      this.notificationsStore.pushToast({
+        type: 'keyer',
+        title: 'Voice Keyer',
+        description: `Playing ${message.name}`,
+      });
       this.voicePlaybackPaused = false;
       this.voicePlaybackStopRequested = false;
+      this.playbackMessageId = message.id;
+      this.playbackTotalMs = this.getVoiceMessageLength(message);
+      this.playbackElapsedMs = 0;
+      this.playbackClipOffsetMs = 0;
       try {
         await setPTT(true);
         await new Promise(resolve => setTimeout(resolve, this.preDelayMs));
@@ -664,7 +756,9 @@ export default defineComponent({
           }
           const clip = this.voiceClips.find(item => item.id === clipId);
           if (!clip) continue;
+          this.playbackClipOffsetMs = this.playbackElapsedMs;
           await this.playClip(clip);
+          this.playbackClipOffsetMs = this.playbackElapsedMs;
         }
 
         await new Promise(resolve => setTimeout(resolve, this.postDelayMs));
@@ -675,15 +769,42 @@ export default defineComponent({
         this.isVoiceTransmitting = false;
         this.voicePlaybackPaused = false;
         this.voicePlaybackStopRequested = false;
+        this.activeAudio = null;
+        this.playbackMessageId = null;
+        this.playbackElapsedMs = 0;
+        this.playbackTotalMs = 0;
+        this.playbackClipOffsetMs = 0;
+        if (this.playbackInterval) {
+          window.clearInterval(this.playbackInterval);
+          this.playbackInterval = null;
+        }
       }
     },
     pauseVoiceMessage() {
       if (!this.isVoiceTransmitting) return;
       this.voicePlaybackPaused = !this.voicePlaybackPaused;
+      if (this.activeAudio) {
+        if (this.voicePlaybackPaused) {
+          this.activeAudio.pause();
+        } else {
+          this.activeAudio.play().catch(() => undefined);
+        }
+      }
     },
     stopVoiceMessage() {
       if (!this.isVoiceTransmitting) return;
       this.voicePlaybackStopRequested = true;
+      if (this.activeAudio) {
+        this.activeAudio.pause();
+        this.activeAudio.currentTime = 0;
+      }
+      setPTT(false).catch(() => undefined);
+      this.isVoiceTransmitting = false;
+      this.playbackMessageId = null;
+      if (this.playbackInterval) {
+        window.clearInterval(this.playbackInterval);
+        this.playbackInterval = null;
+      }
     },
     deleteVoiceMessage(messageId: string) {
       if (!window.confirm('Delete this message?')) return;
@@ -709,6 +830,11 @@ export default defineComponent({
 
       if (!text.trim()) return;
 
+      this.notificationsStore.pushToast({
+        type: 'keyer',
+        title: 'CW Keyer',
+        description: `Sending ${message.name}`,
+      });
       this.isCwTransmitting = true;
       try {
         await this.sendCwText(text);
@@ -732,6 +858,7 @@ export default defineComponent({
     },
 
     handleKeydown(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
@@ -802,6 +929,7 @@ export default defineComponent({
         baudRate: this.cwConfig.baudRate,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      configHelper.updateSetting(['voiceKeyer'], 'cwPort', this.cwConfig.port).catch(() => undefined);
     },
     openCwSettings() {
       this.cwSettingsOpen = true;
@@ -940,8 +1068,12 @@ export default defineComponent({
             sequence: [...message.sequence],
             assignedKey: message.assignedKey,
           })),
+          preDelayMs: this.preDelayMs,
+          postDelayMs: this.postDelayMs,
+          cwPort: this.cwConfig.port,
         };
         await configHelper.updateSetting(['voiceKeyer'], 'state', JSON.stringify(payload));
+        window.dispatchEvent(new Event('voice-keyer-updated'));
       } catch (error) {
         console.error('Failed to save voice keyer state:', error);
       }
@@ -1062,14 +1194,22 @@ export default defineComponent({
             @dragover="onDragOver"
           >
             <div class="message-controls">
-              <button class="panel-action icon" type="button" @click.stop="playVoiceMessage(message)">▶</button>
-              <button class="panel-action icon" type="button" @click.stop="pauseVoiceMessage()">⏸</button>
-              <button class="panel-action icon" type="button" @click.stop="stopVoiceMessage()">⏹</button>
+              <button class="panel-action icon play-btn" type="button" @click.stop="playVoiceMessage(message)">▶</button>
+              <button class="panel-action icon pause-btn" type="button" @click.stop="pauseVoiceMessage()">⏸</button>
+              <button class="panel-action icon stop-btn" type="button" @click.stop="stopVoiceMessage()">⏹</button>
             </div>
             <div class="message-content">
               <div class="message-header-row">
                 <span class="message-title">{{ message.name }}</span>
                 <div class="message-actions-right">
+                  <span class="message-length">
+                    <span v-if="playbackMessageId === message.id">
+                      {{ formatDurationMs(playbackElapsedMs) }} / {{ formatDurationMs(playbackTotalMs) }}
+                    </span>
+                    <span v-else>
+                      {{ formatDurationMs(getVoiceMessageLength(message)) }}
+                    </span>
+                  </span>
                   <button class="panel-action icon danger" type="button" @click.stop="deleteVoiceMessage(message.id)">
                     🗑
                   </button>
@@ -1109,6 +1249,15 @@ export default defineComponent({
                     </div>
                   </template>
                 </div>
+                <div class="message-waveform">
+                  <div class="waveform-track">
+                    <div
+                      v-if="playbackMessageId === message.id && playbackTotalMs > 0"
+                      class="sequence-progress-line waveform-progress"
+                      :style="{ left: `${Math.min(100, (playbackElapsedMs / playbackTotalMs) * 100)}%` }"
+                    />
+                  </div>
+                </div>
               </div>
               <div class="message-footer">
                 <label>Assign key</label>
@@ -1130,6 +1279,15 @@ export default defineComponent({
             @dragover="onDragOver"
           >
             <div class="message-empty">Drag here a clip to create a new message</div>
+          </div>
+        </div>
+      </BasePanel>
+      <BasePanel class="hotkeys-panel" title="Hotkeys">
+        <div v-if="!voiceAssignedHotkeys.length" class="message-empty">No hotkeys assigned.</div>
+        <div v-else class="hotkey-list">
+          <div v-for="item in voiceAssignedHotkeys" :key="item.key" class="hotkey-card">
+            <span class="hotkey-key">{{ item.key }}</span>
+            <span class="hotkey-name">{{ item.name }}</span>
           </div>
         </div>
       </BasePanel>
@@ -1200,9 +1358,9 @@ export default defineComponent({
             @dragover="onDragOver"
           >
             <div class="message-controls">
-              <button class="panel-action icon" type="button" @click.stop="sendCwMessage(message)">▶</button>
-              <button class="panel-action icon" type="button" disabled>⏸</button>
-              <button class="panel-action icon" type="button" disabled>⏹</button>
+              <button class="panel-action icon play-btn" type="button" @click.stop="sendCwMessage(message)">▶</button>
+              <button class="panel-action icon pause-btn" type="button" disabled>⏸</button>
+              <button class="panel-action icon stop-btn" type="button" disabled>⏹</button>
             </div>
             <div class="message-content">
               <div class="message-header-row">
@@ -1268,6 +1426,15 @@ export default defineComponent({
             @dragover="onDragOver"
           >
             <div class="message-empty">Drag here a clip to create a new message</div>
+          </div>
+        </div>
+      </BasePanel>
+      <BasePanel class="hotkeys-panel" title="Hotkeys">
+        <div v-if="!cwAssignedHotkeys.length" class="message-empty">No hotkeys assigned.</div>
+        <div v-else class="hotkey-list">
+          <div v-for="item in cwAssignedHotkeys" :key="item.key" class="hotkey-card">
+            <span class="hotkey-key">{{ item.key }}</span>
+            <span class="hotkey-name">{{ item.name }}</span>
           </div>
         </div>
       </BasePanel>
@@ -1387,7 +1554,7 @@ export default defineComponent({
 
 .voice-grid {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: 360px 1fr 220px;
   gap: 1rem;
   flex: 1;
 }
@@ -1579,6 +1746,39 @@ export default defineComponent({
   min-height: 0;
 }
 
+.hotkeys-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.hotkey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hotkey-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #2f2f2f;
+  border-radius: 6px;
+  background: #232323;
+}
+
+.hotkey-key {
+  font-weight: 700;
+  color: #f3b240;
+  min-width: 36px;
+}
+
+.hotkey-name {
+  color: #e6e6e6;
+  font-size: 0.85rem;
+}
+
 .message-card {
   display: grid;
   grid-template-columns: 44px 1fr;
@@ -1590,8 +1790,8 @@ export default defineComponent({
 }
 
 .message-card.active {
-  border-color: #ffa500;
-  background: rgba(255, 165, 0, 0.1);
+  border-color: #2f2f2f;
+  background: #202020;
 }
 
 .message-card.highlight {
@@ -1611,6 +1811,24 @@ export default defineComponent({
   flex-direction: column;
   gap: 0.35rem;
   align-items: center;
+}
+
+.message-controls .play-btn {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.7);
+  color: #d1fae5;
+}
+
+.message-controls .pause-btn {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #bfdbfe;
+}
+
+.message-controls .stop-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
 }
 
 .message-content {
@@ -1634,6 +1852,12 @@ export default defineComponent({
 .message-actions-right {
   display: inline-flex;
   gap: 0.35rem;
+  align-items: center;
+}
+
+.message-length {
+  font-size: 0.75rem;
+  color: #bdbdbd;
 }
 
 .message-body {
@@ -1670,6 +1894,39 @@ export default defineComponent({
   position: relative;
 }
 
+.sequence-progress-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+
+.message-waveform {
+  margin-top: 0.4rem;
+}
+
+.waveform-track {
+  position: relative;
+  height: 22px;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.1) 0,
+      rgba(255, 255, 255, 0.1) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  border: 1px solid #2f2f2f;
+}
+
+.waveform-progress {
+  top: 0;
+  bottom: 0;
+}
+
 .sequence-block {
   background: #2b2b2b;
   border: 1px solid #3b3b3b;
@@ -1679,7 +1936,7 @@ export default defineComponent({
 }
 
 .sequence-block:hover {
-  border-color: #f3b240;
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .sequence-placeholder-overlay {
@@ -1695,7 +1952,7 @@ export default defineComponent({
 }
 
 .sequence-placeholder-overlay.active {
-  border-color: #f3b240;
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 

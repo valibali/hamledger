@@ -7,6 +7,7 @@ import { useQrzStore } from '../../store/qrz';
 import ContestDxClusterStrip from './ContestDxClusterStrip.vue';
 import GraylineMap from './GraylineMap.vue';
 import DxCluster from '../DxCluster.vue';
+import VoiceKeyerHotkeysPanel from '../VoiceKeyerHotkeysPanel.vue';
 import ContestSetupModal from '../modals/ContestSetupModal.vue';
 import ContestSessionsModal from '../modals/ContestSessionsModal.vue';
 import ContestSessionStatsModal from '../modals/ContestSessionStatsModal.vue';
@@ -1611,6 +1612,9 @@ watch(
     <section class="speed-dial-panel panel">
       <ContestDxClusterStrip @spot-clicked="focusCallsign" />
     </section>
+    <section class="hotkeys-strip">
+      <VoiceKeyerHotkeysPanel />
+    </section>
   </div>
 
   <ContestStatsCardsModal
@@ -1740,6 +1744,10 @@ watch(
   width: 300px;
   min-width: 300px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 1rem);
+  min-height: 0;
 }
 
 .speed-dial-panel {
@@ -1751,10 +1759,20 @@ watch(
   margin-top: auto;
 }
 
+.hotkeys-strip {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
 :deep(.contest-right .dx-cluster) {
   background: #1b1b1b;
   border-color: #2c2c2c;
   border-radius: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 

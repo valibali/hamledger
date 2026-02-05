@@ -1,13 +1,17 @@
 <script lang="ts">
 import { useAwardsStore } from '../store/awards';
+import { useNotificationsStore } from '../store/notifications';
 import type { Achievement } from '../types/awards';
+import type { NotificationToast } from '../store/notifications';
 
 export default {
   name: 'ToastNotifications',
   data() {
     return {
       awardsStore: useAwardsStore(),
+      notificationsStore: useNotificationsStore(),
       displayedToasts: [] as Achievement[],
+      displayedNotifications: [] as NotificationToast[],
       maxToasts: 3,
     };
   },
@@ -21,6 +25,17 @@ export default {
         
         for (const achievement of newOnes) {
           this.showToast(achievement);
+        }
+      },
+      deep: true,
+    },
+    'notificationsStore.toasts': {
+      handler(newToasts: NotificationToast[]) {
+        const newOnes = newToasts.filter(
+          t => !this.displayedNotifications.find(d => d.id === t.id)
+        );
+        for (const toast of newOnes) {
+          this.showNotification(toast);
         }
       },
       deep: true,
@@ -41,6 +56,22 @@ export default {
         this.dismissToast(achievement.id);
       }, 5000);
     },
+    showNotification(toast: NotificationToast) {
+      this.displayedNotifications.push(toast);
+      if (this.displayedNotifications.length > this.maxToasts) {
+        this.displayedNotifications.shift();
+      }
+      setTimeout(() => {
+        this.dismissNotification(toast.id);
+      }, 4000);
+    },
+    dismissNotification(id: string) {
+      const index = this.displayedNotifications.findIndex(t => t.id === id);
+      if (index > -1) {
+        this.displayedNotifications.splice(index, 1);
+      }
+      this.notificationsStore.dismissToast(id);
+    },
     
     dismissToast(id: string) {
       const index = this.displayedToasts.findIndex(t => t.id === id);
@@ -57,6 +88,7 @@ export default {
         grid: '📍',
         iota: '🏝️',
         milestone: '🏆',
+        keyer: '📣',
       };
       return icons[type] || '🎉';
     },
@@ -79,6 +111,19 @@ export default {
           <span class="toast-description">{{ toast.description }}</span>
         </div>
         <button class="toast-close" @click.stop="dismissToast(toast.id)">×</button>
+      </div>
+      <div
+        v-for="toast in displayedNotifications"
+        :key="toast.id"
+        :class="['toast', `toast-${toast.type}`]"
+        @click="dismissNotification(toast.id)"
+      >
+        <span class="toast-icon">{{ getIcon(toast.type) }}</span>
+        <div class="toast-content">
+          <span class="toast-title">{{ toast.title }}</span>
+          <span class="toast-description">{{ toast.description }}</span>
+        </div>
+        <button class="toast-close" @click.stop="dismissNotification(toast.id)">×</button>
       </div>
     </transition-group>
   </div>
@@ -149,6 +194,10 @@ export default {
 
 .toast-milestone {
   border-left-color: #ffd700;
+}
+
+.toast-keyer {
+  border-left-color: #34d399;
 }
 
 .toast-icon {

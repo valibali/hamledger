@@ -72,5 +72,9 @@
     "focusLockDisabled": false,
     "showFocusToggle": false,
     "activeSession": null
+  },
+  "audio": {
+    "inputDeviceId": "",
+    "outputDeviceId": ""
   }
 }
