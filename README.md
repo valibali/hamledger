@@ -6,36 +6,67 @@
 
 _If you find my work valuable, please consider to Sponsor or Donate!_
 
+**Hamledger** is a modern amateur radio logging app built with Vue 3, TypeScript, and Electron.  
+Fast daily logging, serious contesting, and a polished UI that stays out of your way.
+
+---
+
+## Highlights (Quick Tour)
+
+### 1) Everyday logging that feels instant
 ![image](./public/qso.png)
-![image](./public/dxcluster.png) ![image](./public/logbook.png) ![image](./public/qso_detail.png)
+![image](./public/logbook.png)
+![image](./public/qso_detail.png)
 
-A modern amateur radio logging application built with Vue 3, TypeScript, and Electron.
-It just works.
+- Fast QSO entry with rich station details
+- Clean log area with filters and sorting
+- Detailed QSO view with map and station info
 
-## Description
+### 2) DX cluster at a glance
+![image](./public/dxcluster.png)
 
-Hamledger is a feature-rich amateur radio logging application designed for ham radio operators. It provides a modern, intuitive interface for logging QSOs (radio contacts), managing station information, and tracking various operating achievements. This is not a contest-grade logger (Hamledger Contest is in the making), but rather an everyday logger tool.
+- High‑density spot visualization
+- Quick station selection right from the cluster
 
-## Features
+### 3) Contest mode built for flow
+![image](./public/contest-mode.png)
+![image](./public/contest-stats.png)
 
-- **Real-time Rig Control**: Interface with popular amateur radio transceivers (Hamlib)
-- **QSO Logging**: Easy and efficient contact logging with auto-fill capabilities, ADIF import-export
-- **DX Cluster**: Quick and seamless selection of stations
-- **S-Meter Display**: Real-time signal strength visualization
-- **Propagation Data**: Current solar and propagation condition monitoring
-- **UTC Clock**: Integrated UTC time display for accurate logging
-- **Weather Information**: Local weather conditions display
-- **Remote Station Info**: Quick access to contacted station details
-- **WSJT-X Integration**: Can automatically log QSOs from WSJT-X
-- **Modern UI**: Clean, intuitive interface built with Vue 3
+- Dedicated contest workflow with sessions, multipliers, and speed dial
+- Session statistics modal with map and detailed QSO list
 
-## Technical Stack
+### 4) Awards & achievements
+![image](./public/awards.png)
 
-- **Frontend**: Vue 3 with TypeScript
-- **State Management**: Pinia
-- **Build Tool**: Vite
-- **Desktop Runtime**: Electron
-- **Styling**: Custom CSS with modern design principles
+- Track award progress and operating milestones
+
+### 5) Voice & CW keyer
+![image](./public/voice-keyer.png)
+![image](./public/voice-keyer-cw.png)
+
+- Record clips, build messages, and assign hotkeys
+- Winkeyer‑compatible CW workflow
+
+### 6) Hotkeys at your fingertips
+![image](./public/hotkeys-strip.png)
+
+- Visible hotkey strip with queue‑aware status
+
+---
+
+## Core Features
+
+- **Real-time Rig Control** (Hamlib)
+- **QSO Logging** with auto‑fill + ADIF import/export
+- **DX Cluster** selection and visualization
+- **Contest Mode** with sessions, speed dial, multipliers, and stats
+- **Awards** tracking
+- **Voice & CW Keyer** with hotkeys
+- **Propagation + Weather** panels
+- **WSJT‑X Integration**
+- **Modern UI** optimized for fast operating
+
+---
 
 ## Documentation
 
@@ -43,16 +74,20 @@ For detailed usage instructions and complete functionality guide, see:
 - [Tutorial (Hungarian)](TUTORIAL.md) - Teljes funkcionalitás útmutató magyar nyelven
 - [Tutorial (English)](TUTORIAL_EN.md) - Complete functionality guide in English
 
+---
+
 ## Installation
 
 See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+
+---
 
 ## Getting Started with Development
 
 ### Prerequisites
 
 - Node.js (v16 or later)
-- npm package manager
+- pnpm package manager
 - Git
 
 ### Installation
@@ -61,18 +96,17 @@ See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 
    ```bash
    git clone https://github.com/valibali/hamledger.git
-
    ```
 
 2. Install dependencies:
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Start the development server:
    ```bash
-   npm run app:dev
+   pnpm run app:dev
    ```
 
 ### Building for Production
@@ -80,20 +114,22 @@ See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 1. Build the application:
 
    ```bash
-   npm run app:build
+   pnpm run app:build
    ```
 
 2. Preview the production build:
    ```bash
-   npm run app:preview
+   pnpm run app:preview
    ```
+
+---
 
 ## Development
 
 ### Project Structure
 
 ```
-hamlog/
+hamledger/
 ├── src/
 │   ├── components/     # Vue components
 │   ├── store/         # Pinia stores
@@ -109,9 +145,13 @@ hamlog/
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+---
+
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE) with commercial clause. See the [LICENSE](LICENSE) file for details.
+
+---
 
 ## Acknowledgments
 
@@ -119,5 +159,5 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE) wi
 - The Electron team for making cross-platform desktop apps possible
 - The amateur radio community for inspiration and feedback
 
-All the best,
+All the best,  
 HA5XB Balazs

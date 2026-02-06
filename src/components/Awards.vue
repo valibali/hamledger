@@ -565,6 +565,10 @@ export default {
   min-height: 0;
 }
 
+.overview-tab {
+  gap: 1rem;
+}
+
 .dxcc-tab,
 .was-tab,
 .waz-tab,
